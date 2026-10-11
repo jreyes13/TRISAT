@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Back Arc of Teal Earth Orbit Ring (Depth Behind Earth) -->
+    <path
+        android:pathData="M 26,58 C 24,48 34,38 50,38 C 66,38 74,34 74,38"
+        android:strokeWidth="1.8"
+        android:strokeColor="#7000F5D4"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+
+    <!-- TRISAT 3-Satellite Constellation Triangulation Beams -->
+    <path
+        android:pathData="M 69,32 L 31,56 L 45,39 Z"
+        android:strokeWidth="0.6"
+        android:strokeColor="#3500E5FF"
+        android:fillColor="#00000000" />
+
+    <!-- Earth Atmosphere Outer Aura Glow -->
+    <path android:pathData="M 50,48 m -20,0 a 20,20 0 1,0 40,0 a 20,20 0 1,0 -40,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="50"
+                android:centerY="48"
+                android:gradientRadius="20"
+                android:type="radial">
+                <item android:color="#3000E5FF" android:offset="0.7" />
+                <item android:color="#0000E5FF" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Earth Globe Base Sphere -->
+    <path android:pathData="M 50,48 m -16.5,0 a 16.5,16.5 0 1,0 33,0 a 16.5,16.5 0 1,0 -33,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="40"
+                android:startY="32"
+                android:endX="60"
+                android:endY="64"
+                android:type="linear">
+                <item android:color="#0D4B82" android:offset="0.0" />
+                <item android:color="#08294B" android:offset="0.6" />
+                <item android:color="#041529" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Earth Atmosphere Limb Rim -->
+    <path
+        android:pathData="M 50,48 m -16.5,0 a 16.5,16.5 0 1,0 33,0 a 16.5,16.5 0 1,0 -33,0"
+        android:strokeWidth="0.9"
+        android:strokeColor="#5000E5FF"
+        android:fillColor="#00000000" />
+
+    <!-- Stylized Earth Continents (Americas / Europe / Africa) -->
+    <!-- North America -->
+    <path
+        android:fillColor="#B000B4D8"
+        android:pathData="M39.5,37 C41,35.5 44,36 45,38 C46,39.5 44.5,41.5 43,42 C41.5,42.5 39,40 39.5,37 Z" />
+    <!-- South America -->
+    <path
+        android:fillColor="#A00096C7"
+        android:pathData="M42.5,45 C44.5,45 46,47 45,50 C44,53 42,55.5 41,54 C40,52.5 41,47 42.5,45 Z" />
+    <!-- Europe & Africa -->
+    <path
+        android:fillColor="#B000B4D8"
+        android:pathData="M52,36 C55,35 58,36.5 57,39 C56,41.5 58,45 56,49 C54,53 51,52 51,48 C51,44 50,38 52,36 Z" />
+
+    <!-- Earth Latitude Parallels -->
+    <path
+        android:pathData="M 33.5,48 Q 50,53.5 66.5,48"
+        android:strokeWidth="1.2"
+        android:strokeColor="#00E5FF"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M 35.5,42.5 Q 50,46.5 64.5,42.5"
+        android:strokeWidth="0.8"
+        android:strokeColor="#7000E5FF"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M 35.5,53.5 Q 50,57.5 64.5,53.5"
+        android:strokeWidth="0.8"
+        android:strokeColor="#7000E5FF"
+        android:fillColor="#00000000" />
+
+    <!-- Earth Longitude Meridians -->
+    <path
+        android:pathData="M 50,31.5 Q 54.5,48 50,64.5"
+        android:strokeWidth="1.2"
+        android:strokeColor="#00E5FF"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M 50,31.5 Q 41.5,48 50,64.5"
+        android:strokeWidth="0.8"
+        android:strokeColor="#7000E5FF"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M 50,31.5 Q 58.5,48 50,64.5"
+        android:strokeWidth="0.8"
+        android:strokeColor="#7000E5FF"
+        android:fillColor="#00000000" />
+
+    <!-- Active Navigation Target Beacon on Earth -->
+    <path
+        android:pathData="M 46,44 m -3,0 a 3,3 0 1,0 6,0 a 3,3 0 1,0 -6,0"
+        android:strokeWidth="0.8"
+        android:strokeColor="#00E5FF"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M 46,44 m -1.2,0 a 1.2,1.2 0 1,0 2.4,0 a 1.2,1.2 0 1,0 -2.4,0"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Front Arc Glow (Teal Earth Orbit Ring) -->
+    <path
+        android:pathData="M 74,38 C 74,44 66,53 50,58 C 34,63 24,58 26,58"
+        android:strokeWidth="5.0"
+        android:strokeColor="#3000F5D4"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+
+    <!-- Main Front Arc (Vivid Teal Earth Orbit Ring) -->
+    <path
+        android:pathData="M 74,38 C 74,44 66,53 50,58 C 34,63 24,58 26,58"
+        android:strokeWidth="3.0"
+        android:strokeColor="#00F5D4"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+
+    <!-- Primary Satellite (Top Right of Orbit) -->
+    <!-- Navigation Signal Arcs Beaming Down from Satellite to Earth -->
+    <path
+        android:pathData="M 64,38 A 8,8 0 0 1 61,42"
+        android:strokeWidth="1.2"
+        android:strokeColor="#00E5FF"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M 61,41 A 13,13 0 0 1 56,47"
+        android:strokeWidth="1.0"
+        android:strokeColor="#8000E5FF"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+
+    <!-- Solar Panel Left Wing -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M 62.5,29.5 L 66,31 L 65,33.5 L 61.5,32 Z" />
+    <!-- Solar Panel Right Wing -->
+    <path
+        android:fillColor="#00E5FF"
+        android:pathData="M 72,31.5 L 75.5,33 L 74.5,35.5 L 71,34 Z" />
+    <!-- Main Satellite Body Box -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 66.5,30 L 71.5,30 L 71.5,35 L 66.5,35 Z" />
+    <path
+        android:pathData="M 66.5,30 L 71.5,30 L 71.5,35 L 66.5,35 Z"
+        android:strokeWidth="0.8"
+        android:strokeColor="#0A132B"
+        android:fillColor="#00000000" />
+    <!-- Satellite Center Sensor -->
+    <path
+        android:fillColor="#00F5D4"
+        android:pathData="M 68,31.5 L 70,31.5 L 70,33.5 L 68,33.5 Z" />
+
+    <!-- Constellation Node 2 (Secondary Satellite) -->
+    <path
+        android:pathData="M 31,56 m -2.2,0 a 2.2,2.2 0 1,0 4.4,0 a 2.2,2.2 0 1,0 -4.4,0"
+        android:fillColor="#00E5FF" />
+    <path
+        android:pathData="M 31,56 m -1,0 a 1,1 0 1,0 2,0 a 1,1 0 1,0 -2,0"
+        android:fillColor="#FFFFFF" />
+
+    <!-- Constellation Node 3 (Tertiary Satellite) -->
+    <path
+        android:pathData="M 45,39 m -1.8,0 a 1.8,1.8 0 1,0 3.6,0 a 1.8,1.8 0 1,0 -3.6,0"
+        android:fillColor="#00F5D4" />
+
+    <!-- GREEN LOCK BADGE (Bottom Right) -->
+    <!-- Outer High-Contrast Dark Blue Outline Base -->
+    <path
+        android:pathData="M 71,70 m -13,0 a 13,13 0 1,0 26,0 a 13,13 0 1,0 -26,0"
+        android:fillColor="#0A132B" />
+
+    <!-- Outer Green Glow Aura Ring -->
+    <path
+        android:pathData="M 71,70 m -12,0 a 12,12 0 1,0 24,0 a 12,12 0 1,0 -24,0"
+        android:fillColor="#3000E676" />
+
+    <!-- Green Badge Base Circle with Gradient -->
+    <path android:pathData="M 71,70 m -10.5,0 a 10.5,10.5 0 1,0 21,0 a 10.5,10.5 0 1,0 -21,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="71"
+                android:startY="59.5"
+                android:endX="71"
+                android:endY="80.5"
+                android:type="linear">
+                <item android:color="#00E676" android:offset="0.0" />
+                <item android:color="#00C853" android:offset="0.7" />
+                <item android:color="#00A142" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Inner Badge Rim Accent -->
+    <path
+        android:pathData="M 71,70 m -10.5,0 a 10.5,10.5 0 1,0 21,0 a 10.5,10.5 0 1,0 -21,0"
+        android:strokeWidth="0.8"
+        android:strokeColor="#50FFFFFF"
+        android:fillColor="#00000000" />
+
+    <!-- WHITE LOCK ICON INSIDE GREEN BADGE -->
+    <!-- Lock Shackle Arc -->
+    <path
+        android:pathData="M 68.2, 69.2 L 68.2, 66.5 C 68.2, 64.8 73.8, 64.8 73.8, 66.5 L 73.8, 69.2"
+        android:strokeWidth="1.8"
+        android:strokeColor="#FFFFFF"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+
+    <!-- Lock Solid Body Box -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 66.2, 69 C 65.5,69 65,69.5 65,70.2 L 65, 75.8 C 65,76.5 65.5,77 66.2,77 L 75.8,77 C 76.5,77 77,76.5 77,75.8 L 77, 70.2 C 77,69.5 76.5,69 75.8,69 Z" />
+
+    <!-- Keyhole Detail inside Lock Body -->
+    <path
+        android:fillColor="#004D25"
+        android:pathData="M 71, 71.5 m -1.1,0 a 1.1,1.1 0 1,0 2.2,0 a 1.1,1.1 0 1,0 -2.2,0" />
+    <path
+        android:pathData="M 70.4,72.2 L 71.6,72.2 L 71.9,74.5 L 70.1,74.5 Z"
+        android:fillColor="#004D25" />
+
+</vector>
