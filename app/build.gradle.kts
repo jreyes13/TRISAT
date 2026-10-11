@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.myapplication"
-    compileSdk = 35
+    compileSdk = 37
     buildToolsVersion = "35.0.0"
 
     defaultConfig {
