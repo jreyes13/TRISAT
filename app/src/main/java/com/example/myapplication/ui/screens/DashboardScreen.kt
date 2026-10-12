@@ -70,6 +70,7 @@ import com.example.myapplication.data.gnss.model.ThreatScenario
 import com.example.myapplication.data.gnss.model.ThreatType
 import com.example.myapplication.data.gnss.model.TrustLevel
 import com.example.myapplication.data.gnss.model.TrustSubScores
+import com.example.myapplication.ui.components.LocationPermissionHandler
 import com.example.myapplication.ui.components.StatusBadge
 import com.example.myapplication.ui.components.StatusLevel
 import com.example.myapplication.ui.components.TrustabilityGaugeMeter
@@ -87,6 +88,8 @@ fun DashboardScreen(
     val gnssStatus by gnssViewModel.gnssStatusState.collectAsState()
     val locationData by gnssViewModel.locationState.collectAsState()
     val activeScenario by gnssViewModel.activeScenarioState.collectAsState()
+    val permissionGranted by gnssViewModel.permissionGranted.collectAsState()
+    val isMockMode by gnssViewModel.isMockMode.collectAsState()
 
     val trustLevel = trustReport.trustLevel
 
@@ -122,6 +125,23 @@ fun DashboardScreen(
                         contentScale = ContentScale.FillWidth
                     )
                 }
+            }
+        }
+
+        // Location Permission Banner
+        if (!permissionGranted) {
+            item {
+                LocationPermissionHandler(
+                    isPermissionGranted = permissionGranted,
+                    isMockMode = isMockMode,
+                    onPermissionResult = { granted ->
+                        if (granted) {
+                            gnssViewModel.refreshPermissions()
+                            gnssViewModel.toggleMockMode(false)
+                            gnssViewModel.startMonitoring()
+                        }
+                    }
+                )
             }
         }
 

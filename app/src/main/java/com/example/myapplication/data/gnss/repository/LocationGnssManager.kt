@@ -386,8 +386,8 @@ class LocationGnssManager(private val context: Context) {
         hardwareCheckJob?.cancel()
         hardwareCheckJob = scope.launch {
             delay(3500L)
-            // If no satellite hardware callbacks arrived or zero satellites tracked, auto-fallback to mock stream
-            if (_gnssStatusData.value.satellites.isEmpty() || lastHardwareEventTime == 0L) {
+            // Only start mock stream if explicitly forced or if location permissions are missing
+            if (forceMockMode || !hasLocationPermission()) {
                 startMockStream()
             }
         }
