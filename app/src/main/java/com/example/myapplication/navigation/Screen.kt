@@ -42,6 +42,6 @@ sealed class Screen(
     )
 
     companion object {
-        val items = listOf(Dashboard, SignalMonitor, ThreatAnalysis, Settings)
+        val items get() = listOf(Dashboard, SignalMonitor, ThreatAnalysis, Settings)
     }
 }
