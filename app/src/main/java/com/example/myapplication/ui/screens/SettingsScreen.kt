@@ -27,6 +27,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -46,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -55,11 +58,41 @@ import com.example.myapplication.ui.components.StatusBadge
 import com.example.myapplication.ui.components.StatusLevel
 import com.example.myapplication.ui.theme.TRISATTheme
 import com.example.myapplication.ui.viewmodel.GnssViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun SettingsScreen(
     gnssViewModel: GnssViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val packageInfo = remember(context) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(context.packageName, PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    val versionName = packageInfo?.versionName ?: "1.0.2"
+    val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        packageInfo?.longVersionCode ?: 1L
+    } else {
+        @Suppress("DEPRECATION")
+        packageInfo?.versionCode?.toLong() ?: 1L
+    }
+
+    val buildDate = remember(packageInfo) {
+        val lastUpdate = packageInfo?.lastUpdateTime ?: System.currentTimeMillis()
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(lastUpdate))
+    }
+
     var rawGnssLogging by remember { mutableStateOf(true) }
     var osnmaValidation by remember { mutableStateOf(true) }
     var sensitivityThreshold by remember { mutableFloatStateOf(0.80f) }
@@ -261,7 +294,7 @@ fun SettingsScreen(
 
         item {
             Text(
-                text = "System Information & Telemetry",
+                text = "System Information & Build Details",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -279,10 +312,11 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     InfoRow(label = "Application Name", value = "TRISAT - Earth Intelligence")
-                    InfoRow(label = "Trustability Engine", value = "v1.0.4 (Multi-Constellation)")
-                    InfoRow(label = "Cryptographic Core", value = "Galileo OSNMA KROOT (ECDSA P-256)")
+                    InfoRow(label = "Build Version", value = "v$versionName (Code $versionCode)")
+                    InfoRow(label = "Compilation Date", value = buildDate)
+                    InfoRow(label = "Galileo OSNMA Engine", value = "v1.2.0 (I/NAV & TESLA Active)")
                     InfoRow(label = "Supported Satellites", value = "GPS, Galileo, BeiDou, GLONASS, QZSS, SBAS")
-                    InfoRow(label = "KeyStore Hardware Security", value = "Hardware Backed (TEE / StrongBox)")
+                    InfoRow(label = "KeyStore Security", value = "Hardware Backed (TEE / StrongBox)")
                 }
             }
         }

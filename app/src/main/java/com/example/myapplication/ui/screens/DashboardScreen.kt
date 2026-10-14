@@ -24,6 +24,7 @@ import com.example.myapplication.R
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.GppBad
 import androidx.compose.material.icons.rounded.GppGood
@@ -55,6 +56,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -90,6 +92,13 @@ fun DashboardScreen(
     val activeScenario by gnssViewModel.activeScenarioState.collectAsState()
     val permissionGranted by gnssViewModel.permissionGranted.collectAsState()
     val isMockMode by gnssViewModel.isMockMode.collectAsState()
+    val inavMessages by gnssViewModel.inavMessagesState.collectAsState()
+    val positionHistory by gnssViewModel.positionHistoryState.collectAsState()
+    val lastAGnssResetTime by gnssViewModel.lastAGnssResetTimeState.collectAsState()
+
+    val inavSvidSet = remember(inavMessages) {
+        inavMessages.filter { it.isGalileoInav }.map { it.svid }.toSet()
+    }
 
     val trustLevel = trustReport.trustLevel
 
@@ -145,81 +154,12 @@ fun DashboardScreen(
             }
         }
 
-        // 1. Main Trustability Gauge Meter Card
+        // 1. Open Sky Satellite View (Skyplot)
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Rounded.Security,
-                                contentDescription = "Trustability Engine",
-                                tint = when (trustLevel) {
-                                    TrustLevel.HIGH_TRUST -> MaterialTheme.colorScheme.tertiary
-                                    TrustLevel.MEDIUM_TRUST -> MaterialTheme.colorScheme.secondary
-                                    TrustLevel.LOW_TRUST -> MaterialTheme.colorScheme.error
-                                },
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Trustability Overview",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        val badgeText = when (trustLevel) {
-                            TrustLevel.HIGH_TRUST -> "HIGH_TRUST"
-                            TrustLevel.MEDIUM_TRUST -> "MEDIUM_TRUST"
-                            TrustLevel.LOW_TRUST -> "THREAT_DETECTED"
-                        }
-                        val statusLevel = when (trustLevel) {
-                            TrustLevel.HIGH_TRUST -> StatusLevel.SECURE
-                            TrustLevel.MEDIUM_TRUST -> StatusLevel.WARNING
-                            TrustLevel.LOW_TRUST -> StatusLevel.ALERT
-                        }
-                        StatusBadge(
-                            text = badgeText,
-                            level = statusLevel,
-                            icon = if (trustLevel == TrustLevel.HIGH_TRUST) Icons.Rounded.CheckCircle else Icons.Rounded.Warning
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Gauge Meter
-                    TrustabilityGaugeMeter(
-                        score = trustReport.overallScore,
-                        trustLevel = trustLevel
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = trustLevel.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                }
-            }
+            com.example.myapplication.ui.components.SkyplotCard(
+                satellites = gnssStatus.satellites,
+                inavSvidSet = inavSvidSet
+            )
         }
 
         // 2. Active Threats Banner / Alert Cards
@@ -238,126 +178,149 @@ fun DashboardScreen(
             }
         }
 
-        // 3. Interactive Threat Simulation Scenario Switcher Controls
+        // 2. Position History & Error Statistics Module
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                )
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Rounded.FilterList,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Threat Simulation & Testing",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        StatusBadge(
-                            text = activeScenario.displayName.take(18),
-                            level = if (activeScenario == ThreatScenario.NOMINAL) StatusLevel.SECURE else StatusLevel.WARNING
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Select a GNSS attack vector scenario to test TRISAT trust score evaluation interactively:",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(ThreatScenario.entries) { scenario ->
-                            val isSelected = activeScenario == scenario
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { gnssViewModel.selectThreatScenario(scenario) },
-                                label = {
-                                    Text(
-                                        text = scenario.displayName,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                },
-                                leadingIcon = if (isSelected) {
-                                    {
-                                        Icon(
-                                            imageVector = Icons.Rounded.CheckCircle,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                } else null,
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = if (scenario == ThreatScenario.NOMINAL) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.errorContainer,
-                                    selectedLabelColor = if (scenario == ThreatScenario.NOMINAL) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        // 4. Authenticated Earth Intelligence Location & Position Card
-        item {
-            Text(
-                text = "Authenticated Earth Intelligence Metrics",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+            PositionHistoryCard(
+                positionHistory = positionHistory,
+                lastAGnssResetTime = lastAGnssResetTime,
+                onClearHistory = { gnssViewModel.clearPositionHistory() },
+                onRemoveAGnss = { gnssViewModel.resetAGnssData() }
             )
         }
+    }
+}
 
-        item {
-            EarthIntelligenceLocationCard(
-                location = locationData,
-                satelliteCount = gnssStatus.satelliteCount,
-                constellationCount = gnssStatus.constellationCounts.size,
-                trustLevel = trustLevel
-            )
-        }
+@Composable
+fun PositionHistoryCard(
+    positionHistory: List<LocationData>,
+    lastAGnssResetTime: Long,
+    onClearHistory: () -> Unit,
+    onRemoveAGnss: () -> Unit
+) {
+    val sampleCount = positionHistory.size
+    val horizontalRms = remember(positionHistory) {
+        if (positionHistory.isEmpty()) 1.2f
+        else kotlin.math.sqrt(positionHistory.map { (it.accuracy * it.accuracy).toDouble() }.average()).toFloat()
+    }
+    val verticalRms = remember(positionHistory) {
+        if (positionHistory.isEmpty()) 2.1f
+        else kotlin.math.sqrt(positionHistory.map {
+            val vert = if (it.verticalAccuracyMeters > 0) it.verticalAccuracyMeters else it.accuracy * 1.5f
+            (vert * vert).toDouble()
+        }.average()).toFloat()
+    }
+    val rms3d = remember(horizontalRms, verticalRms) {
+        kotlin.math.sqrt((horizontalRms * horizontalRms + verticalRms * verticalRms).toDouble()).toFloat()
+    }
 
-        // 5. Sub-Score Breakdown Grid / Cards (6 Core Metrics)
-        item {
-            Text(
-                text = "Sub-Score Diagnostics Breakdown",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-            )
-        }
+    val isRecentlyReset = System.currentTimeMillis() - lastAGnssResetTime < 5000L
 
-        item {
-            SubScoresOverviewGrid(subScores = trustReport.subScores)
-        }
-
-        // 6. Action & Recalibration Row
-        item {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = "Position History & Error Stats",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                        Text(
+                            text = "$sampleCount Position Samples Evaluated",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+
+                StatusBadge(
+                    text = if (isRecentlyReset) "A-GNSS PURGED" else "SAMPLES ACTIVE",
+                    level = if (isRecentlyReset) StatusLevel.WARNING else StatusLevel.SECURE
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                RawMetricTile(
+                    label = "Horizontal Error",
+                    value = "${String.format(Locale.US, "%.2f", horizontalRms)} m",
+                    subtitle = "2D RMS Error",
+                    icon = Icons.Rounded.Map,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                RawMetricTile(
+                    label = "Vertical Error",
+                    value = "${String.format(Locale.US, "%.2f", verticalRms)} m",
+                    subtitle = "1D Height Error",
+                    icon = Icons.Rounded.Navigation,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                RawMetricTile(
+                    label = "3D Position Error",
+                    value = "${String.format(Locale.US, "%.2f", rms3d)} m",
+                    subtitle = "RMS 3D Fix Error",
+                    icon = Icons.Rounded.Speed,
+                    modifier = Modifier.weight(1f)
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                RawMetricTile(
+                    label = "Sample Count",
+                    value = "$sampleCount",
+                    subtitle = "Epochs Logged",
+                    icon = Icons.Rounded.Timer,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Button(
-                    onClick = { gnssViewModel.recalibrate() },
+                    onClick = onRemoveAGnss,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
@@ -366,23 +329,23 @@ fun DashboardScreen(
                     Icon(
                         imageVector = Icons.Rounded.Refresh,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Recalibrate Engine")
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Remove A-GNSS", fontSize = 11.sp, maxLines = 1, softWrap = false)
                 }
 
                 OutlinedButton(
-                    onClick = onNavigateToSignal,
+                    onClick = onClearHistory,
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.BarChart,
+                        imageVector = Icons.Rounded.DeleteSweep,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Signal Monitor")
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Clear History", fontSize = 11.sp, maxLines = 1, softWrap = false)
                 }
             }
         }
@@ -429,307 +392,6 @@ fun DashboardThreatAlertCard(
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun EarthIntelligenceLocationCard(
-    location: LocationData,
-    satelliteCount: Int,
-    constellationCount: Int,
-    trustLevel: TrustLevel
-) {
-    val latStr = if (location.latitude >= 0) {
-        String.format(Locale.US, "%.6f° N", location.latitude)
-    } else {
-        String.format(Locale.US, "%.6f° S", -location.latitude)
-    }
-
-    val lngStr = if (location.longitude >= 0) {
-        String.format(Locale.US, "%.6f° E", location.longitude)
-    } else {
-        String.format(Locale.US, "%.6f° W", -location.longitude)
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Rounded.Map,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Authenticated Spatial Coordinates",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                StatusBadge(
-                    text = if (location.hasFix) "3D FIX LOCKED" else "NO FIX",
-                    level = if (trustLevel == TrustLevel.HIGH_TRUST) StatusLevel.SECURE else StatusLevel.WARNING
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Main Lat/Lng Display
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "LATITUDE",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = latStr,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "LONGITUDE",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = lngStr,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Details Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                MetricPill(
-                    label = "Altitude",
-                    value = "${String.format(Locale.US, "%.1f", location.altitude)} m",
-                    icon = Icons.Rounded.Navigation
-                )
-                MetricPill(
-                    label = "Accuracy",
-                    value = "±${String.format(Locale.US, "%.1f", location.accuracy)} m",
-                    icon = Icons.Rounded.LocationOn
-                )
-                MetricPill(
-                    label = "Satellites",
-                    value = "$satelliteCount Sats ($constellationCount Const)",
-                    icon = Icons.Rounded.SatelliteAlt
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun MetricPill(
-    label: String,
-    value: String,
-    icon: ImageVector
-) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Column {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun SubScoresOverviewGrid(subScores: TrustSubScores) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            SubScoreCardItem(
-                title = "Signal Power (C/N0)",
-                score = subScores.signalAuthenticityScore,
-                weight = "25%",
-                icon = Icons.Rounded.SignalCellular4Bar,
-                modifier = Modifier.weight(1f)
-            )
-            SubScoreCardItem(
-                title = "AGC / Anti-Jam",
-                score = subScores.agcInterferenceScore,
-                weight = "20%",
-                icon = Icons.Rounded.Speed,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            SubScoreCardItem(
-                title = "Constellations",
-                score = subScores.constellationDiversityScore,
-                weight = "15%",
-                icon = Icons.Rounded.SatelliteAlt,
-                modifier = Modifier.weight(1f)
-            )
-            SubScoreCardItem(
-                title = "Geometry / DOP",
-                score = subScores.geometryDopScore,
-                weight = "15%",
-                icon = Icons.Rounded.Shield,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            SubScoreCardItem(
-                title = "Clock Stability",
-                score = subScores.clockStabilityScore,
-                weight = "10%",
-                icon = Icons.Rounded.Timer,
-                modifier = Modifier.weight(1f)
-            )
-            SubScoreCardItem(
-                title = "OSNMA Auth",
-                score = subScores.osnmaAuthScore,
-                weight = "15%",
-                icon = Icons.Rounded.Key,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-fun SubScoreCardItem(
-    title: String,
-    score: Float,
-    weight: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier
-) {
-    val scoreClamped = score.coerceIn(0f, 100f)
-    val color = when {
-        scoreClamped >= 80f -> MaterialTheme.colorScheme.tertiary
-        scoreClamped >= 50f -> MaterialTheme.colorScheme.secondary
-        else -> MaterialTheme.colorScheme.error
-    }
-
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        )
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = color,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
-                    )
-                }
-                Text(
-                    text = weight,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 10.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${scoreClamped.toInt()}%",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = color
-                )
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            LinearProgressIndicator(
-                progress = { scoreClamped / 100f },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
-                color = color,
-                trackColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            )
         }
     }
 }

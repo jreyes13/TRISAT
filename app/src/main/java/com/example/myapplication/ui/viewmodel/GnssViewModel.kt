@@ -16,7 +16,11 @@ class GnssViewModel(application: Application) : AndroidViewModel(application) {
 
     val gnssStatusState: StateFlow<GnssStatusData> = gnssManager.gnssStatusData
     val gnssMeasurementsState: StateFlow<GnssMeasurementsData> = gnssManager.gnssMeasurementsData
+    val inavMessagesState: StateFlow<List<com.example.myapplication.data.gnss.model.GalileoInavMessage>> = gnssManager.inavMessages
+    val hasInavSupportState: StateFlow<Boolean> = gnssManager.hasInavSupport
     val locationState: StateFlow<LocationData> = gnssManager.locationData
+    val positionHistoryState: StateFlow<List<LocationData>> = gnssManager.positionHistory
+    val lastAGnssResetTimeState: StateFlow<Long> = gnssManager.lastAGnssResetTime
     val trustReportState: StateFlow<TrustReport> = gnssManager.trustReportData
     val activeScenarioState: StateFlow<ThreatScenario> = gnssManager.activeScenario
     val isMockMode: StateFlow<Boolean> = gnssManager.isMockMode
@@ -44,7 +48,15 @@ class GnssViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun recalibrate() {
-        gnssManager.reevaluateTrust()
+        gnssManager.resetAGnssData()
+    }
+
+    fun resetAGnssData() {
+        gnssManager.resetAGnssData()
+    }
+
+    fun clearPositionHistory() {
+        gnssManager.clearPositionHistory()
     }
 
     fun refreshPermissions() {

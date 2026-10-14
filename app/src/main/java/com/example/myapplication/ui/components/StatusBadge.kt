@@ -75,9 +75,12 @@ fun StatusBadge(
                 text = text,
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 12.sp
+                    fontSize = 11.sp
                 ),
-                color = contentColor
+                color = contentColor,
+                maxLines = 1,
+                softWrap = false,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
             )
         }
     }

@@ -60,6 +60,7 @@ import com.example.myapplication.data.gnss.model.TrustLevel
 import com.example.myapplication.data.gnss.model.TrustSubScores
 import com.example.myapplication.ui.components.StatusBadge
 import com.example.myapplication.ui.components.StatusLevel
+import com.example.myapplication.ui.components.TrustabilityGaugeMeter
 import com.example.myapplication.ui.theme.TRISATTheme
 import com.example.myapplication.ui.viewmodel.GnssViewModel
 import java.text.SimpleDateFormat
@@ -154,6 +155,13 @@ fun ThreatAnalysisScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
+                TrustabilityGaugeCard(
+                    score = trustReport.overallScore,
+                    trustLevel = trustLevel
+                )
+            }
+
+            item {
                 AntiSpoofingOverviewCard(
                     trustLevel = trustLevel,
                     threatCount = threats.size,
@@ -210,6 +218,78 @@ fun ThreatAnalysisScreen(
             items(trustReport.intelligenceLogs.reversed()) { log ->
                 IntelligenceLogCard(entry = log)
             }
+        }
+    }
+}
+
+@Composable
+fun TrustabilityGaugeCard(
+    score: Float,
+    trustLevel: TrustLevel
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Rounded.Shield,
+                        contentDescription = "Trustability Engine",
+                        tint = when (trustLevel) {
+                            TrustLevel.HIGH_TRUST -> MaterialTheme.colorScheme.tertiary
+                            TrustLevel.MEDIUM_TRUST -> MaterialTheme.colorScheme.secondary
+                            TrustLevel.LOW_TRUST -> MaterialTheme.colorScheme.error
+                        },
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Trustability Overview",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                StatusBadge(
+                    text = trustLevel.displayName,
+                    level = when (trustLevel) {
+                        TrustLevel.HIGH_TRUST -> StatusLevel.SECURE
+                        TrustLevel.MEDIUM_TRUST -> StatusLevel.WARNING
+                        TrustLevel.LOW_TRUST -> StatusLevel.ALERT
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TrustabilityGaugeMeter(
+                score = score,
+                trustLevel = trustLevel
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = trustLevel.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
         }
     }
 }

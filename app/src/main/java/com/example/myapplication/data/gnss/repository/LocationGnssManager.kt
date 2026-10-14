@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.GnssMeasurementsEvent
+import android.location.GnssNavigationMessage
 import android.location.GnssStatus
 import android.location.Location
 import android.location.LocationListener
@@ -13,9 +14,11 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
+import com.example.myapplication.data.gnss.engine.OsnmaVerificationEngine
 import com.example.myapplication.data.gnss.engine.TrustScoringEngine
 import com.example.myapplication.data.gnss.mock.MockGnssGenerator
 import com.example.myapplication.data.gnss.model.ConstellationType
+import com.example.myapplication.data.gnss.model.GalileoInavMessage
 import com.example.myapplication.data.gnss.model.GnssMeasurementDetail
 import com.example.myapplication.data.gnss.model.GnssMeasurementsData
 import com.example.myapplication.data.gnss.model.GnssStatusData
@@ -42,6 +45,7 @@ class LocationGnssManager(private val context: Context) {
 
     private val mockGnssGenerator = MockGnssGenerator()
     private val trustScoringEngine = TrustScoringEngine()
+    private val osnmaEngine = OsnmaVerificationEngine()
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     private val _gnssStatusData = MutableStateFlow(GnssStatusData())
@@ -50,8 +54,20 @@ class LocationGnssManager(private val context: Context) {
     private val _gnssMeasurementsData = MutableStateFlow(GnssMeasurementsData())
     val gnssMeasurementsData: StateFlow<GnssMeasurementsData> = _gnssMeasurementsData.asStateFlow()
 
+    private val _inavMessages = MutableStateFlow<List<GalileoInavMessage>>(emptyList())
+    val inavMessages: StateFlow<List<GalileoInavMessage>> = _inavMessages.asStateFlow()
+
+    private val _hasInavSupport = MutableStateFlow(false)
+    val hasInavSupport: StateFlow<Boolean> = _hasInavSupport.asStateFlow()
+
     private val _locationData = MutableStateFlow(LocationData())
     val locationData: StateFlow<LocationData> = _locationData.asStateFlow()
+
+    private val _positionHistory = MutableStateFlow<List<LocationData>>(emptyList())
+    val positionHistory: StateFlow<List<LocationData>> = _positionHistory.asStateFlow()
+
+    private val _lastAGnssResetTime = MutableStateFlow<Long>(0L)
+    val lastAGnssResetTime: StateFlow<Long> = _lastAGnssResetTime.asStateFlow()
 
     private val _trustReportData = MutableStateFlow(TrustReport())
     val trustReportData: StateFlow<TrustReport> = _trustReportData.asStateFlow()
@@ -243,9 +259,14 @@ class LocationGnssManager(private val context: Context) {
 
             if (!forceMockMode) {
                 _locationData.value = locData
+                _positionHistory.value = (_positionHistory.value + locData).takeLast(200)
                 reevaluateTrust(newLocation = locData)
             }
         }
+    }
+
+    fun clearPositionHistory() {
+        _positionHistory.value = emptyList()
     }
 
     fun setThreatScenario(scenario: ThreatScenario) {
@@ -259,9 +280,13 @@ class LocationGnssManager(private val context: Context) {
         newMeasurements: GnssMeasurementsData = _gnssMeasurementsData.value,
         newLocation: LocationData = _locationData.value
     ) {
+        val realOsnmaStatus = if (_hasInavSupport.value) {
+            osnmaEngine.verifyOsnma(_inavMessages.value)
+        } else null
+
         val osnmaOverride = if (_activeScenario.value == ThreatScenario.OSNMA_FAILURE) {
             OsnmaStatus.FAILED
-        } else null
+        } else realOsnmaStatus
 
         val report = trustScoringEngine.evaluateTrust(
             gnssStatus = newStatus,
@@ -270,6 +295,39 @@ class LocationGnssManager(private val context: Context) {
             osnmaOverride = osnmaOverride
         )
         _trustReportData.value = report
+    }
+
+    @SuppressLint("MissingPermission")
+    fun resetAGnssData() {
+        _lastAGnssResetTime.value = System.currentTimeMillis()
+        try {
+            val bundle = android.os.Bundle()
+            bundle.putBoolean("ephemeris", true)
+            bundle.putBoolean("almanac", true)
+            bundle.putBoolean("position", true)
+            bundle.putBoolean("time", true)
+            bundle.putBoolean("iono", true)
+            bundle.putBoolean("utc", true)
+            bundle.putBoolean("health", true)
+            bundle.putBoolean("svdir", true)
+            bundle.putBoolean("svsteer", true)
+            bundle.putBoolean("sadata", true)
+            bundle.putBoolean("rti", true)
+
+            locationManager.sendExtraCommand(
+                LocationManager.GPS_PROVIDER,
+                "delete_a_gps_data",
+                bundle
+            )
+        } catch (_: Exception) {
+            // Ignore if extra commands not supported on platform
+        }
+
+        _gnssStatusData.value = GnssStatusData()
+        _gnssMeasurementsData.value = GnssMeasurementsData()
+        _inavMessages.value = emptyList()
+        _positionHistory.value = emptyList()
+        reevaluateTrust()
     }
 
     fun hasLocationPermission(): Boolean {
@@ -339,16 +397,42 @@ class LocationGnssManager(private val context: Context) {
         }
     }
 
+    private val gnssNavigationCallback = object : GnssNavigationMessage.Callback() {
+        override fun onGnssNavigationMessageReceived(event: GnssNavigationMessage) {
+            lastHardwareEventTime = System.currentTimeMillis()
+            if (event.type == GnssNavigationMessage.TYPE_GAL_I) {
+                _hasInavSupport.value = true
+                val hexString = event.data.joinToString("") { "%02X".format(it) }
+                val inavMsg = GalileoInavMessage(
+                    svid = event.svid,
+                    type = event.type,
+                    typeName = "GAL_I",
+                    submessageId = event.submessageId,
+                    messageId = event.messageId,
+                    status = event.status,
+                    rawBytes = event.data,
+                    hexData = hexString
+                )
+                val updatedList = (_inavMessages.value + inavMsg).takeLast(50)
+                _inavMessages.value = updatedList
+                reevaluateTrust()
+            }
+        }
+    }
+
     @SuppressLint("MissingPermission")
     private fun registerHardwareCallbacks() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             locationManager.registerGnssStatusCallback(mainExecutor, gnssStatusCallback)
             locationManager.registerGnssMeasurementsCallback(mainExecutor, gnssMeasurementsCallback)
+            locationManager.registerGnssNavigationMessageCallback(mainExecutor, gnssNavigationCallback)
         } else {
             @Suppress("DEPRECATION")
             locationManager.registerGnssStatusCallback(gnssStatusCallback, handler)
             @Suppress("DEPRECATION")
             locationManager.registerGnssMeasurementsCallback(gnssMeasurementsCallback, handler)
+            @Suppress("DEPRECATION")
+            locationManager.registerGnssNavigationMessageCallback(gnssNavigationCallback, handler)
         }
 
         if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -376,6 +460,7 @@ class LocationGnssManager(private val context: Context) {
         try {
             locationManager.unregisterGnssStatusCallback(gnssStatusCallback)
             locationManager.unregisterGnssMeasurementsCallback(gnssMeasurementsCallback)
+            locationManager.unregisterGnssNavigationMessageCallback(gnssNavigationCallback)
             locationManager.removeUpdates(locationListener)
         } catch (_: Exception) {
             // Ignore if already unregistered
