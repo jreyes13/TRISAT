@@ -19,13 +19,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Navigation
+import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Public
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.SatelliteAlt
 import androidx.compose.material.icons.rounded.SignalCellular4Bar
@@ -204,20 +213,7 @@ fun SignalMonitorScreen(
             }
 
             item {
-                EarthIntelligenceLocationCard(
-                    location = locationData,
-                    satelliteCount = gnssStatus.satelliteCount,
-                    constellationCount = gnssStatus.constellationCounts.size,
-                    trustLevel = trustReport.trustLevel
-                )
-            }
-
-            item {
-                Cn0BandDistributionCard(satellites = satellites)
-            }
-
-            item {
-                RawClockAndAgcCard(gnssMeasurements = gnssMeasurements)
+                MapAndLocationActionCard(location = locationData)
             }
 
             item {
@@ -511,6 +507,133 @@ fun GalileoOnlyConvergenceCard(
                         fontWeight = FontWeight.Bold,
                         color = com.example.myapplication.ui.components.GalileoColor
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MapAndLocationActionCard(
+    location: com.example.myapplication.data.gnss.model.LocationData
+) {
+    val context = LocalContext.current
+    var isCopied by remember { mutableStateOf(false) }
+
+    val latStr = String.format(Locale.US, "%.6f", location.latitude)
+    val lngStr = String.format(Locale.US, "%.6f", location.longitude)
+    val formattedCoords = "$latStr, $lngStr"
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Rounded.Map,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = "Authenticated Position & Navigator",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Export coordinates to external navigation tools",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                StatusBadge(
+                    text = if (isCopied) "COPIED!" else "GEO INTEL",
+                    level = if (isCopied) StatusLevel.SECURE else StatusLevel.INFO
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Current Position Coordinates:",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "$formattedCoords (Alt: ${String.format(Locale.US, "%.1f", location.altitude)}m)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clip = ClipData.newPlainText("TRISAT Coordinates", formattedCoords)
+                        clipboard.setPrimaryClip(clip)
+                        isCopied = true
+                        Toast.makeText(context, "Coordinates copied to clipboard!", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ContentCopy,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Copy Coordinates", fontSize = 11.sp, maxLines = 1, softWrap = false)
+                }
+
+                androidx.compose.material3.OutlinedButton(
+                    onClick = {
+                        try {
+                            val uri = Uri.parse("geo:${location.latitude},${location.longitude}?q=${location.latitude},${location.longitude}(TRISAT+Fix)")
+                            val intent = Intent(Intent.ACTION_VIEW, uri)
+                            context.startActivity(intent)
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "No navigation app found", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.OpenInNew,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Google Maps", fontSize = 11.sp, maxLines = 1, softWrap = false)
                 }
             }
         }

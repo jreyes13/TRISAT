@@ -75,6 +75,9 @@ fun ThreatAnalysisScreen(
 ) {
     val trustReport by gnssViewModel.trustReportState.collectAsState()
     val activeScenario by gnssViewModel.activeScenarioState.collectAsState()
+    val gnssStatus by gnssViewModel.gnssStatusState.collectAsState()
+    val locationData by gnssViewModel.locationState.collectAsState()
+    val gnssMeasurements by gnssViewModel.gnssMeasurementsState.collectAsState()
 
     val trustLevel = trustReport.trustLevel
     val subScores = trustReport.subScores
@@ -168,6 +171,23 @@ fun ThreatAnalysisScreen(
                     activeScenario = activeScenario,
                     onSelectScenario = { scenario -> gnssViewModel.selectThreatScenario(scenario) }
                 )
+            }
+
+            item {
+                com.example.myapplication.ui.screens.EarthIntelligenceLocationCard(
+                    location = locationData,
+                    satelliteCount = gnssStatus.satelliteCount,
+                    constellationCount = gnssStatus.constellationCounts.size,
+                    trustLevel = trustLevel
+                )
+            }
+
+            item {
+                com.example.myapplication.ui.screens.Cn0BandDistributionCard(satellites = gnssStatus.satellites)
+            }
+
+            item {
+                com.example.myapplication.ui.screens.RawClockAndAgcCard(gnssMeasurements = gnssMeasurements)
             }
 
             item {

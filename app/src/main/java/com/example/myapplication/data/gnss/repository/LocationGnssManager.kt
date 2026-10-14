@@ -382,6 +382,9 @@ class LocationGnssManager(private val context: Context) {
             startMockStream()
         } else {
             stopMockStream()
+            _isMockMode.value = false
+            _gnssStatusData.value = GnssStatusData()
+            _gnssMeasurementsData.value = GnssMeasurementsData()
             if (_isMonitoringActive.value) {
                 if (hasLocationPermission()) {
                     try {
@@ -513,5 +516,6 @@ class LocationGnssManager(private val context: Context) {
     private fun stopMockStream() {
         mockJob?.cancel()
         mockJob = null
+        _isMockMode.value = false
     }
 }
