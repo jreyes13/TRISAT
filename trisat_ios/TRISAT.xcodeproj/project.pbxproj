@@ -259,7 +259,9 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TRISAT needs GNSS data.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers and stream raw satellite telemetry.";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TRISAT requires location access to stream satellite telemetry and calculate position fixes.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -300,7 +302,9 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TRISAT needs GNSS data.";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers and stream raw satellite telemetry.";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TRISAT requires location access to stream satellite telemetry and calculate position fixes.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

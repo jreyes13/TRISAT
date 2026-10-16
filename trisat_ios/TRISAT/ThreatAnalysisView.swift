@@ -4,56 +4,54 @@ struct ThreatAnalysisView: View {
     @ObservedObject var viewModel: GnssViewModel
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 16) {
-                    HStack {
-                        VStack(alignment: .leading) {
-                            Text("Threat Analysis")
-                                .font(.title2)
-                                .bold()
-                            Text("Interference, Spoofing & OSNMA Verification")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
+        ScrollView {
+            VStack(spacing: 16) {
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("Threat Analysis")
+                            .font(.title2)
+                            .bold()
+                        Text("Interference, Spoofing & OSNMA Verification")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                    .padding(.horizontal)
-                    
-                    // Threat Card 1: OS-NMA Authentication
-                    ThreatMetricCard(
-                        title: "OS-NMA Navigation Auth",
-                        status: "AUTHENTICATED",
-                        statusColor: .green,
-                        icon: "lock.shield.fill",
-                        details: "HKROOT Certificate Verified via Public Key. TESLA Key Chain Valid."
-                    )
-                    
-                    // Threat Card 2: Jamming Detection
-                    ThreatMetricCard(
-                        title: "Jamming / Interference",
-                        status: "NO INTERFERENCE",
-                        statusColor: .green,
-                        icon: "wifi.exclamationmark",
-                        details: "C/N0 levels nominal across E1/E5 bands. AGC levels stable."
-                    )
-                    
-                    // Threat Card 3: Spoofing / Meaconing Analysis
-                    ThreatMetricCard(
-                        title: "Spoofing / Meaconing",
-                        status: "LOW RISK",
-                        statusColor: .green,
-                        icon: "shield.slash.fill",
-                        details: "Clock drift and Pseudorange consistency checks within normal parameters."
-                    )
+                    Spacer()
                 }
-                .padding(.vertical)
+                .padding([.horizontal, .top])
+                
+                // Threat Card 1: OS-NMA Authentication
+                ThreatMetricCard(
+                    title: "OS-NMA Navigation Auth",
+                    status: "AUTHENTICATED",
+                    statusColor: .green,
+                    icon: "lock.shield.fill",
+                    details: "HKROOT Certificate Verified via Public Key. TESLA Key Chain Valid."
+                )
+                
+                // Threat Card 2: Jamming Detection
+                ThreatMetricCard(
+                    title: "Jamming / Interference",
+                    status: "NO INTERFERENCE",
+                    statusColor: .green,
+                    icon: "wifi.exclamationmark",
+                    details: "C/N0 levels nominal across E1/E5 bands. AGC levels stable."
+                )
+                
+                // Threat Card 3: Spoofing / Meaconing Analysis
+                ThreatMetricCard(
+                    title: "Spoofing / Meaconing",
+                    status: "LOW RISK",
+                    statusColor: .green,
+                    icon: "shield.slash.fill",
+                    details: "Clock drift and Pseudorange consistency checks within normal parameters."
+                )
             }
-            .navigationBarHidden(true)
+            .padding(.bottom)
         }
     }
 }
 
+// Vista para renderizar cada tarjeta de métrica de amenaza
 struct ThreatMetricCard: View {
     let title: String
     let status: String
