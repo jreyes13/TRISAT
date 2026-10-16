@@ -129,7 +129,8 @@ fun SignalMonitorScreen(
                         gnssStatus = gnssStatus,
                         filteredSatCount = filteredSatellites.size,
                         estimatedHdop = trustReport.estimatedHdop,
-                        isMockMode = isMockMode
+                        isMockMode = isMockMode,
+                        onToggleMockMode = { gnssViewModel.toggleMockMode(it) }
                     )
                 }
 
@@ -192,7 +193,8 @@ fun SignalMonitorScreen(
                     gnssStatus = gnssStatus,
                     filteredSatCount = filteredSatellites.size,
                     estimatedHdop = trustReport.estimatedHdop,
-                    isMockMode = isMockMode
+                    isMockMode = isMockMode,
+                    onToggleMockMode = { gnssViewModel.toggleMockMode(it) }
                 )
             }
 
@@ -253,7 +255,8 @@ fun HeaderStatsCard(
     gnssStatus: GnssStatusData,
     filteredSatCount: Int,
     estimatedHdop: Float,
-    isMockMode: Boolean
+    isMockMode: Boolean,
+    onToggleMockMode: (Boolean) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -293,7 +296,7 @@ fun HeaderStatsCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -305,11 +308,16 @@ fun HeaderStatsCard(
                     level = if (isMockMode) StatusLevel.WARNING else StatusLevel.SECURE
                 )
 
-                Text(
-                    text = if (isMockMode) "Simulated Telemetry" else "Live Hardware Sensor",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                OutlinedButton(
+                    onClick = { onToggleMockMode(!isMockMode) },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = if (isMockMode) "Use Real Hardware" else "Use Simulation",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

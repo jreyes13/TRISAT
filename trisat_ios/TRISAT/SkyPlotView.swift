@@ -1,15 +1,42 @@
 import SwiftUI
 
-/// Representa un satélite en la bóveda celeste
-struct SatelliteInfo: Identifiable {
-    let id: Int           // PRN / SVID (ej. 1 para E01)
-    let elevation: Double // Elevación en grados (0° en el horizonte, 90° en el cénit)
-    let azimuth: Double   // Acimut en grados (0° a 360°, relativo al Norte)
-    let cno: Int          // Relación señal-ruido C/N0 (en dB-Hz)
-    let isGalileo: Bool   // Flag para diferenciar satélites Galileo
+enum ConstellationKind {
+    case galileo
+    case gps
+    case glonass
+    case beidou
+
+    var color: Color {
+        switch self {
+        case .galileo: return Color(red: 0.0, green: 0.9, blue: 1.0) // Cyan
+        case .gps: return Color(red: 1.0, green: 0.7, blue: 0.0)     // Amber
+        case .glonass: return Color(red: 1.0, green: 0.2, blue: 0.3) // Red
+        case .beidou: return Color(red: 0.2, green: 0.8, blue: 0.2)  // Green
+        }
+    }
 }
 
-/// Vista personalizada que renderiza la bóveda celeste (Skyplot polar)
+/// Representa un satélite en la bóveda celeste
+struct SatelliteInfo: Identifiable {
+    let id: Int           // SVID
+    let elevation: Double // Elevación en grados (0° - 90°)
+    let azimuth: Double   // Acimut en grados (0° - 360°)
+    let cno: Int          // Relación C/N0 (dB-Hz)
+    let constellation: ConstellationKind
+    let usedInFix: Bool
+    let hasInav: Bool
+
+    var formattedLabel: String {
+        switch constellation {
+        case .galileo: return "E\(String(format: "%02d", id))"
+        case .gps: return "G\(String(format: "%02d", id))"
+        case .glonass: return "R\(String(format: "%02d", id))"
+        case .beidou: return "B\(String(format: "%02d", id))"
+        }
+    }
+}
+
+/// Vista de Bóveda Celeste Polar para iOS (SwiftUI)
 struct SkyPlotView: View {
     let satellites: [SatelliteInfo]
     
@@ -19,9 +46,9 @@ struct SkyPlotView: View {
             let radius = min(geometry.size.width, geometry.size.height) / 2 - 20
             
             ZStack {
-                // 1. Círculos concéntricos de elevación (0°, 30°, 60°)
+                // 1. Concentric elevation rings
                 Circle()
-                    .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    .stroke(Color.gray.opacity(0.3), lineWidth: 1.5)
                     .frame(width: radius * 2, height: radius * 2)
                 
                 Circle()
@@ -32,7 +59,7 @@ struct SkyPlotView: View {
                     .stroke(Color.gray.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [4]))
                     .frame(width: radius * 2/3, height: radius * 2/3)
                 
-                // 2. Líneas de los puntos cardinales (N-S, E-O)
+                // 2. Cardinal Crosshairs
                 Path { path in
                     path.move(to: CGPoint(x: center.x, y: center.y - radius))
                     path.addLine(to: CGPoint(x: center.x, y: center.y + radius))
@@ -41,25 +68,47 @@ struct SkyPlotView: View {
                 }
                 .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                 
-                // Labels de Puntos Cardinales
+                // Cardinal Labels
                 Text("N").font(.caption2).bold().position(x: center.x, y: center.y - radius - 12)
                 Text("S").font(.caption2).bold().position(x: center.x, y: center.y + radius + 12)
                 Text("E").font(.caption2).bold().position(x: center.x + radius + 12, y: center.y)
                 Text("W").font(.caption2).bold().position(x: center.x - radius - 12, y: center.y)
                 
-                // 3. Dibujar cada satélite en su posición polar
+                // 3. Satellites
                 ForEach(satellites) { sat in
                     let point = pointForSatellite(sat, center: center, radius: radius)
                     
                     ZStack {
-                        Circle()
-                            .fill(sat.isGalileo ? Color.blue : Color.gray)
-                            .frame(width: 22, height: 22)
-                            .shadow(radius: 2)
+                        if sat.usedInFix {
+                            // Square symbol
+                            Rectangle()
+                                .stroke(sat.constellation.color, lineWidth: 2)
+                                .background(sat.constellation.color.opacity(0.25))
+                                .frame(width: 20, height: 20)
+
+                            if sat.hasInav {
+                                Rectangle()
+                                    .fill(sat.constellation.color)
+                                    .frame(width: 8, height: 8)
+                            }
+                        } else {
+                            // Circle symbol
+                            Circle()
+                                .stroke(sat.constellation.color, lineWidth: 2)
+                                .background(sat.constellation.color.opacity(0.25))
+                                .frame(width: 20, height: 20)
+
+                            if sat.hasInav {
+                                Circle()
+                                    .fill(sat.constellation.color)
+                                    .frame(width: 8, height: 8)
+                            }
+                        }
                         
-                        Text("E\(String(format: "%02d", sat.id))")
+                        Text(sat.formattedLabel)
                             .font(.system(size: 8, weight: .bold, design: .monospaced))
                             .foregroundColor(.white)
+                            .offset(y: 16)
                     }
                     .position(point)
                 }
@@ -68,17 +117,11 @@ struct SkyPlotView: View {
         .frame(height: 220)
     }
     
-    /// Convierte la elevación y acimut a coordenadas cartesianas (X, Y)
     private func pointForSatellite(_ sat: SatelliteInfo, center: CGPoint, radius: CGFloat) -> CGPoint {
-        // La elevación determina el radio: 90° (cénit) es el centro, 0° (horizonte) es el borde exterior
         let r = radius * CGFloat(90.0 - sat.elevation) / 90.0
-        
-        // El acimut se mide en sentido horario desde el Norte (0°)
         let rad = (sat.azimuth - 90.0) * .pi / 180.0
-        
         let x = center.x + r * cos(rad)
         let y = center.y + r * sin(rad)
-        
         return CGPoint(x: x, y: y)
     }
 }
