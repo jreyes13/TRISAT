@@ -13,25 +13,29 @@ struct MainTabView: View {
             // Tab 1: Dashboard
             DashboardView(viewModel: viewModel)
                 .tabItem {
-                    Label("Dashboard", systemImage: "gauge.with.needle.fill")
+                    Image(systemName: "gauge.with.needle.fill")
+                    Text("Dashboard")
                 }
             
             // Tab 2: Signal Processing
             SignalProcessingView(viewModel: viewModel)
                 .tabItem {
-                    Label("Signal Proc.", systemImage: "waveform.path.ecg")
+                    Image(systemName: "waveform.path.ecg")
+                    Text("Signal Proc.")
                 }
             
             // Tab 3: Threat Analysis
             ThreatAnalysisView(viewModel: viewModel)
                 .tabItem {
-                    Label("Threat Analysis", systemImage: "shield.exclamationmark.fill")
+                    Image(systemName: "exclamationmark.shield.fill")
+                    Text("Threat Analysis")
                 }
             
             // Tab 4: Settings
             SettingsView(bluetoothManager: bluetoothManager)
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
+                    Image(systemName: "gearshape.fill")
+                    Text("Settings")
                 }
         }
         .accentColor(.blue)

@@ -1,25 +1,34 @@
-# TRISAT - User Manual & Technical Reference Guide
+# TRISAT - Multiplatform User Manual & Technical Reference Guide
 
-Welcome to the **TRISAT (Authenticated Earth Intelligence)** application manual. This document explains the architecture, features, GNSS testing workflows, and OSNMA verification tools provided by TRISAT.
+Welcome to the **TRISAT (Authenticated Earth Intelligence)** multiplatform application manual. This document explains the repository architecture, features, GNSS testing workflows, and OSNMA verification tools provided by TRISAT across Android and iOS ecosystems.
 
 ---
 
-## 1. Application Overview
+## 1. Application Overview & Repository Structure
 
-TRISAT is a native Android application designed for **Galileo OSNMA (Open Service Navigation Message Authentication) testing**, multi-constellation GNSS signal analysis, anti-spoofing diagnostic evaluation, and spatial coordinate verification.
+TRISAT is a **multiplatform GNSS intelligence solution** designed for **Galileo OSNMA (Open Service Navigation Message Authentication) testing**, multi-constellation GNSS signal analysis, anti-spoofing diagnostic evaluation, and spatial coordinate verification.
 
-### Core Capabilities:
+### Repository Layout:
+* 📂 **`app/`**: Native Android Application (Kotlin, Jetpack Compose, Android GNSS HAL Location APIs).
+* 📂 **`trisat_ios/`**: Native iOS Application (Swift, SwiftUI, CoreLocation, Xcode Project).
+* 📄 **`README.md`**: Project overview, feature summary, and build instructions.
+* 📄 **`USER_MANUAL.md`**: Complete user manual and technical reference guide.
+
+---
+
+## 2. Core Capabilities
+
 * **Real-time Open Sky View (Skyplot):** Polar visualization of tracked satellites categorized by constellation (Galileo Primary, GPS, GLONASS, BeiDou) with custom symbols for tracking ($\bigcirc$), position fix ($\square$), and Galileo I/NAV reception ($\bigodot/\boxdot$).
 * **Galileo I/NAV & OSNMA Receiver Test:** Direct extraction and inspection of raw Galileo `TYPE_GAL_I` navigation frames.
 * **Galileo-Only Authenticated Position Solution:** Calculates position convergence time and 3D fix accuracy exclusively from authenticated Galileo satellites.
 * **Multi-Constellation Solution Matrix:** Side-by-side comparison of position, 2D/1D error, and sat count for Galileo OS-NMA, Galileo-Only, GPS-Only, GLONASS-Only, and BeiDou-Only.
 * **Position History & Error Statistics:** Tracks RMS horizontal (2D), vertical (1D), and 3D position errors across logged epochs.
-* **Cold-Start A-GNSS Purge:** Issues native Android HAL commands to flush cached A-GPS/A-GNSS ephemeris and almanac data.
-* **Geospatial Exporter:** Copy coordinates directly to system clipboard or open position fixes in Google Maps / external navigators.
+* **Cold-Start A-GNSS Purge:** Issues native HAL commands to flush cached A-GPS/A-GNSS ephemeris and almanac data.
+* **Geospatial Exporter:** Copy coordinates directly to system clipboard or open position fixes in Google Maps / Apple Maps.
 
 ---
 
-## 2. Screen & Feature Guide
+## 3. Screen & Feature Guide
 
 ### 📱 Dashboard Tab
 1. **Open Sky Satellite View (Skyplot):**
@@ -49,8 +58,8 @@ TRISAT is a native Android application designed for **Galileo OSNMA (Open Servic
      * *GLONASS Only*
      * *BeiDou Only*
 5. **Authenticated Position & Navigator:**
-   * `Copy Coordinates`: Copies current latitude/longitude to Android Clipboard.
-   * `Google Maps`: Opens current fix in Google Maps or external navigation apps.
+   * `Copy Coordinates`: Copies current latitude/longitude to Clipboard.
+   * `Google Maps`: Opens current fix in Google Maps / Apple Maps or external navigation apps.
 6. **Tracked Satellite Channels List:**
    * Detailed breakdown per satellite: SVID, Constellation, $C/N_0$ progress bar, Elevation/Azimuth, and Carrier Frequency.
 
@@ -81,19 +90,22 @@ TRISAT is a native Android application designed for **Galileo OSNMA (Open Servic
 3. **Emulator & Testing Controls:**
    * Toggle `Force Mock GNSS Stream` (Simulation Mode).
 4. **System Information & Build Details:**
-   * Displays dynamic APK Build Version (`v1.1.0`), Code (`2`), and Compilation Timestamp.
+   * Displays dynamic Build Version (`v1.1.0`), Code (`2`), and Compilation Timestamp.
 
 ---
 
-## 3. How to Test OSNMA on a Physical Phone
+## 4. How to Test OSNMA on a Physical Device
 
-1. Install the APK on an Android device:
+### Android Device:
+1. Build and install the APK:
    ```bash
    ./gradlew assembleDebug
    ```
-2. Open TRISAT outdoors under clear open sky.
-3. Grant location permissions when prompted.
-4. Go to **Signal Monitor** $\rightarrow$ **Galileo I/NAV & OSNMA Receiver Test**.
-5. **Verification Result:**
-   * **Green Badge (`I/NAV CAPABLE (OSNMA OK)`)**: Your phone's GNSS chipset and Android driver deliver raw Galileo `TYPE_GAL_I` navigation frames. The device is fully capable of Galileo OSNMA authentication!
+2. Open TRISAT outdoors under clear open sky and grant location permissions.
+3. Go to **Signal Monitor** $\rightarrow$ **Galileo I/NAV & OSNMA Receiver Test**.
+4. **Result:**
+   * **Green Badge (`I/NAV CAPABLE (OSNMA OK)`)**: Your device delivers raw Galileo `TYPE_GAL_I` navigation frames. The device is fully capable of Galileo OSNMA authentication!
    * **Orange Badge (`NO I/NAV DETECTED`)**: The phone's hardware driver does not expose raw I/NAV pages required for OSNMA.
+
+### iOS Device:
+Open `trisat_ios/TRISAT.xcodeproj` in Xcode, connect your iPhone, and run the app to test CoreLocation & Galileo satellite tracking.
