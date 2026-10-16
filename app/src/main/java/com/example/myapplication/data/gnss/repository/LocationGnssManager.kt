@@ -147,7 +147,7 @@ class LocationGnssManager(private val context: Context) {
                 )
             }
 
-            if (!forceMockMode && satList.isNotEmpty()) {
+            if (!forceMockMode) {
                 stopMockStream()
                 _isMockMode.value = false
                 val newStatus = GnssStatusData(
@@ -323,10 +323,33 @@ class LocationGnssManager(private val context: Context) {
             // Ignore if extra commands not supported on platform
         }
 
-        _gnssStatusData.value = GnssStatusData()
-        _gnssMeasurementsData.value = GnssMeasurementsData()
+        // Clear location fix and satellite telemetry
+        _locationData.value = LocationData(hasFix = false)
+        _gnssStatusData.value = GnssStatusData(isMock = false)
+        _gnssMeasurementsData.value = GnssMeasurementsData(isMock = false)
         _inavMessages.value = emptyList()
         _positionHistory.value = emptyList()
+
+        // Temporarily pause location updates to force HAL cold-start re-acquisition
+        try {
+            locationManager.removeUpdates(locationListener)
+            handler.postDelayed({
+                if (_isMonitoringActive.value && !forceMockMode) {
+                    try {
+                        if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                            locationManager.requestLocationUpdates(
+                                LocationManager.GPS_PROVIDER,
+                                1000L,
+                                0f,
+                                locationListener,
+                                Looper.getMainLooper()
+                            )
+                        }
+                    } catch (_: Exception) {}
+                }
+            }, 2500L)
+        } catch (_: Exception) {}
+
         reevaluateTrust()
     }
 

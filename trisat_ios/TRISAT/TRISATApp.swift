@@ -1,9 +1,10 @@
 import SwiftUI
 
-@main struct MyApp: App {
+@main
+struct TRISATApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainTabView()
         }
     }
 }
