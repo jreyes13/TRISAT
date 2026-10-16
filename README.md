@@ -2,15 +2,15 @@
 
 TRISAT is an advanced **multiplatform GNSS intelligence application** (Android & iOS) designed for **Galileo OSNMA (Open Service Navigation Message Authentication) testing**, multi-constellation GNSS signal analysis, anti-spoofing diagnostic evaluation, and spatial coordinate verification.
 
-![TRISAT Banner](app/src/main/res/drawable/trisat_logo.png)
+![TRISAT Banner](trisat_android/src/main/res/drawable/trisat_logo.png)
 
 ## 🌐 Multiplatform Architecture
 
 TRISAT is built as a cross-ecosystem solution with native implementations for both major mobile operating systems:
 
-| Platform | Location in Repository | Tech Stack | Status |
+| Platform | Directory in Repository | Tech Stack | Status |
 | :--- | :--- | :--- | :--- |
-| **Android** | `app/` | Kotlin, Jetpack Compose, Android GNSS HAL APIs | Active |
+| **Android** | `trisat_android/` | Kotlin, Jetpack Compose, Android GNSS HAL APIs | Active |
 | **iOS** | `trisat_ios/` | Swift, SwiftUI, CoreLocation, Xcode Project | Active |
 
 ---
@@ -35,12 +35,12 @@ For complete usage instructions, technical architecture, and OSNMA testing workf
 
 ## 🛠️ How to Build
 
-### Android App
+### Android App (`trisat_android`)
 ```bash
 # Assemble Debug APK
 ./gradlew assembleDebug
 ```
-Output APK: `app/build/outputs/apk/debug/app-debug.apk`
+Output APK: `trisat_android/build/outputs/apk/debug/trisat_android-debug.apk`
 
-### iOS App
+### iOS App (`trisat_ios`)
 Open `trisat_ios/TRISAT.xcodeproj` in **Xcode** and run on your iOS device or simulator.

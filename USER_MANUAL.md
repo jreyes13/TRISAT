@@ -9,7 +9,7 @@ Welcome to the **TRISAT (Authenticated Earth Intelligence)** multiplatform appli
 TRISAT is a **multiplatform GNSS intelligence solution** designed for **Galileo OSNMA (Open Service Navigation Message Authentication) testing**, multi-constellation GNSS signal analysis, anti-spoofing diagnostic evaluation, and spatial coordinate verification.
 
 ### Repository Layout:
-* 📂 **`app/`**: Native Android Application (Kotlin, Jetpack Compose, Android GNSS HAL Location APIs).
+* 📂 **`trisat_android/`**: Native Android Application (Kotlin, Jetpack Compose, Android GNSS HAL Location APIs).
 * 📂 **`trisat_ios/`**: Native iOS Application (Swift, SwiftUI, CoreLocation, Xcode Project).
 * 📄 **`README.md`**: Project overview, feature summary, and build instructions.
 * 📄 **`USER_MANUAL.md`**: Complete user manual and technical reference guide.
@@ -96,7 +96,7 @@ TRISAT is a **multiplatform GNSS intelligence solution** designed for **Galileo 
 
 ## 4. How to Test OSNMA on a Physical Device
 
-### Android Device:
+### Android Device (`trisat_android`):
 1. Build and install the APK:
    ```bash
    ./gradlew assembleDebug
@@ -107,5 +107,5 @@ TRISAT is a **multiplatform GNSS intelligence solution** designed for **Galileo 
    * **Green Badge (`I/NAV CAPABLE (OSNMA OK)`)**: Your device delivers raw Galileo `TYPE_GAL_I` navigation frames. The device is fully capable of Galileo OSNMA authentication!
    * **Orange Badge (`NO I/NAV DETECTED`)**: The phone's hardware driver does not expose raw I/NAV pages required for OSNMA.
 
-### iOS Device:
+### iOS Device (`trisat_ios`):
 Open `trisat_ios/TRISAT.xcodeproj` in Xcode, connect your iPhone, and run the app to test CoreLocation & Galileo satellite tracking.

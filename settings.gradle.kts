@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "My Application"
-include(":app")
+rootProject.name = "TRISAT"
+include(":trisat_android")
