@@ -18,7 +18,7 @@ struct MainTabView: View {
                     Text("Dashboard")
                 }
                 .tag(0)
-            
+
             // Tab 2: Signal Processing
             SignalProcessingView(viewModel: viewModel)
                 .tabItem {
@@ -26,7 +26,7 @@ struct MainTabView: View {
                     Text("Signal Proc.")
                 }
                 .tag(1)
-            
+
             // Tab 3: Threat Analysis
             ThreatAnalysisView(viewModel: viewModel)
                 .tabItem {
@@ -34,15 +34,15 @@ struct MainTabView: View {
                     Text("Threat Analysis")
                 }
                 .tag(2)
-            
-            // Tab 4: Settings
-            SettingsView(bluetoothManager: bluetoothManager)
+
+            // Tab 4: Settings & Logs
+            SettingsView(bluetoothManager: bluetoothManager, viewModel: viewModel)
                 .tabItem {
                     Image(systemName: "gearshape.fill")
                     Text("Settings")
                 }
                 .tag(3)
         }
-        .accentColor(.blue)
+        .accentColor(.cyan)
     }
 }

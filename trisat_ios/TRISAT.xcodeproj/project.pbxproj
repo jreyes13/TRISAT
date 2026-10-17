@@ -6,17 +6,50 @@
 	objectVersion = 90;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		100000000000000000000001 /* BluetoothManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000001 /* BluetoothManager.swift */; };
+		100000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000002 /* ContentView.swift */; };
+		100000000000000000000003 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000003 /* DashboardView.swift */; };
+		100000000000000000000004 /* GalileoINavMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000004 /* GalileoINavMessage.swift */; };
+		100000000000000000000005 /* GnssRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000005 /* GnssRepository.swift */; };
+		100000000000000000000006 /* GnssViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000006 /* GnssViewModel.swift */; };
+		100000000000000000000007 /* INavMessageCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000007 /* INavMessageCard.swift */; };
+		100000000000000000000008 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000008 /* MainTabView.swift */; };
+		100000000000000000000009 /* OsnmaEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000009 /* OsnmaEngine.swift */; };
+		100000000000000000000010 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000010 /* SettingsView.swift */; };
+		100000000000000000000011 /* Sgp4OrbitPropagator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000011 /* Sgp4OrbitPropagator.swift */; };
+		100000000000000000000012 /* SignalProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000012 /* SignalProcessingView.swift */; };
+		100000000000000000000013 /* SkyPlotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000013 /* SkyPlotView.swift */; };
+		100000000000000000000014 /* ThreatAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000014 /* ThreatAnalysisView.swift */; };
+		100000000000000000000015 /* TleDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000015 /* TleDownloader.swift */; };
+		100000000000000000000016 /* TRISATApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000016 /* TRISATApp.swift */; };
+		100000000000000000000017 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000017 /* Assets.xcassets */; };
+		100000000000000000000018 /* MiniMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000018 /* MiniMapView.swift */; };
+		100000000000000000000019 /* BuildInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000019 /* BuildInfo.swift */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* TRISAT.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TRISAT.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000001 /* BluetoothManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothManager.swift; sourceTree = "<group>"; };
+		200000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		200000000000000000000003 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		200000000000000000000004 /* GalileoINavMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalileoINavMessage.swift; sourceTree = "<group>"; };
+		200000000000000000000005 /* GnssRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GnssRepository.swift; sourceTree = "<group>"; };
+		200000000000000000000006 /* GnssViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GnssViewModel.swift; sourceTree = "<group>"; };
+		200000000000000000000007 /* INavMessageCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = INavMessageCard.swift; sourceTree = "<group>"; };
+		200000000000000000000008 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		200000000000000000000009 /* OsnmaEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsnmaEngine.swift; sourceTree = "<group>"; };
+		200000000000000000000010 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		200000000000000000000011 /* Sgp4OrbitPropagator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sgp4OrbitPropagator.swift; sourceTree = "<group>"; };
+		200000000000000000000012 /* SignalProcessingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalProcessingView.swift; sourceTree = "<group>"; };
+		200000000000000000000013 /* SkyPlotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyPlotView.swift; sourceTree = "<group>"; };
+		200000000000000000000014 /* ThreatAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreatAnalysisView.swift; sourceTree = "<group>"; };
+		200000000000000000000015 /* TleDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TleDownloader.swift; sourceTree = "<group>"; };
+		200000000000000000000016 /* TRISATApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TRISATApp.swift; sourceTree = "<group>"; };
+		200000000000000000000017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		200000000000000000000018 /* MiniMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniMapView.swift; sourceTree = "<group>"; };
+		200000000000000000000019 /* BuildInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildInfo.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		000000000000000000000010 /* TRISAT */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = TRISAT;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		000000000000000130000000 /* Frameworks */ = {
@@ -33,6 +66,32 @@
 				000000000000000000000010 /* TRISAT */,
 				000000000000000000000020 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000010 /* TRISAT */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000001 /* BluetoothManager.swift */,
+				200000000000000000000002 /* ContentView.swift */,
+				200000000000000000000003 /* DashboardView.swift */,
+				200000000000000000000004 /* GalileoINavMessage.swift */,
+				200000000000000000000005 /* GnssRepository.swift */,
+				200000000000000000000006 /* GnssViewModel.swift */,
+				200000000000000000000007 /* INavMessageCard.swift */,
+				200000000000000000000008 /* MainTabView.swift */,
+				200000000000000000000009 /* OsnmaEngine.swift */,
+				200000000000000000000010 /* SettingsView.swift */,
+				200000000000000000000011 /* Sgp4OrbitPropagator.swift */,
+				200000000000000000000012 /* SignalProcessingView.swift */,
+				200000000000000000000013 /* SkyPlotView.swift */,
+				200000000000000000000014 /* ThreatAnalysisView.swift */,
+				200000000000000000000015 /* TleDownloader.swift */,
+				200000000000000000000016 /* TRISATApp.swift */,
+				200000000000000000000017 /* Assets.xcassets */,
+				200000000000000000000018 /* MiniMapView.swift */,
+				200000000000000000000019 /* BuildInfo.swift */,
+			);
+			path = TRISAT;
 			sourceTree = "<group>";
 		};
 		000000000000000000000020 /* Products */ = {
@@ -56,11 +115,8 @@
 			);
 			buildRules = (
 			);
-			fileSystemSynchronizedGroups = (
-				000000000000000000000010 /* TRISAT */,
-			);
 			name = TRISAT;
-			productName = MyApp;
+			productName = TRISAT;
 			productReference = 000000000000000000000120 /* TRISAT.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -102,6 +158,7 @@
 		000000000000000140000000 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				100000000000000000000017 /* Assets.xcassets in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */
@@ -110,6 +167,24 @@
 		000000000000000120000000 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				100000000000000000000001 /* BluetoothManager.swift in Sources */,
+				100000000000000000000002 /* ContentView.swift in Sources */,
+				100000000000000000000003 /* DashboardView.swift in Sources */,
+				100000000000000000000004 /* GalileoINavMessage.swift in Sources */,
+				100000000000000000000005 /* GnssRepository.swift in Sources */,
+				100000000000000000000006 /* GnssViewModel.swift in Sources */,
+				100000000000000000000007 /* INavMessageCard.swift in Sources */,
+				100000000000000000000008 /* MainTabView.swift in Sources */,
+				100000000000000000000009 /* OsnmaEngine.swift in Sources */,
+				100000000000000000000010 /* SettingsView.swift in Sources */,
+				100000000000000000000011 /* Sgp4OrbitPropagator.swift in Sources */,
+				100000000000000000000012 /* SignalProcessingView.swift in Sources */,
+				100000000000000000000013 /* SkyPlotView.swift in Sources */,
+				100000000000000000000014 /* ThreatAnalysisView.swift in Sources */,
+				100000000000000000000015 /* TleDownloader.swift in Sources */,
+				100000000000000000000016 /* TRISATApp.swift in Sources */,
+				100000000000000000000018 /* MiniMapView.swift in Sources */,
+				100000000000000000000019 /* BuildInfo.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
@@ -119,43 +194,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DRIVERKIT_DEPLOYMENT_TARGET = 27.0;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -163,25 +207,11 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.6.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				PROJECT_UNIQUE_VALUE = ZLAWU4TQ;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				TVOS_DEPLOYMENT_TARGET = 27.0;
-				WATCHOS_DEPLOYMENT_TARGET = 27.0;
-				XROS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Debug;
 		};
@@ -189,61 +219,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DRIVERKIT_DEPLOYMENT_TARGET = 27.0;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 26.6.2;
-				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				PROJECT_UNIQUE_VALUE = ZLAWU4TQ;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
-				TVOS_DEPLOYMENT_TARGET = 27.0;
-				WATCHOS_DEPLOYMENT_TARGET = 27.0;
-				XROS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Release;
 		};
@@ -339,17 +323,19 @@
 		000000000000000010000000 /* Build configuration list for PBXProject "TRISAT" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				000000000000000011000000 /* Debug configuration for PBXProject "TRISAT" */,
-				000000000000000012000000 /* Release configuration for PBXProject "TRISAT" */,
+				000000000000000011000000 /* Debug */,
+				000000000000000012000000 /* Release */,
 			);
+			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 		000000000000000110000000 /* Build configuration list for PBXNativeTarget "TRISAT" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				000000000000000111000000 /* Debug configuration for PBXNativeTarget "TRISAT" */,
-				000000000000000112000000 /* Release configuration for PBXNativeTarget "TRISAT" */,
+				000000000000000111000000 /* Debug */,
+				000000000000000112000000 /* Release */,
 			);
+			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
