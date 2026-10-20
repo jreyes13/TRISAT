@@ -1,12 +1,14 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @StateObject private var viewModel: GnssViewModel
     @StateObject private var bluetoothManager = BluetoothManager()
+    @StateObject private var viewModel: GnssViewModel
     @State private var selectedTab: Int = 0
     
     init() {
-        _viewModel = StateObject(wrappedValue: GnssViewModel())
+        let sharedBle = BluetoothManager()
+        _bluetoothManager = StateObject(wrappedValue: sharedBle)
+        _viewModel = StateObject(wrappedValue: GnssViewModel(bluetoothManager: sharedBle))
     }
     
     var body: some View {

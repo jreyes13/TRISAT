@@ -26,6 +26,7 @@ class GnssViewModel(application: Application) : AndroidViewModel(application) {
     val isMockMode: StateFlow<Boolean> = gnssManager.isMockMode
     val isMonitoringActive: StateFlow<Boolean> = gnssManager.isMonitoringActive
     val permissionGranted: StateFlow<Boolean> = gnssManager.permissionGranted
+    val isBleServerActive: StateFlow<Boolean> = gnssManager.isBleServerActive
 
     init {
         gnssManager.startMonitoring()
@@ -41,6 +42,10 @@ class GnssViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleMockMode(forceMock: Boolean) {
         gnssManager.setForceMockMode(forceMock)
+    }
+
+    fun toggleBleServer(enable: Boolean): Boolean {
+        return gnssManager.toggleBleServer(enable)
     }
 
     fun selectThreatScenario(scenario: ThreatScenario) {

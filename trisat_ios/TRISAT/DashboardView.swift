@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 struct DashboardView: View {
     @ObservedObject var viewModel: GnssViewModel
@@ -148,7 +149,13 @@ struct DashboardView: View {
                 Button(action: {
                     let lat = viewModel.currentCoordinate.latitude
                     let lon = viewModel.currentCoordinate.longitude
-                    UIPasteboard.general.string = String(format: "%.6f, %.6f", lat, lon)
+                    let coordStr = String(format: "%.6f, %.6f", lat, lon)
+                    #if os(iOS)
+                    UIPasteboard.general.string = coordStr
+                    #elseif os(macOS)
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(coordStr, forType: .string)
+                    #endif
                     isCopied = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                         isCopied = false
@@ -171,7 +178,11 @@ struct DashboardView: View {
                     let lat = viewModel.currentCoordinate.latitude
                     let lon = viewModel.currentCoordinate.longitude
                     if let url = URL(string: "https://maps.apple.com/?q=\(lat),\(lon)&ll=\(lat),\(lon)") {
+                        #if os(iOS)
                         UIApplication.shared.open(url)
+                        #elseif os(macOS)
+                        NSWorkspace.shared.open(url)
+                        #endif
                     }
                 }) {
                     HStack {

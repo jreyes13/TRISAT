@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Download
@@ -183,6 +184,63 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Export RINEX")
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Text(
+                text = "TRISAT Wireless BLE Bridge (Sensor Pod)",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+            )
+        }
+
+        item {
+            val isBleActive by gnssViewModel.isBleServerActive.collectAsState()
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SettingSwitchRow(
+                        title = "Broadcast BLE Sensor Stream (Bridge Mode)",
+                        subtitle = "Broadcast raw Galileo TYPE_GAL_I frames & sat status over Bluetooth to iOS / external clients",
+                        icon = Icons.Rounded.Bluetooth,
+                        checked = isBleActive,
+                        onCheckedChange = { gnssViewModel.toggleBleServer(it) }
+                    )
+
+                    if (isBleActive) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Rounded.CheckCircle,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "BLE Sensor Pod Name:",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = gnssViewModel.gnssManager.bleServer.deviceName,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }

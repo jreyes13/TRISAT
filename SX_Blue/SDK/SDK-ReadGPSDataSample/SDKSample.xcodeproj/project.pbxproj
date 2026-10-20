@@ -1,0 +1,554 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2C50E87A1A2600CA00BE611E /* libConnectionManagerRead-universal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C5DCCE41A143CCC00732AD8 /* libConnectionManagerRead-universal.a */; };
+		2C50E87B1A2600D600BE611E /* libnmea-universal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A5716AC1957077B007C683C /* libnmea-universal.a */; };
+		2C50E87D1A2600E800BE611E /* libSatellitesView-Universal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2C50E87C1A2600E800BE611E /* libSatellitesView-Universal.a */; };
+		3F57340319E887AC00EDC5AD /* ExternalAccessory.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2CCB462819E0829F00CDB3D9 /* ExternalAccessory.framework */; };
+		7A5716671957016C007C683C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A5716661957016C007C683C /* Foundation.framework */; };
+		7A5716691957016C007C683C /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A5716681957016C007C683C /* CoreGraphics.framework */; };
+		7A57166B1957016C007C683C /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A57166A1957016C007C683C /* UIKit.framework */; };
+		7A5716711957016C007C683C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 7A57166F1957016C007C683C /* InfoPlist.strings */; };
+		7A5716731957016C007C683C /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A5716721957016C007C683C /* main.m */; };
+		7A5716771957016C007C683C /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A5716761957016C007C683C /* AppDelegate.m */; };
+		7A57167A1957016C007C683C /* Main_iPhone.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7A5716781957016C007C683C /* Main_iPhone.storyboard */; };
+		7A57167D1957016C007C683C /* Main_iPad.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7A57167B1957016C007C683C /* Main_iPad.storyboard */; };
+		7A5716851957016C007C683C /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7A5716841957016C007C683C /* Images.xcassets */; };
+		7A5716A219570391007C683C /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A5716A119570391007C683C /* MapKit.framework */; };
+		7A5716C2195707C7007C683C /* SatellitesViewRessources.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 7A5716C0195707C7007C683C /* SatellitesViewRessources.bundle */; };
+		7A5716C61957088B007C683C /* GPSManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A5716C51957088B007C683C /* GPSManager.m */; };
+		7A5716C919570A43007C683C /* NMEAManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A5716C819570A43007C683C /* NMEAManager.m */; };
+		7A5716D419571311007C683C /* ConfigurationTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A5716D319571311007C683C /* ConfigurationTableViewController.m */; };
+		7A5716DB19572473007C683C /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A5716DA19572472007C683C /* CoreLocation.framework */; };
+		7A5716DD1957247A007C683C /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7A5716DC1957247A007C683C /* AudioToolbox.framework */; };
+		7A57174319577FDA007C683C /* LocationViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A57174219577FDA007C683C /* LocationViewController.m */; };
+		7A571749195784CA007C683C /* DataViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 7A571748195784CA007C683C /* DataViewController.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		2C50E8741A25FC5200BE611E /* libSatellitesView-Universal.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libSatellitesView-Universal.a"; path = "iSX_SDKSample/libs/satellitesView/libSatellitesView-Universal.a"; sourceTree = "<group>"; };
+		2C50E87C1A2600E800BE611E /* libSatellitesView-Universal.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libSatellitesView-Universal.a"; path = "SDKSample/libs/satellitesView/libSatellitesView-Universal.a"; sourceTree = "<group>"; };
+		2C549BB419DEF98D00D1137A /* CoreTelephony.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreTelephony.framework; path = System/Library/Frameworks/CoreTelephony.framework; sourceTree = SDKROOT; };
+		2C549BB519DEF98D00D1137A /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
+		2C549BB619DEF98D00D1137A /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
+		2C5DCCE21A143C9A00732AD8 /* ConnectionManagerRead.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ConnectionManagerRead.h; path = ../../connectionManager/inc/ConnectionManagerRead.h; sourceTree = "<group>"; };
+		2C5DCCE41A143CCC00732AD8 /* libConnectionManagerRead-universal.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libConnectionManagerRead-universal.a"; path = "../../connectionManager/lib/libConnectionManagerRead-universal.a"; sourceTree = "<group>"; };
+		2CCB462819E0829F00CDB3D9 /* ExternalAccessory.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ExternalAccessory.framework; path = System/Library/Frameworks/ExternalAccessory.framework; sourceTree = SDKROOT; };
+		7A5716631957016C007C683C /* SDKSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SDKSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A5716661957016C007C683C /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		7A5716681957016C007C683C /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		7A57166A1957016C007C683C /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		7A57166E1957016C007C683C /* SDKSample-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SDKSample-Info.plist"; sourceTree = "<group>"; };
+		7A5716701957016C007C683C /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		7A5716721957016C007C683C /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		7A5716741957016C007C683C /* SDKSample-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SDKSample-Prefix.pch"; sourceTree = "<group>"; };
+		7A5716751957016C007C683C /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		7A5716761957016C007C683C /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		7A5716791957016C007C683C /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main_iPhone.storyboard; sourceTree = "<group>"; };
+		7A57167C1957016C007C683C /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main_iPad.storyboard; sourceTree = "<group>"; };
+		7A5716841957016C007C683C /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
+		7A5716A119570391007C683C /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
+		7A5716A61957077B007C683C /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = libs/nmea/config.h; sourceTree = "<group>"; };
+		7A5716A71957077B007C683C /* context.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = context.h; path = libs/nmea/context.h; sourceTree = "<group>"; };
+		7A5716A81957077B007C683C /* generate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = generate.h; path = libs/nmea/generate.h; sourceTree = "<group>"; };
+		7A5716A91957077B007C683C /* generator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = generator.h; path = libs/nmea/generator.h; sourceTree = "<group>"; };
+		7A5716AA1957077B007C683C /* gmath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gmath.h; path = libs/nmea/gmath.h; sourceTree = "<group>"; };
+		7A5716AB1957077B007C683C /* info.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = info.h; path = libs/nmea/info.h; sourceTree = "<group>"; };
+		7A5716AC1957077B007C683C /* libnmea-universal.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libnmea-universal.a"; path = "libs/nmea/libnmea-universal.a"; sourceTree = "<group>"; };
+		7A5716AD1957077B007C683C /* nmea.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = nmea.h; path = libs/nmea/nmea.h; sourceTree = "<group>"; };
+		7A5716AE1957077B007C683C /* parse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = parse.h; path = libs/nmea/parse.h; sourceTree = "<group>"; };
+		7A5716AF1957077B007C683C /* parser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = parser.h; path = libs/nmea/parser.h; sourceTree = "<group>"; };
+		7A5716B01957077B007C683C /* sentence.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sentence.h; path = libs/nmea/sentence.h; sourceTree = "<group>"; };
+		7A5716B11957077B007C683C /* time.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = time.h; path = libs/nmea/time.h; sourceTree = "<group>"; };
+		7A5716B21957077B007C683C /* tok.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tok.h; path = libs/nmea/tok.h; sourceTree = "<group>"; };
+		7A5716B31957077B007C683C /* units.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = units.h; path = libs/nmea/units.h; sourceTree = "<group>"; };
+		7A5716B8195707AC007C683C /* serialComDefs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = serialComDefs.h; path = ../../connectionManager/inc/serialComDefs.h; sourceTree = "<group>"; };
+		7A5716BE195707C7007C683C /* libSatellitesView-universal.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libSatellitesView-universal.a"; path = "libs/satellitesView/libSatellitesView-universal.a"; sourceTree = "<group>"; };
+		7A5716BF195707C7007C683C /* SatellitesView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SatellitesView.h; path = libs/satellitesView/SatellitesView.h; sourceTree = "<group>"; };
+		7A5716C0195707C7007C683C /* SatellitesViewRessources.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; name = SatellitesViewRessources.bundle; path = libs/satellitesView/SatellitesViewRessources.bundle; sourceTree = "<group>"; };
+		7A5716C41957088B007C683C /* GPSManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GPSManager.h; path = managers/GPSManager.h; sourceTree = "<group>"; };
+		7A5716C51957088B007C683C /* GPSManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = GPSManager.m; path = managers/GPSManager.m; sourceTree = "<group>"; };
+		7A5716C719570A43007C683C /* NMEAManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NMEAManager.h; path = managers/NMEAManager.h; sourceTree = "<group>"; };
+		7A5716C819570A43007C683C /* NMEAManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = NMEAManager.m; path = managers/NMEAManager.m; sourceTree = "<group>"; };
+		7A5716CA19570B0F007C683C /* DLog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DLog.h; sourceTree = "<group>"; };
+		7A5716D219571311007C683C /* ConfigurationTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ConfigurationTableViewController.h; path = configuration/ConfigurationTableViewController.h; sourceTree = "<group>"; };
+		7A5716D319571311007C683C /* ConfigurationTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = ConfigurationTableViewController.m; path = configuration/ConfigurationTableViewController.m; sourceTree = "<group>"; };
+		7A5716DA19572472007C683C /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+		7A5716DC1957247A007C683C /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		7A57174119577FDA007C683C /* LocationViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LocationViewController.h; path = location/LocationViewController.h; sourceTree = "<group>"; };
+		7A57174219577FDA007C683C /* LocationViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = LocationViewController.m; path = location/LocationViewController.m; sourceTree = "<group>"; };
+		7A571747195784CA007C683C /* DataViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DataViewController.h; path = Data/DataViewController.h; sourceTree = "<group>"; };
+		7A571748195784CA007C683C /* DataViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = DataViewController.m; path = Data/DataViewController.m; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7A5716601957016C007C683C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2C50E87D1A2600E800BE611E /* libSatellitesView-Universal.a in Frameworks */,
+				2C50E87B1A2600D600BE611E /* libnmea-universal.a in Frameworks */,
+				2C50E87A1A2600CA00BE611E /* libConnectionManagerRead-universal.a in Frameworks */,
+				3F57340319E887AC00EDC5AD /* ExternalAccessory.framework in Frameworks */,
+				7A5716DD1957247A007C683C /* AudioToolbox.framework in Frameworks */,
+				7A5716DB19572473007C683C /* CoreLocation.framework in Frameworks */,
+				7A5716691957016C007C683C /* CoreGraphics.framework in Frameworks */,
+				7A57166B1957016C007C683C /* UIKit.framework in Frameworks */,
+				7A5716A219570391007C683C /* MapKit.framework in Frameworks */,
+				7A5716671957016C007C683C /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		2C5DCCE31A143CCC00732AD8 /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				2C5DCCE41A143CCC00732AD8 /* libConnectionManagerRead-universal.a */,
+			);
+			path = lib;
+			sourceTree = "<group>";
+		};
+		7A57165A1957016C007C683C = {
+			isa = PBXGroup;
+			children = (
+				7A57166C1957016C007C683C /* SDKSample */,
+				7A5716651957016C007C683C /* Frameworks */,
+				7A5716641957016C007C683C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7A5716641957016C007C683C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7A5716631957016C007C683C /* SDKSample.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		7A5716651957016C007C683C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				2C50E87C1A2600E800BE611E /* libSatellitesView-Universal.a */,
+				2C50E8741A25FC5200BE611E /* libSatellitesView-Universal.a */,
+				2CCB462819E0829F00CDB3D9 /* ExternalAccessory.framework */,
+				2C549BB419DEF98D00D1137A /* CoreTelephony.framework */,
+				2C549BB519DEF98D00D1137A /* libz.dylib */,
+				2C549BB619DEF98D00D1137A /* SystemConfiguration.framework */,
+				7A5716DC1957247A007C683C /* AudioToolbox.framework */,
+				7A5716DA19572472007C683C /* CoreLocation.framework */,
+				7A5716A119570391007C683C /* MapKit.framework */,
+				7A5716661957016C007C683C /* Foundation.framework */,
+				7A5716681957016C007C683C /* CoreGraphics.framework */,
+				7A57166A1957016C007C683C /* UIKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		7A57166C1957016C007C683C /* SDKSample */ = {
+			isa = PBXGroup;
+			children = (
+				7A5716CA19570B0F007C683C /* DLog.h */,
+				7A5716A5195706A6007C683C /* libSatellitesView */,
+				7A5716A419570697007C683C /* libConnectionManager */,
+				7A5716A31957068A007C683C /* libnmea */,
+				7A5716751957016C007C683C /* AppDelegate.h */,
+				7A5716761957016C007C683C /* AppDelegate.m */,
+				7A5716781957016C007C683C /* Main_iPhone.storyboard */,
+				7A57167B1957016C007C683C /* Main_iPad.storyboard */,
+				7A5716C319570814007C683C /* managers */,
+				7A5716D1195712C5007C683C /* Tab Configuration */,
+				7A57174019577C87007C683C /* Tab Location */,
+				7A571746195783D3007C683C /* Tab Data */,
+				7A5716841957016C007C683C /* Images.xcassets */,
+				7A57166D1957016C007C683C /* Supporting Files */,
+			);
+			path = SDKSample;
+			sourceTree = "<group>";
+		};
+		7A57166D1957016C007C683C /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				7A57166E1957016C007C683C /* SDKSample-Info.plist */,
+				7A57166F1957016C007C683C /* InfoPlist.strings */,
+				7A5716721957016C007C683C /* main.m */,
+				7A5716741957016C007C683C /* SDKSample-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		7A5716A31957068A007C683C /* libnmea */ = {
+			isa = PBXGroup;
+			children = (
+				7A5716A61957077B007C683C /* config.h */,
+				7A5716A71957077B007C683C /* context.h */,
+				7A5716A81957077B007C683C /* generate.h */,
+				7A5716A91957077B007C683C /* generator.h */,
+				7A5716AA1957077B007C683C /* gmath.h */,
+				7A5716AB1957077B007C683C /* info.h */,
+				7A5716AC1957077B007C683C /* libnmea-universal.a */,
+				7A5716AD1957077B007C683C /* nmea.h */,
+				7A5716AE1957077B007C683C /* parse.h */,
+				7A5716AF1957077B007C683C /* parser.h */,
+				7A5716B01957077B007C683C /* sentence.h */,
+				7A5716B11957077B007C683C /* time.h */,
+				7A5716B21957077B007C683C /* tok.h */,
+				7A5716B31957077B007C683C /* units.h */,
+			);
+			name = libnmea;
+			sourceTree = "<group>";
+		};
+		7A5716A419570697007C683C /* libConnectionManager */ = {
+			isa = PBXGroup;
+			children = (
+				7A5716B5195707AC007C683C /* inc */,
+				2C5DCCE31A143CCC00732AD8 /* lib */,
+			);
+			name = libConnectionManager;
+			path = libs/connectionManager;
+			sourceTree = "<group>";
+		};
+		7A5716A5195706A6007C683C /* libSatellitesView */ = {
+			isa = PBXGroup;
+			children = (
+				7A5716BE195707C7007C683C /* libSatellitesView-universal.a */,
+				7A5716BF195707C7007C683C /* SatellitesView.h */,
+				7A5716C0195707C7007C683C /* SatellitesViewRessources.bundle */,
+			);
+			name = libSatellitesView;
+			sourceTree = "<group>";
+		};
+		7A5716B5195707AC007C683C /* inc */ = {
+			isa = PBXGroup;
+			children = (
+				2C5DCCE21A143C9A00732AD8 /* ConnectionManagerRead.h */,
+				7A5716B8195707AC007C683C /* serialComDefs.h */,
+			);
+			path = inc;
+			sourceTree = "<group>";
+		};
+		7A5716C319570814007C683C /* managers */ = {
+			isa = PBXGroup;
+			children = (
+				7A5716C41957088B007C683C /* GPSManager.h */,
+				7A5716C51957088B007C683C /* GPSManager.m */,
+				7A5716C719570A43007C683C /* NMEAManager.h */,
+				7A5716C819570A43007C683C /* NMEAManager.m */,
+			);
+			name = managers;
+			sourceTree = "<group>";
+		};
+		7A5716D1195712C5007C683C /* Tab Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				7A5716D219571311007C683C /* ConfigurationTableViewController.h */,
+				7A5716D319571311007C683C /* ConfigurationTableViewController.m */,
+			);
+			name = "Tab Configuration";
+			sourceTree = "<group>";
+		};
+		7A57174019577C87007C683C /* Tab Location */ = {
+			isa = PBXGroup;
+			children = (
+				7A57174119577FDA007C683C /* LocationViewController.h */,
+				7A57174219577FDA007C683C /* LocationViewController.m */,
+			);
+			name = "Tab Location";
+			sourceTree = "<group>";
+		};
+		7A571746195783D3007C683C /* Tab Data */ = {
+			isa = PBXGroup;
+			children = (
+				7A571747195784CA007C683C /* DataViewController.h */,
+				7A571748195784CA007C683C /* DataViewController.m */,
+			);
+			name = "Tab Data";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7A5716621957016C007C683C /* SDKSample */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7A57169B1957016C007C683C /* Build configuration list for PBXNativeTarget "SDKSample" */;
+			buildPhases = (
+				7A57165F1957016C007C683C /* Sources */,
+				7A5716601957016C007C683C /* Frameworks */,
+				7A5716611957016C007C683C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SDKSample;
+			productName = GPSCable;
+			productReference = 7A5716631957016C007C683C /* SDKSample.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7A57165B1957016C007C683C /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0600;
+				ORGANIZATIONNAME = amanenterprises;
+				TargetAttributes = {
+					7A5716621957016C007C683C = {
+						DevelopmentTeam = 8JV3248NCB;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+							com.apple.Maps.iOS = {
+								enabled = 1;
+							};
+							com.apple.iOS = {
+								enabled = 1;
+							};
+						};
+					};
+				};
+			};
+			buildConfigurationList = 7A57165E1957016C007C683C /* Build configuration list for PBXProject "SDKSample" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 7A57165A1957016C007C683C;
+			productRefGroup = 7A5716641957016C007C683C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7A5716621957016C007C683C /* SDKSample */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7A5716611957016C007C683C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7A57167D1957016C007C683C /* Main_iPad.storyboard in Resources */,
+				7A5716851957016C007C683C /* Images.xcassets in Resources */,
+				7A5716C2195707C7007C683C /* SatellitesViewRessources.bundle in Resources */,
+				7A57167A1957016C007C683C /* Main_iPhone.storyboard in Resources */,
+				7A5716711957016C007C683C /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7A57165F1957016C007C683C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7A5716C919570A43007C683C /* NMEAManager.m in Sources */,
+				7A5716771957016C007C683C /* AppDelegate.m in Sources */,
+				7A57174319577FDA007C683C /* LocationViewController.m in Sources */,
+				7A571749195784CA007C683C /* DataViewController.m in Sources */,
+				7A5716D419571311007C683C /* ConfigurationTableViewController.m in Sources */,
+				7A5716731957016C007C683C /* main.m in Sources */,
+				7A5716C61957088B007C683C /* GPSManager.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		7A57166F1957016C007C683C /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				7A5716701957016C007C683C /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		7A5716781957016C007C683C /* Main_iPhone.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				7A5716791957016C007C683C /* Base */,
+			);
+			name = Main_iPhone.storyboard;
+			sourceTree = "<group>";
+		};
+		7A57167B1957016C007C683C /* Main_iPad.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				7A57167C1957016C007C683C /* Base */,
+			);
+			name = Main_iPad.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		7A5716991957016C007C683C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALID_ARCHS = "armv7s arm64 armv7";
+			};
+			name = Debug;
+		};
+		7A57169A1957016C007C683C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 7.1;
+				ONLY_ACTIVE_ARCH = NO;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VALID_ARCHS = "armv7s arm64 armv7";
+			};
+			name = Release;
+		};
+		7A57169C1957016C007C683C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					armv7s,
+				);
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon_iSX;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "SDKSample/SDKSample-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/SDKSample/libs/**",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "$(SRCROOT)/SDKSample/SDKSample-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/SDKSample/libs/**";
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = SDKSample;
+				PROVISIONING_PROFILE = "";
+				VALID_ARCHS = "armv7 armv7s x86_64 arm64";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Debug;
+		};
+		7A57169D1957016C007C683C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					armv7s,
+				);
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon_iSX;
+				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "SDKSample/SDKSample-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/SDKSample/libs/**",
+					"$(inherited)",
+				);
+				INFOPLIST_FILE = "$(SRCROOT)/SDKSample/SDKSample-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/SDKSample/libs/**";
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = SDKSample;
+				PROVISIONING_PROFILE = "";
+				VALID_ARCHS = "armv7 armv7s x86_64 arm64";
+				WRAPPER_EXTENSION = app;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		7A57165E1957016C007C683C /* Build configuration list for PBXProject "SDKSample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7A5716991957016C007C683C /* Debug */,
+				7A57169A1957016C007C683C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7A57169B1957016C007C683C /* Build configuration list for PBXNativeTarget "SDKSample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7A57169C1957016C007C683C /* Debug */,
+				7A57169D1957016C007C683C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7A57165B1957016C007C683C /* Project object */;
+}

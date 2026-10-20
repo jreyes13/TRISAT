@@ -1,0 +1,362 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 90;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		100000000000000000000001 /* BluetoothManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000001 /* BluetoothManager.swift */; };
+		100000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000002 /* ContentView.swift */; };
+		100000000000000000000003 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000003 /* DashboardView.swift */; };
+		100000000000000000000004 /* GalileoINavMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000004 /* GalileoINavMessage.swift */; };
+		100000000000000000000005 /* GnssRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000005 /* GnssRepository.swift */; };
+		100000000000000000000006 /* GnssViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000006 /* GnssViewModel.swift */; };
+		100000000000000000000007 /* INavMessageCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000007 /* INavMessageCard.swift */; };
+		100000000000000000000008 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000008 /* MainTabView.swift */; };
+		100000000000000000000009 /* OsnmaEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000009 /* OsnmaEngine.swift */; };
+		100000000000000000000010 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000010 /* SettingsView.swift */; };
+		100000000000000000000011 /* Sgp4OrbitPropagator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000011 /* Sgp4OrbitPropagator.swift */; };
+		100000000000000000000012 /* SignalProcessingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000012 /* SignalProcessingView.swift */; };
+		100000000000000000000013 /* SkyPlotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000013 /* SkyPlotView.swift */; };
+		100000000000000000000014 /* ThreatAnalysisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000014 /* ThreatAnalysisView.swift */; };
+		100000000000000000000015 /* TleDownloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000015 /* TleDownloader.swift */; };
+		100000000000000000000016 /* TRISATApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000016 /* TRISATApp.swift */; };
+		100000000000000000000017 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000017 /* Assets.xcassets */; };
+		100000000000000000000018 /* MiniMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000018 /* MiniMapView.swift */; };
+		100000000000000000000019 /* BuildInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000019 /* BuildInfo.swift */; };
+		100000000000000000000020 /* BleDevicePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000020 /* BleDevicePickerSheet.swift */; };
+		100000000000000000000021 /* MacSerialPortManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000021 /* MacSerialPortManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000000000000000000000120 /* TRISAT.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TRISAT.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		200000000000000000000001 /* BluetoothManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BluetoothManager.swift; sourceTree = "<group>"; };
+		200000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		200000000000000000000003 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		200000000000000000000004 /* GalileoINavMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalileoINavMessage.swift; sourceTree = "<group>"; };
+		200000000000000000000005 /* GnssRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GnssRepository.swift; sourceTree = "<group>"; };
+		200000000000000000000006 /* GnssViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GnssViewModel.swift; sourceTree = "<group>"; };
+		200000000000000000000007 /* INavMessageCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = INavMessageCard.swift; sourceTree = "<group>"; };
+		200000000000000000000008 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		200000000000000000000009 /* OsnmaEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OsnmaEngine.swift; sourceTree = "<group>"; };
+		200000000000000000000010 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		200000000000000000000011 /* Sgp4OrbitPropagator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sgp4OrbitPropagator.swift; sourceTree = "<group>"; };
+		200000000000000000000012 /* SignalProcessingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignalProcessingView.swift; sourceTree = "<group>"; };
+		200000000000000000000013 /* SkyPlotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyPlotView.swift; sourceTree = "<group>"; };
+		200000000000000000000014 /* ThreatAnalysisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThreatAnalysisView.swift; sourceTree = "<group>"; };
+		200000000000000000000015 /* TleDownloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TleDownloader.swift; sourceTree = "<group>"; };
+		200000000000000000000016 /* TRISATApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TRISATApp.swift; sourceTree = "<group>"; };
+		200000000000000000000017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		200000000000000000000018 /* MiniMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniMapView.swift; sourceTree = "<group>"; };
+		200000000000000000000019 /* BuildInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildInfo.swift; sourceTree = "<group>"; };
+		200000000000000000000020 /* BleDevicePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BleDevicePickerSheet.swift; sourceTree = "<group>"; };
+		200000000000000000000021 /* MacSerialPortManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSerialPortManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		000000000000000130000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000010 /* TRISAT */,
+				000000000000000000000020 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000010 /* TRISAT */ = {
+			isa = PBXGroup;
+			children = (
+				200000000000000000000001 /* BluetoothManager.swift */,
+				200000000000000000000002 /* ContentView.swift */,
+				200000000000000000000003 /* DashboardView.swift */,
+				200000000000000000000004 /* GalileoINavMessage.swift */,
+				200000000000000000000005 /* GnssRepository.swift */,
+				200000000000000000000006 /* GnssViewModel.swift */,
+				200000000000000000000007 /* INavMessageCard.swift */,
+				200000000000000000000008 /* MainTabView.swift */,
+				200000000000000000000009 /* OsnmaEngine.swift */,
+				200000000000000000000010 /* SettingsView.swift */,
+				200000000000000000000011 /* Sgp4OrbitPropagator.swift */,
+				200000000000000000000012 /* SignalProcessingView.swift */,
+				200000000000000000000013 /* SkyPlotView.swift */,
+				200000000000000000000014 /* ThreatAnalysisView.swift */,
+				200000000000000000000015 /* TleDownloader.swift */,
+				200000000000000000000016 /* TRISATApp.swift */,
+				200000000000000000000017 /* Assets.xcassets */,
+				200000000000000000000018 /* MiniMapView.swift */,
+				200000000000000000000019 /* BuildInfo.swift */,
+				200000000000000000000020 /* BleDevicePickerSheet.swift */,
+				200000000000000000000021 /* MacSerialPortManager.swift */,
+			);
+			path = TRISAT;
+			sourceTree = "<group>";
+		};
+		000000000000000000000020 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000120 /* TRISAT.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000000000000000100000000 /* TRISAT */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000110000000 /* Build configuration list for PBXNativeTarget "TRISAT" */;
+			buildPhases = (
+				000000000000000120000000 /* Sources */,
+				000000000000000130000000 /* Frameworks */,
+				000000000000000140000000 /* Resources */,
+			);
+			buildRules = (
+			);
+			name = TRISAT;
+			productName = TRISAT;
+			productReference = 000000000000000000000120 /* TRISAT.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2630;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					000000000000000100000000 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+				};
+			};
+			buildConfigurationList = 000000000000000010000000 /* Build configuration list for PBXProject "TRISAT" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000000000000000000000001;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 90;
+			productRefGroup = 000000000000000000000020 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000000000000000100000000 /* TRISAT */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		000000000000000140000000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+				100000000000000000000017 /* Assets.xcassets in Resources */,
+			);
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000000000000000120000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+				100000000000000000000001 /* BluetoothManager.swift in Sources */,
+				100000000000000000000002 /* ContentView.swift in Sources */,
+				100000000000000000000003 /* DashboardView.swift in Sources */,
+				100000000000000000000004 /* GalileoINavMessage.swift in Sources */,
+				100000000000000000000005 /* GnssRepository.swift in Sources */,
+				100000000000000000000006 /* GnssViewModel.swift in Sources */,
+				100000000000000000000007 /* INavMessageCard.swift in Sources */,
+				100000000000000000000008 /* MainTabView.swift in Sources */,
+				100000000000000000000009 /* OsnmaEngine.swift in Sources */,
+				100000000000000000000010 /* SettingsView.swift in Sources */,
+				100000000000000000000011 /* Sgp4OrbitPropagator.swift in Sources */,
+				100000000000000000000012 /* SignalProcessingView.swift in Sources */,
+				100000000000000000000013 /* SkyPlotView.swift in Sources */,
+				100000000000000000000014 /* ThreatAnalysisView.swift in Sources */,
+				100000000000000000000015 /* TleDownloader.swift in Sources */,
+				100000000000000000000016 /* TRISATApp.swift in Sources */,
+				100000000000000000000018 /* MiniMapView.swift in Sources */,
+				100000000000000000000019 /* BuildInfo.swift in Sources */,
+				100000000000000000000020 /* BleDevicePickerSheet.swift in Sources */,
+				100000000000000000000021 /* MacSerialPortManager.swift in Sources */,
+			);
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		000000000000000011000000 /* Debug configuration for PBXProject "TRISAT" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		000000000000000012000000 /* Release configuration for PBXProject "TRISAT" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		000000000000000111000000 /* Debug configuration for PBXNativeTarget "TRISAT" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LT5ANEE9LF;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers and stream raw satellite telemetry.";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TRISAT requires location access to stream satellite telemetry and calculate position fixes.";
+				INFOPLIST_KEY_UIBackgroundModes = "external-accessory bluetooth-central bluetooth-peripheral";
+				INFOPLIST_KEY_UISupportedExternalAccessoryProtocols = "com.geneq.sxbluegps com.geneq.sxblue com.geneq.sxblueII com.geneq.sxblueplatinum com.amanenterprises.nmea com.amanenterprises.gsl com.apple.protocols.nmea com.eos-gnss.arrow";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jreyes13.TRISAT;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+			};
+			name = Debug;
+		};
+		000000000000000112000000 /* Release configuration for PBXNativeTarget "TRISAT" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LT5ANEE9LF;
+				ENABLE_APP_SANDBOX = NO;
+				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers and stream raw satellite telemetry.";
+				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TRISAT requires location access to stream satellite telemetry and calculate position fixes.";
+				INFOPLIST_KEY_UIBackgroundModes = "external-accessory bluetooth-central bluetooth-peripheral";
+				INFOPLIST_KEY_UISupportedExternalAccessoryProtocols = "com.geneq.sxbluegps com.geneq.sxblue com.geneq.sxblueII com.geneq.sxblueplatinum com.amanenterprises.nmea com.amanenterprises.gsl com.apple.protocols.nmea com.eos-gnss.arrow";
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
+				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
+				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jreyes13.TRISAT;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		000000000000000010000000 /* Build configuration list for PBXProject "TRISAT" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000011000000 /* Debug */,
+				000000000000000012000000 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		000000000000000110000000 /* Build configuration list for PBXNativeTarget "TRISAT" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000111000000 /* Debug */,
+				000000000000000112000000 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 000000000000000000000000 /* Project object */;
+}

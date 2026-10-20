@@ -88,6 +88,23 @@ class LocationGnssManager(private val context: Context) {
     private var mockJob: Job? = null
     private var hardwareCheckJob: Job? = null
 
+    val bleServer = com.example.myapplication.data.gnss.ble.TrisatBleServer(context)
+
+    private val _isBleServerActive = MutableStateFlow(false)
+    val isBleServerActive: StateFlow<Boolean> = _isBleServerActive.asStateFlow()
+
+    fun toggleBleServer(enable: Boolean): Boolean {
+        return if (enable) {
+            val ok = bleServer.startServer()
+            _isBleServerActive.value = ok
+            ok
+        } else {
+            bleServer.stopServer()
+            _isBleServerActive.value = false
+            true
+        }
+    }
+
     private var lastHardwareEventTime = 0L
 
     private val mainExecutor: Executor by lazy {
@@ -157,6 +174,10 @@ class LocationGnssManager(private val context: Context) {
                 )
                 _gnssStatusData.value = newStatus
                 reevaluateTrust(newStatus = newStatus)
+
+                if (bleServer.isServerActive) {
+                    bleServer.broadcastSatStatus(satList)
+                }
             }
         }
     }
@@ -261,6 +282,10 @@ class LocationGnssManager(private val context: Context) {
                 _locationData.value = locData
                 _positionHistory.value = (_positionHistory.value + locData).takeLast(200)
                 reevaluateTrust(newLocation = locData)
+
+                if (bleServer.isServerActive) {
+                    bleServer.broadcastLocation(locData)
+                }
             }
         }
     }
@@ -442,6 +467,10 @@ class LocationGnssManager(private val context: Context) {
                 val updatedList = (_inavMessages.value + inavMsg).takeLast(50)
                 _inavMessages.value = updatedList
                 reevaluateTrust()
+
+                if (bleServer.isServerActive) {
+                    bleServer.broadcastInavFrame(inavMsg)
+                }
             }
         }
     }

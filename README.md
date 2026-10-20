@@ -31,9 +31,35 @@ TRISAT is built as a cross-ecosystem solution with native, high-performance impl
 
 ---
 
+## 📱 Hardware Compatibility & Android GNSS Benchmarking
+
+### OEM Driver Support & Requirements
+Running client-side Galileo OS-NMA verification directly on Android mobile devices requires OEM driver support for raw navigation message delivery via `GnssNavigationMessage.Callback` (specifically `TYPE_GAL_I`). While Google introduced raw GNSS measurement APIs in Android 7/8+, hardware support varies across chipset vendors (Qualcomm Snapdragon, MediaTek, Samsung Exynos, Unisoc).
+
+### Industry Diagnostic Reference: GPSTest
+TRISAT benchmarks device compatibility against the open-source **GPSTest** application and its crowdsourced capabilities database:
+* **GPSTest App:** [GPSTest on Google Play](https://play.google.com/store/apps/details?id=com.android.gpstest)
+* **GitHub Repository:** [barbeau/gpstest](https://github.com/barbeau/gpstest) (Created and maintained by Sean Barbeau)
+* **Android Capabilities Matrix:** [GPSTest Crowdsourced GNSS Database (Google Sheets)](https://docs.google.com/spreadsheets/d/1jXtRCoEnnFNWj6_oFlVWflsf-b0jkfZpyhN-BXsv7uo/edit?gid=0#gid=0)
+
+#### Minimum Device Requirements for Native OSNMA Extraction:
+| Capability / API | Minimum Status Required | Criticality for TRISAT | Impact if Unsupported |
+| :--- | :---: | :--- | :--- |
+| **Android Version** | Android 8.0+ (API 26) | Mandatory | Core raw GNSS and navigation message APIs are unavailable. |
+| **Navigation Messages** | `SUPPORTED` | Mandatory | Inability to extract Galileo I/NAV frames; OSNMA verification cannot operate locally. |
+| **Dual-Frequency (E1/E5a)** | `SUPPORTED` | Recommended | Requires single-frequency ionospheric models (NeQuick-G), reducing overall accuracy. |
+| **Accumulated Delta Range (ADR)** | `SUPPORTED` | Recommended | Prevents carrier-phase smoothing, limiting positioning accuracy to code pseudorange baseline. |
+
+Before deploying or testing TRISAT on an Android smartphone, verify in the [GPSTest Database](https://docs.google.com/spreadsheets/d/1jXtRCoEnnFNWj6_oFlVWflsf-b0jkfZpyhN-BXsv7uo/edit?gid=0#gid=0) that your device model has **`SUPPORTED`** in the `Navigation messages` column.
+
+> **Note for iOS Devices:** Apple's `CoreLocation` framework abstracts raw constellation navigation messages and does not provide an equivalent to Android's `GnssNavigationMessage`. TRISAT for iOS retrieves high-accuracy position and telemetry via `CoreLocation`, and supports streaming raw Galileo I/NAV pages via an external GNSS receiver (e.g., u-blox ZED-F9P, Septentrio, SXblue) over Bluetooth Low Energy (BLE).
+
+---
+
 ## 📖 Documentation
 
-For complete usage instructions, technical architecture, and OSNMA testing workflows, please refer to the [USER_MANUAL.md](USER_MANUAL.md).
+* For complete usage instructions, technical architecture, and OSNMA testing workflows, please refer to the [USER_MANUAL.md](USER_MANUAL.md).
+* **State of the Art & Overview:** Consult the technical state of the art and ecosystem overview in the [TRISAT Overview Document](https://docs.google.com/document/d/1hdZqK1QkqJp_4wGj9-DmBCKDsRlN9INIX3hqUMN9QLg/edit?usp=sharing).
 
 ---
 
@@ -43,8 +69,3 @@ For complete usage instructions, technical architecture, and OSNMA testing workf
 ```bash
 # Assemble Debug APK
 ./gradlew assembleDebug
-```
-Output APK location: `trisat_android/build/outputs/apk/debug/trisat_android-debug.apk`
-
-### iOS App (`trisat_ios`)
-Open `trisat_ios/TRISAT.xcodeproj` in **Xcode** (`Cmd + R` or `xcodebuild`) and run on your iOS device or simulator.

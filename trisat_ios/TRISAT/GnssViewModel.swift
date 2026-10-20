@@ -5,6 +5,7 @@ import Combine
 @MainActor
 class GnssViewModel: ObservableObject {
     private let repository: GnssRepository
+    let bluetoothManager: BluetoothManager
     let tleDownloader = TleDownloader()
     private var cancellables = Set<AnyCancellable>()
     
@@ -26,19 +27,18 @@ class GnssViewModel: ObservableObject {
     // Computed Satellites for Skyplot
     @Published var displayedSatellites: [SatelliteInfo] = []
 
-    init(repository: GnssRepository = GnssRepository()) {
+    init(repository: GnssRepository = GnssRepository(), bluetoothManager: BluetoothManager = BluetoothManager()) {
         self.repository = repository
+        self.bluetoothManager = bluetoothManager
         setupBindings()
     }
     
     func start() {
         repository.requestPermissions()
-        repository.startINavFeed()
         updateSatellites()
     }
     
     func stop() {
-        repository.stopINavFeed()
         repository.stopLocationUpdates()
     }
 
@@ -46,8 +46,8 @@ class GnssViewModel: ObservableObject {
         let coord = currentCoordinate
 
         let allSats: [SatelliteInfo]
-        if selectedMode == 1 {
-            allSats = Sgp4OrbitPropagator.propagateToSkyplot(tles: tleDownloader.parsedTles, timeOffsetHours: 0.0, observerLocation: coord)
+        if selectedMode == 1 && !displayedSatellites.isEmpty {
+            allSats = displayedSatellites
         } else if selectedMode == 2 {
             allSats = Sgp4OrbitPropagator.propagateToSkyplot(tles: tleDownloader.parsedTles, timeOffsetHours: timeOffsetHours, observerLocation: coord)
         } else {
@@ -86,9 +86,34 @@ class GnssViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .assign(to: &$messages)
 
+        // Bind Bluetooth Manager stream callbacks directly to GnssViewModel
+        bluetoothManager.onInavFrameReceived = { [weak self] msg in
+            self?.repository.appendRealInavMessage(msg)
+        }
+
+        bluetoothManager.onSatStatusReceived = { [weak self] sats in
+            if self?.selectedMode == 1 {
+                self?.displayedSatellites = sats
+            }
+        }
+
+        bluetoothManager.onLocationReceived = { [weak self] lat, lon in
+            if self?.selectedMode == 1 {
+                self?.currentCoordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                let latDir = lat >= 0 ? "N" : "S"
+                let lonDir = lon >= 0 ? "E" : "W"
+                self?.locationText = String(format: "%.6f° %@, %.6f° %@", abs(lat), latDir, abs(lon), lonDir)
+            }
+        }
+
         Publishers.CombineLatest4($selectedMode, $timeOffsetHours, $isGalileoEnabled, $isGpsEnabled)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in self?.updateSatellites() }
+            .sink { [weak self] mode, _, _, _ in
+                if mode == 1 {
+                    self?.repository.clearMessages()
+                }
+                self?.updateSatellites()
+            }
             .store(in: &cancellables)
 
         Publishers.CombineLatest($isGlonassEnabled, $isBeidouEnabled)

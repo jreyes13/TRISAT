@@ -1,0 +1,488 @@
+"""
+Interactive Cross-Platform Web Dashboard for TRISAT-SDR.
+Uses Python's standard `http.server` so it runs out-of-the-box on macOS,
+GNU/Linux, and Windows without requiring external web server libraries.
+"""
+
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
+import threading
+from urllib.parse import parse_qs, urlparse
+
+from ..receiver import TrisatSdrReceiver
+
+
+DASHBOARD_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRISAT-SDR | Dual-HackRF Multi-Band GNSS Software Receiver</title>
+<style>
+  :root {
+    --bg: #070b14;
+    --card: #0f172a;
+    --border: #1e293b;
+    --cyan: #06b6d4;
+    --green: #10b981;
+    --amber: #f59e0b;
+    --purple: #a855f7;
+    --red: #ef4444;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+    padding: 16px;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: linear-gradient(90deg, #0f172a, #0b2639);
+    border: 1px solid var(--cyan);
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .title-block h1 { font-size: 20px; letter-spacing: 0.5px; color: #38bdf8; }
+  .title-block p { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .badge-green { background: rgba(16,185,129,0.2); color: #34d399; border: 1px solid #10b981; }
+  .badge-cyan { background: rgba(6,182,212,0.2); color: #22d3ee; border: 1px solid #06b6d4; }
+  .badge-amber { background: rgba(245,158,11,0.2); color: #fbbf24; border: 1px solid #f59e0b; }
+  .badge-purple { background: rgba(168,85,247,0.2); color: #c084fc; border: 1px solid #a855f7; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1.2fr 1fr 1.2fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 1100px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .card h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    color: #38bdf8;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .kv-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .kv-row span:first-child { color: var(--muted); }
+  .kv-row span:last-child { font-weight: 600; }
+
+  canvas {
+    width: 100%;
+    height: 125px;
+    background: #050811;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    margin-top: 8px;
+  }
+  .controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  select, button {
+    background: #1e293b;
+    color: var(--text);
+    border: 1px solid var(--cyan);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  button:hover { background: #0e7490; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #1e293b; }
+  th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+
+  .mono-box {
+    background: #050811;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 10px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px;
+    height: 210px;
+    overflow-y: auto;
+    line-height: 1.5;
+  }
+  .cmd-line {
+    background: #050811;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    color: #34d399;
+    margin-top: 6px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-block">
+    <h1>🛰️ TRISAT-SDR — Multi-Band GNSS Software Receiver</h1>
+    <p>Portable SDR Baseband Engine (macOS · GNU/Linux · Windows) | Dual-HackRF Synchronized (E1 OSNMA + E5 AltBOC + E6 HAS)</p>
+  </div>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <span id="fixBadge" class="badge badge-green">INITIALIZING...</span>
+    <span id="epochBadge" class="badge badge-cyan">EPOCH 0</span>
+  </div>
+</header>
+
+<!-- Dual HackRF RF Front-End Section -->
+<div class="grid-2">
+  <div class="card">
+    <h2>
+      <span>📻 SDR #0 (Master Clock) — Galileo E1B/C + GPS L1</span>
+      <span class="badge badge-cyan" id="sdr0Freq">1575.42 MHz</span>
+    </h2>
+    <div class="kv-row"><span>Hardware Device:</span><span id="sdr0Label">--</span></div>
+    <div class="kv-row"><span>Modulation / Code:</span><span id="sdr0Mod">CBOC(6,1,1/11) + BPSK(1)</span></div>
+    <div class="kv-row"><span>Sample Rate / Gains:</span><span id="sdr0Gains">--</span></div>
+    <div class="kv-row"><span>Clock Sync & Bias-T (3.3V):</span><span id="sdr0Sync" style="color:#34d399;">CLKOUT MASTER (10 MHz) | BIAS-T ON</span></div>
+    <div class="cmd-line" id="sdr0Cmd">hackrf_transfer ...</div>
+    <canvas id="spec0Canvas" width="520" height="120"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>
+      <span>📻 SDR #1 (Slave CLKIN Synced) — Secondary Band</span>
+      <span class="badge badge-purple" id="sdr1Freq">1278.75 MHz</span>
+    </h2>
+    <div class="kv-row"><span>Hardware Device:</span><span id="sdr1Label">--</span></div>
+    <div class="kv-row"><span>Modulation / Service:</span><span id="sdr1Mod">BPSK(5) — Galileo E6 HAS</span></div>
+    <div class="kv-row"><span>Sample Rate / Gains:</span><span id="sdr1Gains">--</span></div>
+    <div class="controls">
+      <label style="font-size:12px; color:#94a3b8;">Retune HackRF #1 Band:</label>
+      <select id="bandSelect" onchange="switchSecondaryBand()">
+        <option value="GAL_E6">Galileo E6B/C (1278.75 MHz - HAS High Accuracy PPP)</option>
+        <option value="GAL_E5A">Galileo E5a (1176.45 MHz - F/NAV Iono-Free)</option>
+        <option value="GAL_E5B">Galileo E5b (1207.14 MHz - I/NAV Dual-Band)</option>
+        <option value="GAL_E5_ALTBOC">Galileo E5 Full AltBOC(15,10) (1191.795 MHz - 20 MS/s)</option>
+      </select>
+    </div>
+    <div class="cmd-line" id="sdr1Cmd">hackrf_transfer ...</div>
+    <canvas id="spec1Canvas" width="520" height="120"></canvas>
+  </div>
+</div>
+
+<!-- Middle Row: PVT + Correlator & IQ Constellation + Telemetry Bridge -->
+<div class="grid-3">
+  <div class="card">
+    <h2>
+      <span>📍 Multi-Band PVT & OSNMA / HAS Status</span>
+      <span class="badge badge-green" id="pvtMode">E1 + E6 HAS</span>
+    </h2>
+    <div class="kv-row"><span>Latitude / Longitude:</span><span id="pvtLatLon" style="color:#38bdf8;">--</span></div>
+    <div class="kv-row"><span>Altitude / Clock Bias:</span><span id="pvtAltClk">--</span></div>
+    <div class="kv-row"><span>Estimated 2D / 1D Error:</span><span id="pvtAcc" style="color:#34d399;">--</span></div>
+    <div class="kv-row"><span>DOP (GDOP / PDOP / HDOP):</span><span id="pvtDop">--</span></div>
+    <div class="kv-row"><span>Galileo OSNMA Auth Sats:</span><span id="pvtOsnma" style="color:#22d3ee;">--</span></div>
+    <div class="kv-row"><span>Galileo E6 HAS PPP Sats:</span><span id="pvtHas" style="color:#c084fc;">--</span></div>
+  </div>
+
+  <div class="card">
+    <h2>
+      <span>🎯 Multi-Correlator (VE,E,P,L,VL) & Costas I/Q</span>
+      <span class="badge badge-amber" id="corrChLabel">CH 0</span>
+    </h2>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+      <canvas id="corrCanvas" width="220" height="145" style="height:145px;"></canvas>
+      <canvas id="iqCanvas" width="220" height="145" style="height:145px;"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>
+      <span>🔗 TRISAT Telemetry Bridge (NMEA / $GALINAV / JSON)</span>
+      <span class="badge badge-cyan" id="bridgePkts">0 pkts</span>
+    </h2>
+    <div class="kv-row"><span>UDP Stream (iOS/Android/Mac):</span><span id="bridgeUdp" style="color:#34d399;">--</span></div>
+    <div class="kv-row"><span>TCP Server (Multi-client):</span><span id="bridgeTcp" style="color:#38bdf8;">--</span></div>
+    <div class="kv-row"><span>macOS Virtual Serial (PTY):</span><span id="bridgePty" style="color:#fbbf24;">--</span></div>
+    <div class="mono-box" id="nmeaBox" style="height:105px; margin-top:8px; color:#34d399;"></div>
+  </div>
+</div>
+
+<!-- Bottom Row: DLL/PLL Tracking Channels & Raw Decoded Frames -->
+<div class="grid-2">
+  <div class="card">
+    <h2><span>📡 Active Baseband DLL / PLL Tracking Channels</span></h2>
+    <div style="max-height:220px; overflow-y:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>CH</th>
+            <th>Band</th>
+            <th>PRN/SVID</th>
+            <th>C/N0 (dB-Hz)</th>
+            <th>Doppler (Hz)</th>
+            <th>Code Phase</th>
+            <th>PLL Lock</th>
+          </tr>
+        </thead>
+        <tbody id="trackTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span>🔐 Demodulated Navigation Frames (I/NAV + OSNMA · E6 HAS · E5 · LNAV)</span></h2>
+    <div class="mono-box" id="framesBox"></div>
+  </div>
+</div>
+
+<script>
+async function switchSecondaryBand() {
+  const band = document.getElementById('bandSelect').value;
+  await fetch('/api/set_band?band=' + encodeURIComponent(band), { method: 'POST' });
+}
+
+function drawSpectrum(canvasId, dbValues, strokeColor) {
+  const c = document.getElementById(canvasId);
+  if (!c || !dbValues || !dbValues.length) return;
+  const ctx = c.getContext('2d');
+  const w = c.width, h = c.height;
+  ctx.clearRect(0, 0, w, h);
+
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1;
+  for (let y = 20; y < h; y += 25) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < dbValues.length; i++) {
+    const x = (i / (dbValues.length - 1)) * w;
+    const norm = Math.min(1, Math.max(0, (dbValues[i] + 65) / 55));
+    const y = h - 12 - norm * (h - 24);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+function drawCorrelatorAndIQ(ch) {
+  const cCorr = document.getElementById('corrCanvas');
+  const cIq = document.getElementById('iqCanvas');
+  if (!cCorr || !cIq || !ch) return;
+
+  // 1. Draw 5-tap VE, E, P, L, VL Correlator Peak
+  const ctx1 = cCorr.getContext('2d');
+  const w1 = cCorr.width, h1 = cCorr.height;
+  ctx1.clearRect(0, 0, w1, h1);
+  const taps = ch.correlator_taps || [0.25, 0.55, 1.0, 0.55, 0.25];
+  const labels = ['VE', 'E', 'P', 'L', 'VL'];
+  ctx1.strokeStyle = '#22d3ee';
+  ctx1.lineWidth = 2;
+  ctx1.beginPath();
+  for (let i = 0; i < taps.length; i++) {
+    const x = 25 + (i / (taps.length - 1)) * (w1 - 50);
+    const y = h1 - 24 - taps[i] * (h1 - 45);
+    if (i === 0) ctx1.moveTo(x, y);
+    else ctx1.lineTo(x, y);
+  }
+  ctx1.stroke();
+  for (let i = 0; i < taps.length; i++) {
+    const x = 25 + (i / (taps.length - 1)) * (w1 - 50);
+    const y = h1 - 24 - taps[i] * (h1 - 45);
+    ctx1.fillStyle = (i === 2) ? '#10b981' : '#38bdf8';
+    ctx1.beginPath(); ctx1.arc(x, y, 4, 0, Math.PI * 2); ctx1.fill();
+    ctx1.fillStyle = '#94a3b8';
+    ctx1.font = '10px monospace';
+    ctx1.fillText(labels[i], x - 6, h1 - 8);
+  }
+
+  // 2. Draw Costas Loop I/Q Prompt Diagram
+  const ctx2 = cIq.getContext('2d');
+  const w2 = cIq.width, h2 = cIq.height;
+  ctx2.clearRect(0, 0, w2, h2);
+  ctx2.strokeStyle = '#1e293b';
+  ctx2.beginPath();
+  ctx2.moveTo(w2/2, 0); ctx2.lineTo(w2/2, h2);
+  ctx2.moveTo(0, h2/2); ctx2.lineTo(w2, h2/2);
+  ctx2.stroke();
+
+  const pts = ch.prompt_iq_history || [];
+  for (let i = 0; i < pts.length; i++) {
+    const px = w2/2 + pts[i][0] * (w2 * 0.32);
+    const py = h2/2 - pts[i][1] * (h2 * 0.32);
+    ctx2.fillStyle = '#fbbf24';
+    ctx2.beginPath(); ctx2.arc(px, py, 3, 0, Math.PI * 2); ctx2.fill();
+  }
+}
+
+async function pollStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+
+    document.getElementById('epochBadge').textContent = 'EPOCH ' + data.epoch;
+
+    const p0 = data.primary_sdr;
+    document.getElementById('sdr0Label').textContent = p0.label;
+    document.getElementById('sdr0Freq').textContent = p0.center_freq_mhz + ' MHz';
+    document.getElementById('sdr0Mod').textContent = p0.modulation + ' + GPS L1';
+    document.getElementById('sdr0Gains').textContent = p0.sample_rate_msps + ' MS/s | LNA ' + p0.lna_gain_db + ' dB | VGA ' + p0.vga_gain_db + ' dB';
+    document.getElementById('sdr0Cmd').textContent = '$ ' + p0.cli_cmd;
+    drawSpectrum('spec0Canvas', p0.spectrum_db, '#06b6d4');
+
+    const p1 = data.secondary_sdr;
+    document.getElementById('sdr1Label').textContent = p1.label;
+    document.getElementById('sdr1Freq').textContent = p1.center_freq_mhz + ' MHz';
+    document.getElementById('sdr1Mod').textContent = p1.band_name + ' (' + p1.modulation + ')';
+    document.getElementById('sdr1Gains').textContent = p1.sample_rate_msps + ' MS/s | LNA ' + p1.lna_gain_db + ' dB | VGA ' + p1.vga_gain_db + ' dB';
+    document.getElementById('sdr1Cmd').textContent = '$ ' + p1.cli_cmd;
+    drawSpectrum('spec1Canvas', p1.spectrum_db, '#a855f7');
+
+    if (data.pvt) {
+      const pvt = data.pvt;
+      document.getElementById('fixBadge').textContent = pvt.valid_fix ? '3D FIX LOCKED' : 'ACQUIRING';
+      document.getElementById('pvtMode').textContent = pvt.solution_mode;
+      document.getElementById('pvtLatLon').textContent = pvt.latitude_deg.toFixed(6) + '°, ' + pvt.longitude_deg.toFixed(6) + '°';
+      document.getElementById('pvtAltClk').textContent = pvt.altitude_m.toFixed(1) + ' m | ' + pvt.clock_bias_ns.toFixed(1) + ' ns';
+      document.getElementById('pvtAcc').textContent = '±' + pvt.horizontal_accuracy_m.toFixed(2) + ' m (2D) / ±' + pvt.vertical_accuracy_m.toFixed(2) + ' m (1D)';
+      document.getElementById('pvtDop').textContent = pvt.gdop + ' / ' + pvt.pdop + ' / ' + pvt.hdop;
+      document.getElementById('pvtOsnma').textContent = pvt.osnma_authenticated_sats + ' Sats Verified (HKROOT+MACK)';
+      document.getElementById('pvtHas').textContent = pvt.has_corrected_sats + ' Sats Corrected (E6 C/NAV)';
+    }
+
+    const br = data.bridge;
+    document.getElementById('bridgePkts').textContent = br.packets_sent + ' pkts (' + (br.bytes_sent/1024).toFixed(1) + ' KB)';
+    document.getElementById('bridgeUdp').textContent = 'udp://' + br.udp_target;
+    document.getElementById('bridgeTcp').textContent = 'tcp://' + br.tcp_listen + ' (' + br.tcp_clients + ' clients)';
+    document.getElementById('bridgePty').textContent = br.pty_serial_device;
+    document.getElementById('nmeaBox').innerHTML = (br.recent_nmea || []).map(l => '<div>' + l + '</div>').join('');
+
+    const chs = data.tracking_channels || [];
+    if (chs.length > 0) {
+      document.getElementById('corrChLabel').textContent = chs[0].band_id + ' PRN ' + chs[0].svid;
+      drawCorrelatorAndIQ(chs[0]);
+    }
+    const tbody = document.getElementById('trackTableBody');
+    tbody.innerHTML = chs.map(c => `
+      <tr>
+        <td>#${c.channel_id}</td>
+        <td><span class="badge ${c.band_id.includes('E6') ? 'badge-purple' : (c.band_id.includes('E5') ? 'badge-amber' : 'badge-cyan')}">${c.band_id}</span></td>
+        <td><b>${c.constellation === 'GALILEO' ? 'E' : 'G'}${String(c.svid).padStart(2,'0')}</b></td>
+        <td style="color:#34d399; font-weight:700;">${c.cn0_dbhz.toFixed(1)}</td>
+        <td>${c.carrier_doppler_hz.toFixed(1)}</td>
+        <td>${c.code_phase_chips.toFixed(1)} chips</td>
+        <td>${c.locked ? '🔒 LOCKED (' + c.pll_lock_indicator.toFixed(2) + ')' : 'SEARCH'}</td>
+      </tr>
+    `).join('');
+
+    const frms = data.decoded_frames || [];
+    document.getElementById('framesBox').innerHTML = frms.map(f => {
+      let extra = '';
+      if (f.osnma_hkroot_hex) {
+        extra = ` <span style="color:#22d3ee;">[OSNMA HKROOT:${f.osnma_hkroot_hex} MACK:${f.osnma_mack_hex}]</span>`;
+      } else if (f.frame_type === 'CNAV_E6_HAS') {
+        extra = ` <span style="color:#c084fc;">[HAS dR: ${f.has_orbit_corr_cm} cm]</span>`;
+      }
+      return `<div style="margin-bottom:6px; border-bottom:1px solid #1e293b; padding-bottom:4px;">
+        <span style="color:#fbbf24; font-weight:bold;">[${f.frame_type}]</span>
+        <b>SV${String(f.svid).padStart(2,'0')}</b> Word/Page:${f.word_or_page_id}
+        CRC24Q:<span style="color:#34d399;">${f.crc24q_hex}✓</span>${extra}<br/>
+        <span style="color:#94a3b8;">HEX: ${f.hex_payload.substring(0, 60)}</span>
+      </div>`;
+    }).join('');
+  } catch (e) {}
+}
+
+setInterval(pollStatus, 600);
+pollStatus();
+</script>
+</body>
+</html>
+"""
+
+
+class TrisatWebDashboardServer:
+    """Embedded HTTP Server serving the TRISAT-SDR Dashboard and JSON API."""
+
+    def __init__(self, receiver: TrisatSdrReceiver, host: str = "127.0.0.1", port: int = 8080):
+        self.receiver = receiver
+        self.host = host
+        self.port = port
+        self._httpd: ThreadingHTTPServer = None  # type: ignore
+
+    def start(self, background: bool = True) -> str:
+        receiver_ref = self.receiver
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, format: str, *args) -> None:
+                pass  # Suppress noisy console access logs
+
+            def do_GET(self):
+                parsed = urlparse(self.path)
+                if parsed.path == "/api/status":
+                    snap = receiver_ref.get_status_snapshot()
+                    body = json.dumps(snap).encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+                    self.wfile.write(body)
+                else:
+                    body = DASHBOARD_HTML.encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/html; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(body)
+
+            def do_POST(self):
+                parsed = urlparse(self.path)
+                if parsed.path == "/api/set_band":
+                    qs = parse_qs(parsed.query)
+                    band = qs.get("band", ["GAL_E6"])[0]
+                    receiver_ref.switch_secondary_band(band, dual_enabled=True)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(b'{"status":"ok"}')
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+
+        self._httpd = ThreadingHTTPServer((self.host, self.port), Handler)
+        if background:
+            threading.Thread(target=self._httpd.serve_forever, daemon=True).start()
+        else:
+            self._httpd.serve_forever()
+        return f"http://{self.host}:{self.port}"
+
+    def stop(self) -> None:
+        if self._httpd:
+            self._httpd.shutdown()

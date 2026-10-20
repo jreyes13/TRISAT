@@ -1,0 +1,6 @@
+# Optional high-performance DSP & SDR hardware bindings for TRISAT-SDR
+# Note: TRISAT-SDR runs out-of-the-box with Python 3 standard library,
+# and automatically enables vectorized FFT & hardware drivers when installed.
+numpy>=1.24.0
+scipy>=1.10.0
+pyserial>=3.5

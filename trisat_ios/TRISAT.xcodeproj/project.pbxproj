@@ -26,6 +26,8 @@
 		100000000000000000000017 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000017 /* Assets.xcassets */; };
 		100000000000000000000018 /* MiniMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000018 /* MiniMapView.swift */; };
 		100000000000000000000019 /* BuildInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000019 /* BuildInfo.swift */; };
+		100000000000000000000020 /* BleDevicePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000020 /* BleDevicePickerSheet.swift */; };
+		100000000000000000000021 /* MacSerialPortManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200000000000000000000021 /* MacSerialPortManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +51,8 @@
 		200000000000000000000017 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		200000000000000000000018 /* MiniMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniMapView.swift; sourceTree = "<group>"; };
 		200000000000000000000019 /* BuildInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildInfo.swift; sourceTree = "<group>"; };
+		200000000000000000000020 /* BleDevicePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BleDevicePickerSheet.swift; sourceTree = "<group>"; };
+		200000000000000000000021 /* MacSerialPortManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacSerialPortManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +94,8 @@
 				200000000000000000000017 /* Assets.xcassets */,
 				200000000000000000000018 /* MiniMapView.swift */,
 				200000000000000000000019 /* BuildInfo.swift */,
+				200000000000000000000020 /* BleDevicePickerSheet.swift */,
+				200000000000000000000021 /* MacSerialPortManager.swift */,
 			);
 			path = TRISAT;
 			sourceTree = "<group>";
@@ -185,6 +191,8 @@
 				100000000000000000000016 /* TRISATApp.swift in Sources */,
 				100000000000000000000018 /* MiniMapView.swift in Sources */,
 				100000000000000000000019 /* BuildInfo.swift in Sources */,
+				100000000000000000000020 /* BleDevicePickerSheet.swift in Sources */,
+				100000000000000000000021 /* MacSerialPortManager.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
@@ -246,6 +254,8 @@
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers and stream raw satellite telemetry.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TRISAT requires location access to stream satellite telemetry and calculate position fixes.";
+				INFOPLIST_KEY_UIBackgroundModes = "external-accessory bluetooth-central bluetooth-peripheral";
+				INFOPLIST_KEY_UISupportedExternalAccessoryProtocols = "com.geneq.sxbluegps com.geneq.sxblue com.geneq.sxblueII com.geneq.sxblueplatinum com.amanenterprises.nmea com.amanenterprises.gsl com.apple.protocols.nmea com.eos-gnss.arrow";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -256,8 +266,10 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jreyes13.TRISAT;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -289,6 +301,8 @@
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers and stream raw satellite telemetry.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TRISAT requires location access to stream satellite telemetry and calculate position fixes.";
+				INFOPLIST_KEY_UIBackgroundModes = "external-accessory bluetooth-central bluetooth-peripheral";
+				INFOPLIST_KEY_UISupportedExternalAccessoryProtocols = "com.geneq.sxbluegps com.geneq.sxblue com.geneq.sxblueII com.geneq.sxblueplatinum com.amanenterprises.nmea com.amanenterprises.gsl com.apple.protocols.nmea com.eos-gnss.arrow";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -299,8 +313,10 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jreyes13.TRISAT;
 				PRODUCT_NAME = "$(TARGET_NAME)";
