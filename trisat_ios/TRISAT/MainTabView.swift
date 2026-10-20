@@ -1,14 +1,19 @@
 import SwiftUI
 
 struct MainTabView: View {
-    @StateObject private var bluetoothManager = BluetoothManager()
+    @StateObject private var bluetoothManager: BluetoothManager
     @StateObject private var viewModel: GnssViewModel
+    @StateObject private var telemetryBridge: GnssTelemetryBridge
     @State private var selectedTab: Int = 0
     
     init() {
         let sharedBle = BluetoothManager()
+        let vm = GnssViewModel(bluetoothManager: sharedBle)
+        let bridge = GnssTelemetryBridge(viewModel: vm, bluetoothManager: sharedBle)
+
         _bluetoothManager = StateObject(wrappedValue: sharedBle)
-        _viewModel = StateObject(wrappedValue: GnssViewModel(bluetoothManager: sharedBle))
+        _viewModel = StateObject(wrappedValue: vm)
+        _telemetryBridge = StateObject(wrappedValue: bridge)
     }
     
     var body: some View {
@@ -46,5 +51,8 @@ struct MainTabView: View {
                 .tag(3)
         }
         .accentColor(.cyan)
+        .onAppear {
+            telemetryBridge.configure(viewModel: viewModel, bluetoothManager: bluetoothManager)
+        }
     }
 }

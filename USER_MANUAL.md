@@ -1,6 +1,6 @@
 # TRISAT - Multiplatform User Manual & Technical Reference Guide
 
-Welcome to the **TRISAT (Authenticated Earth Intelligence)** multiplatform application manual. This document explains the repository architecture, features, GNSS testing workflows, and OSNMA verification tools provided by TRISAT across Android, iOS, iPadOS, macOS, and watchOS ecosystems.
+Welcome to the **TRISAT (Authenticated Earth Intelligence)** multiplatform application manual. This document explains the repository architecture, features, GNSS testing workflows, and OSNMA verification tools provided by TRISAT across Android, iOS, iPadOS, and macOS ecosystems.
 
 ---
 
@@ -10,7 +10,12 @@ TRISAT is a **multiplatform GNSS intelligence solution** designed for **Galileo 
 
 ### Repository Layout:
 * 📂 **`trisat_android/`**: Native Android Application (Kotlin, Jetpack Compose, Android GNSS HAL Location APIs).
-* 📂 **`trisat_ios/`**: Native iOS, iPadOS, macOS, and watchOS Application (Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit).
+* 📂 **`trisat_ios/`**: Native iOS & iPadOS Application (Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit).
+* 📂 **`trisat_mac/`**: Native macOS Application (Swift, SwiftUI, Network.framework, PyUSB, libusb, POSIX serial port).
+* 📂 **`SX_Blue/`**: Python USB hardware drivers and telemetry bridges for Geneq SXblue receivers:
+  * `sxblue_config.py`: One-time EEPROM setup tool for FTDI UART at 19200 bps ($JBIN 94/95).
+  * `sxblue_reader.py`: Continuous USB reader and local UDP telemetry broadcaster (`127.0.0.1:9090`).
+  * `run_bridge.sh`: Executable launcher with privilege elevation (`sudo arch -x86_64`).
 * 📄 **`README.md`**: Project overview, feature summary, and build instructions.
 * 📄 **`USER_MANUAL.md`**: Complete user manual and technical reference guide.
 
@@ -18,13 +23,12 @@ TRISAT is a **multiplatform GNSS intelligence solution** designed for **Galileo 
 
 ## 2. Core Capabilities
 
-* **Real-time Open Sky View (Skyplot):** Polar visualization of tracked satellites categorized by constellation (Galileo Primary, GPS, GLONASS, BeiDou) with clean circle markers ($\bigcirc$).
-* **Galileo I/NAV & OSNMA Receiver Test:** Direct extraction and inspection of raw Galileo `TYPE_GAL_I` navigation frames on supported Android devices or external BLE receivers on iOS/macOS.
+* **Anti-Flicker Open Sky Polar Skyplot:** Interactive 360° skyplot with constellation color coding (Galileo Cyan, GPS Amber, GLONASS Red, BeiDou Green) with a persistent 30-second satellite cache that **completely eliminates flickering**.
+* **Satellite C/N0 Signal Strength Bar Chart (Diagrama de Barras):** Real-time vertical SNR bar chart displaying carrier-to-noise ratio in dB-Hz color-coded by signal quality (Green $\ge 35$ dB-Hz, Yellow $\ge 25$ dB-Hz, Red $< 25$ dB-Hz) with constellation PRN badges (`E02`, `G08`, `R05`, `B12`).
+* **Geneq SXblue USB Telemetry Bridge:** Low-level PyUSB/libusb driver interfacing with the Geneq SXblue FTDI USB chip (`VID: 0x0403`, `PID: 0xb5a0`) at 19200 bps, broadcasting JSON and raw NMEA/$BIN datagrams to `127.0.0.1:9090` via `Network.framework`.
+* **Galileo I/NAV & OSNMA Receiver Test:** Direct extraction and inspection of raw Galileo `TYPE_GAL_I` navigation frames and 250-bit subframe pages.
 * **CelesTrak TLE Orbital Propagator & 24h Time Slider:** Download real-time satellite orbital elements and simulate constellation geometries across a 24-hour window ($\pm 12\text{h}$).
-* **Galileo-Only Authenticated Position Solution:** Calculates position convergence time and 3D fix accuracy exclusively from authenticated Galileo satellites.
-* **Multi-Constellation Solution Matrix:** Side-by-side comparison of position, 2D/1D error, and sat count for Galileo OS-NMA, Galileo-Only, GPS-Only, GLONASS-Only, and BeiDou-Only.
-* **Position History & Error Statistics:** Tracks RMS horizontal (2D), vertical (1D), and 3D position errors across logged epochs.
-* **Cold-Start A-GNSS Purge:** Issues native Android HAL commands to flush cached A-GPS/A-GNSS ephemeris and almanac data.
+* **Differential DGPS / RTK Telemetry Analysis:** Real-time decoding of `$GPGGA` differential fix mode, base station ID, correction age (seconds), HDOP/PDOP, and `$GPGST` pseudorange RMS error statistics.
 * **Geospatial Navigator Exporter:** Dynamic hemisphere coordinates (`N`/`S` and `E`/`W`), clean decimal clipboard copying, and direct Apple Maps / Google Maps intent launching.
 
 ---
@@ -35,64 +39,86 @@ TRISAT is a **multiplatform GNSS intelligence solution** designed for **Galileo 
 1. **Open Sky Satellite View (Skyplot):**
    * Displays satellites in polar coordinates (Azimuth $0^\circ - 360^\circ$, Elevation $0^\circ - 90^\circ$).
    * Interactive filter chips allow toggling individual constellations (Galileo, GPS, GLONASS, BeiDou) on or off.
-   * **Adaptive Layout:** 1-column vertical on iPhone; 2-column side-by-side on iPad with 320pt large Skyplot!
+   * **Adaptive Layout:** 1-column vertical on iPhone; 2-column side-by-side on iPad & macOS with 320pt large Skyplot!
 2. **Constellation Signal Matrix:**
    * Grid summary showing visible satellite count and average signal power ($C/N_0$) across Galileo, GPS, GLONASS, and BeiDou networks.
 3. **DOP Geometry Quality Card:**
    * Displays HDOP, VDOP, PDOP, and 3D Geometry Quality indicator.
 4. **Embedded Geospatial Mini Map:**
-   * Live interactive MapKit view displaying current GPS position pin marked `GNSS LIVE`.
+   * Live interactive MapKit view displaying current GPS/Galileo position pin marked `GNSS LIVE`.
 
 ---
 
-### 📶 Signal Processing Tab
-1. **GNSS Raw Signal Monitor Header:**
-   * Shows active mode status (`REAL HARDWARE` vs `SIMULATION MODE`) with toggle button.
-   * Displays total tracked satellites, average $C/N_0$ (dB-Hz), and HDOP.
-2. **Galileo I/NAV & OSNMA Receiver Test:**
-   * Evaluates if your device's hardware driver exposes raw `TYPE_GAL_I` I/NAV pages.
-   * Displays real-time captured I/NAV frame count and raw hexadecimal payloads (`0x1B0A4F...`).
-3. **Multi-Constellation Solution Matrix:**
-   * Comparative table showing position, 2D/1D error, and sat count across all 5 constellation configurations.
+### 📶 Signal Processing Tab (Unified 4-Quadrant View)
+
+The **Signal Processing** tab features a clean 4-quadrant layout displaying all telemetric fields on a single screen without switching tabs:
+
+1. **Top Differential & Hardware Metrics Header:**
+   * **Fix Mode:** *DGPS Differential (SXblue)*, *GPS Autonomous*, *RTK Fixed (Centimeter)*.
+   * **Sats in Fix / HDOP:** Live satellite count and Horizontal Dilution of Precision.
+   * **DGPS Base Station:** Base Station ID (e.g. `0124`) and correction age in seconds.
+   * **GST Pseudorange Error:** RMS pseudorange noise error in meters.
+2. **Quadrant 1 — Open Sky Radar (Skyplot Compacto):**
+   * Compact polar radar displaying satellite positions ($\bigcirc$) without flickering.
+3. **Quadrant 2 — Satellite Signal Strength C/N0 Bar Chart:**
+   * Vertical SNR bars in dB-Hz color-coded green/yellow/red with PRN badges (`E02`, `G08`, `R05`, `B12`).
+4. **Quadrant 3 — ASCII NMEA Telemetry Stream:**
+   * Full-width monospaced green terminal scrolling incoming `$GPGGA`, `$GAGSV`, `$GPGST`, `$GPRMC` sentences.
+5. **Quadrant 4 — Galileo I/NAV Subframes:**
+   * Live cards showing demodulated 250-bit Galileo navigation messages.
 
 ---
 
 ### 🛡️ Threat Analysis Tab
-1. **Trustability Overview Gauge Meter:**
-   * Real-time 0–100% Trustability Score with High/Medium/Low trust classification.
-2. **Anti-Spoofing Status & Interactive Threat Scenario Switcher:**
-   * Interactively test GNSS attack vectors: Nominal, Spoofing, Jamming, Clock Drift, OSNMA Key Failure.
-3. **Real-Time Threat Intelligence Event Logs:**
-   * Live timeline logging detected signal anomalies and security events.
+1. **Overall Threat Score Gauge:**
+   * Real-time 0–100% Threat Score with `NOMINAL / SAFE`, `MODERATE RISK`, or `CRITICAL THREAT` classification.
+2. **Galileo OSNMA Cryptographic Auth:**
+   * Dynamic status (`NO I/NAV DATA`, `SYNCING KEYS`, `AUTHENTICATED`, `AUTH FAILED`) evaluating HKROOT certificate and TESLA key chains.
+3. **Jamming & RF Interference Detection:**
+   * Real-time average $C/N_0$ SNR analysis across tracked satellites and Automatic Gain Control (AGC) monitoring.
+4. **Spoofing / Meaconing Analysis:**
+   * Pseudorange residual noise checks (`$GPGST`) and orbit consistency checks against CelesTrak TLE propagations.
+5. **Differential DGPS & Base Station Integrity:**
+   * Verifies differential station ID and correction age to protect against base station spoofing attacks.
 
 ---
 
-### ⚙️ Settings & Logs Tab
-1. **GNSS Receiver Mode Selector:**
-   * Toggle between Internal Receiver, External Bluetooth GNSS Receiver, and Orbit TLE Simulation.
-2. **CelesTrak TLE Orbit Downloader:**
+### ⚙️ Settings Tab
+1. **Bluetooth GNSS Receivers Card:**
+   * Dedicated BLE device scanner and connection dropdown.
+2. **USB / Local Bridges (Daemon) Card:**
+   * Dedicated selector for `SXblue USB Bridge (UDP 127.0.0.1:9090)`.
+   * Real-time listener status (`Disconnected`, `Listening on :9090`, `Streaming Telemetry`) and datagram counter.
+3. **CelesTrak TLE Orbit Downloader:**
    * Asynchronously fetches and caches fresh TLE orbits.
    * Displays formatted **Last Download Timestamp** stored persistently in `UserDefaults`.
-3. **Live Orbit Simulation SkyPlot Preview (iPad):**
-   * Real-time live Skyplot preview inside Settings updating as the user adjusts the 24-hour time slider ($\pm 12\text{h}$).
-4. **System Information & Build Details:**
-   * Displays dynamic Build Version (`v1.1.0`), Code (`2`), and Compilation Timestamp (`17 Oct 2026`).
 
 ---
 
-## 4. Multi-Device Compatibility (macOS & watchOS)
+## 4. How to Connect the Geneq SXblue Receiver (macOS)
 
-TRISAT is designed using modular SwiftUI and Combine, making cross-apple ecosystem extensions seamless:
+Because Geneq SXblue USB receivers use a custom FTDI Product ID (`VID: 0x0403, PID: 0xb5a0`), macOS does not generate a standard `/dev/cu.usbserial` node. Follow these steps to connect:
 
-### 💻 macOS Extension (Mac Catalyst / Native macOS):
-* Enable `macOS (Designed for iPad)` or `Mac Catalyst` in Xcode target settings.
-* Connect external high-precision GNSS receivers (u-blox ZED-F9P / Septentrio) via Bluetooth LE or USB Serial on macOS.
-* Add a `MenuBarExtra` in SwiftUI to run TRISAT in the macOS top menu bar showing real-time GNSS security status.
+### 1️⃣ Run the USB Reader Daemon
+Open Terminal and run the launcher script:
+```bash
+sudo ./SX_Blue/run_bridge.sh
+```
+*(Enter your Mac password when prompted)*. Terminal will confirm:
+```text
+======================================================
+ TRISAT SXblue USB Telemetry Daemon (Localhost UDP 9090)
+======================================================
+[+] UDP Socket Active -> 127.0.0.1:9090
+[+] Attached to SXblue Receiver (VID: 0x403, PID: 0xb5a0)
+[+] FTDI UART configured at 19200 bps.
 
-### ⌚ watchOS Extension (Apple Watch):
-* Add a `watchOS App` target in `TRISAT.xcodeproj`.
-* CoreLocation & CoreBluetooth run natively on Apple Watch.
-* Provides a compact wrist Skyplot, instant coordinate reader, and haptic wrist alerts when spoofing or jamming is detected.
+[+] Streaming USB Telemetry to localhost:9090... Press Ctrl+C to stop.
+```
+
+### 2️⃣ Launch TRISAT macOS App
+Open TRISAT in Xcode (`trisat_mac`) and press **`Run`** (`Cmd + R`).
+* In **Signal Processing**, all 4 quadrants (Skyplot, C/N0 Bar Chart, NMEA Stream, Galileo I/NAV) will update live in real-time.
 
 ---
 
@@ -104,10 +130,12 @@ TRISAT is designed using modular SwiftUI and Combine, making cross-apple ecosyst
    ./gradlew assembleDebug
    ```
 2. Open TRISAT outdoors under clear open sky and grant location permissions.
-3. Go to **Signal Monitor** $\rightarrow$ **Galileo I/NAV & OSNMA Receiver Test**.
+3. Go to **Signal Processing** $\rightarrow$ **Galileo I/NAV & OSNMA Receiver Test**.
 4. **Result:**
-   * **Green Badge (`I/NAV CAPABLE (OSNMA OK)`)**: Device delivers raw Galileo `TYPE_GAL_I` navigation frames. The device is fully capable of Galileo OSNMA authentication!
+   * **Green Badge (`I/NAV CAPABLE (OSNMA OK)`)**: Device delivers raw Galileo `TYPE_GAL_I` navigation frames.
    * **Orange Badge (`NO I/NAV DETECTED`)**: Device hardware driver does not expose raw I/NAV pages required for OSNMA.
 
-### iOS / iPadOS Device (`trisat_ios`):
-Open `trisat_ios/TRISAT.xcodeproj` in Xcode, connect your iPhone or iPad, and run the app (`Cmd + R`) to test location & TLE satellite simulation.
+### iOS / macOS Target (`trisat_ios` / `trisat_mac`):
+1. Open `trisat_mac/TRISAT.xcodeproj` or `trisat_ios/TRISAT.xcodeproj` in Xcode.
+2. Build and run the app (`Cmd + R`).
+3. Connect the SXblue receiver over USB daemon or Bluetooth LE to stream raw Galileo I/NAV frames into the app.

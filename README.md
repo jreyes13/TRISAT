@@ -1,65 +1,63 @@
 # TRISAT - Authenticated Earth Intelligence
 
-TRISAT is an advanced **multiplatform GNSS intelligence application** (Android & iOS) designed for **Galileo OSNMA (Open Service Navigation Message Authentication) testing**, multi-constellation GNSS signal analysis, anti-spoofing diagnostic evaluation, and spatial coordinate verification.
+TRISAT is an advanced **multiplatform GNSS intelligence application** (Android, iOS & macOS) designed for **Galileo OSNMA (Open Service Navigation Message Authentication) testing**, multi-constellation GNSS signal analysis, anti-spoofing diagnostic evaluation, and spatial coordinate verification.
 
 ![TRISAT Banner](trisat_android/src/main/res/drawable/trisat_logo.png)
 
 ## 🌐 Multiplatform Architecture
 
-TRISAT is built as a cross-ecosystem solution with native, high-performance implementations for both major mobile operating systems:
+TRISAT is built as a cross-ecosystem solution with native, high-performance implementations for Android, iOS, and macOS:
 
-| Platform | Directory in Repository | Tech Stack | Key Capabilities |
+| Platform | Directory | Tech Stack | Key Capabilities |
 | :--- | :--- | :--- | :--- |
 | **Android** | `trisat_android/` | Kotlin, Jetpack Compose, Android GNSS HAL APIs | Raw `TYPE_GAL_I` I/NAV frames, AGC levels, RINEX logging, A-GNSS cold-start reset |
 | **iOS** | `trisat_ios/` | Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit | CelesTrak TLE orbit propagator, 24h time scrubbing, BLE GNSS receiver, Live Map |
+| **macOS** | `trisat_mac/` | Swift, SwiftUI, Network.framework, PyUSB, libusb | Geneq SXblue FTDI USB driver, local UDP 9090 telemetry bridge, anti-flicker Skyplot, C/N0 Bar Chart |
 
 ---
 
 ## 🛰️ Key Features
 
-* 🌌 **Open Sky Polar Skyplot:** Interactive 360° skyplot with constellation color coding (Galileo Cyan, GPS Amber, GLONASS Red, BeiDou Green) and clean circle markers ($\bigcirc$).
-* 🔒 **Galileo I/NAV & OSNMA Receiver Test:** Direct extraction and inspection of raw `TYPE_GAL_I` navigation frames.
+* 🌌 **Anti-Flicker Open Sky Polar Skyplot:** Interactive 360° skyplot with constellation color coding (Galileo Cyan, GPS Amber, GLONASS Red, BeiDou Green) and a persistent 12-second satellite cache that **eliminates flickering**.
+* 📊 **Satellite C/N0 Signal Strength Bar Chart (Diagrama de Barras):** Real-time vertical SNR bar chart displaying carrier-to-noise ratio in dB-Hz color-coded by signal quality (Green $\ge 35$ dB-Hz, Yellow $\ge 25$ dB-Hz, Red $< 25$ dB-Hz) with constellation PRN badges (`E02`, `G08`, `R05`, `B12`).
+* 🔌 **Geneq SXblue USB & UDP Telemetry Bridge:** Low-level PyUSB/libusb driver interfacing with the Geneq SXblue FTDI USB chip (`VID: 0x0403`, `PID: 0xb5a0`) at 19200 bps, broadcasting JSON and raw NMEA/$BIN datagrams to `127.0.0.1:9090` via `Network.framework`.
+* 🔒 **Galileo I/NAV & OSNMA Receiver Test:** Direct extraction and inspection of raw `TYPE_GAL_I` navigation frames and 250-bit subframe pages.
 * 🛰️ **CelesTrak TLE Orbital Propagator & 24h Time Slider:** Download real-time satellite orbital elements and simulate constellation geometries across a 24-hour window ($\pm 12\text{h}$).
-* 📱 **Adaptive iPhone & iPad Layouts:**
-  * **iPhone:** Single-column vertical layout with compact banner logo, Skyplot, position telemetry, and mini map.
-  * **iPad:** Dual-column side-by-side layout with wide 320pt Skyplot, Signal Matrix, DOP Quality cards, and live settings orbit preview!
-* 🗺️ **Embedded Geospatial Mini Map:** Interactive Map displaying current GPS position pin marked `GNSS LIVE`.
-* 📊 **Multi-Constellation Solution Matrix:** Side-by-side comparison of position, 2D/1D error, and sat count for Galileo OS-NMA, Galileo-Only, GPS-Only, GLONASS-Only, and BeiDou-Only.
-* 📈 **Position History & Error Statistics:** RMS 2D horizontal, 1D vertical, and 3D position error metrics across logged epochs.
-* 🔄 **Cold-Start A-GNSS Purge:** Native Android HAL commands to flush cached A-GPS/A-GNSS ephemeris data.
-* 📍 **Geospatial Navigator Exporter:** Dynamic hemisphere coordinates (`N`/`S` and `E`/`W`), clean decimal clipboard copying, and direct Apple Maps / Google Maps intent launching.
+* 📱 **Adaptive Multiplatform Layouts:** Wide 2-column iPad & macOS layouts with full-width centered terminals, DOP quality cards, and clean settings panels.
+* 🗺️ **Embedded Geospatial Mini Map:** Interactive Map displaying current GPS/Galileo position pin marked `GNSS LIVE`.
 
 ---
 
-## 📱 Hardware Compatibility & Android GNSS Benchmarking
+## ⚡ Geneq SXblue USB Telemetry Bridge (macOS)
 
-### OEM Driver Support & Requirements
-Running client-side Galileo OS-NMA verification directly on Android mobile devices requires OEM driver support for raw navigation message delivery via `GnssNavigationMessage.Callback` (specifically `TYPE_GAL_I`). While Google introduced raw GNSS measurement APIs in Android 7/8+, hardware support varies across chipset vendors (Qualcomm Snapdragon, MediaTek, Samsung Exynos, Unisoc).
+Because Geneq SXblue receivers use a custom FTDI Product ID (`VID: 0x0403, PID: 0xb5a0`), macOS does not create a standard `/dev/cu.usbserial` device. TRISAT bridges the receiver to the macOS app using a local UDP daemon.
 
-### Industry Diagnostic Reference: GPSTest
-TRISAT benchmarks device compatibility against the open-source **GPSTest** application and its crowdsourced capabilities database:
-* **GPSTest App:** [GPSTest on Google Play](https://play.google.com/store/apps/details?id=com.android.gpstest)
-* **GitHub Repository:** [barbeau/gpstest](https://github.com/barbeau/gpstest) (Created and maintained by Sean Barbeau)
-* **Android Capabilities Matrix:** [GPSTest Crowdsourced GNSS Database (Google Sheets)](https://docs.google.com/spreadsheets/d/1jXtRCoEnnFNWj6_oFlVWflsf-b0jkfZpyhN-BXsv7uo/edit?gid=0#gid=0)
+### 1️⃣ One-Time Receiver EEPROM Configuration
+Program the SXblue EEPROM to enable Galileo I/NAV subframes (`$JBIN,94,1` & `$JBIN,95,1`):
+```bash
+sudo arch -x86_64 python3 ./SX_Blue/sxblue_config.py
+```
 
-#### Minimum Device Requirements for Native OSNMA Extraction:
-| Capability / API | Minimum Status Required | Criticality for TRISAT | Impact if Unsupported |
-| :--- | :---: | :--- | :--- |
-| **Android Version** | Android 8.0+ (API 26) | Mandatory | Core raw GNSS and navigation message APIs are unavailable. |
-| **Navigation Messages** | `SUPPORTED` | Mandatory | Inability to extract Galileo I/NAV frames; OSNMA verification cannot operate locally. |
-| **Dual-Frequency (E1/E5a)** | `SUPPORTED` | Recommended | Requires single-frequency ionospheric models (NeQuick-G), reducing overall accuracy. |
-| **Accumulated Delta Range (ADR)** | `SUPPORTED` | Recommended | Prevents carrier-phase smoothing, limiting positioning accuracy to code pseudorange baseline. |
+### 2️⃣ Continuous Telemetry Daemon
+Start the continuous USB reader and local UDP broadcaster (`127.0.0.1:9090`):
+```bash
+sudo ./SX_Blue/run_bridge.sh
+# or: sudo arch -x86_64 python3 ./SX_Blue/sxblue_reader.py
+```
 
-Before deploying or testing TRISAT on an Android smartphone, verify in the [GPSTest Database](https://docs.google.com/spreadsheets/d/1jXtRCoEnnFNWj6_oFlVWflsf-b0jkfZpyhN-BXsv7uo/edit?gid=0#gid=0) that your device model has **`SUPPORTED`** in the `Navigation messages` column.
-
-> **Note for iOS Devices:** Apple's `CoreLocation` framework abstracts raw constellation navigation messages and does not provide an equivalent to Android's `GnssNavigationMessage`. TRISAT for iOS retrieves high-accuracy position and telemetry via `CoreLocation`, and supports streaming raw Galileo I/NAV pages via an external GNSS receiver (e.g., u-blox ZED-F9P, Septentrio, SXblue) over Bluetooth Low Energy (BLE).
+### 3️⃣ Launch TRISAT macOS Application
+Open TRISAT from Xcode (`trisat_mac`) or Terminal:
+```bash
+open /Users/jreyes13/Library/Developer/Xcode/DerivedData/TRISAT-hfmnxvykdnelswdxkwyavntnmwht/Build/Products/Debug/TRISAT.app
+```
+* **Signal Processing:** View live full-width green NMEA stream, Galileo I/NAV cards, and the C/N0 SNR Bar Chart.
+* **Dashboard:** View real-time coordinates, altitude, fix quality (*GPS Fix*, *DGPS Fix*, *RTK Fixed*), and anti-flicker Skyplot.
 
 ---
 
 ## 📖 Documentation
 
-* For complete usage instructions, technical architecture, and OSNMA testing workflows, please refer to the [USER_MANUAL.md](USER_MANUAL.md).
-* **State of the Art & Overview:** Consult the technical state of the art and ecosystem overview in the [TRISAT Overview Document](https://docs.google.com/document/d/1hdZqK1QkqJp_4wGj9-DmBCKDsRlN9INIX3hqUMN9QLg/edit?usp=sharing).
+* For complete usage instructions, technical architecture, and OSNMA testing workflows, please refer to [USER_MANUAL.md](USER_MANUAL.md).
 
 ---
 
@@ -67,5 +65,15 @@ Before deploying or testing TRISAT on an Android smartphone, verify in the [GPST
 
 ### Android App (`trisat_android`)
 ```bash
-# Assemble Debug APK
 ./gradlew assembleDebug
+```
+
+### macOS App (`trisat_mac`)
+```bash
+xcodebuild -project trisat_mac/TRISAT.xcodeproj -scheme TRISAT -destination 'platform=macOS,arch=arm64' build
+```
+
+### iOS App (`trisat_ios`)
+```bash
+xcodebuild -project trisat_ios/TRISAT.xcodeproj -scheme TRISAT -sdk iphonesimulator build
+```

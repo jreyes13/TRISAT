@@ -183,12 +183,14 @@ class TelemetryStreamer:
             if len(self.recent_nmea_log) > 80:
                 self.recent_nmea_log.pop(0)
 
-        # Send over UDP
+        # Send over UDP (both configured port e.g. 5005 and TRISAT macOS/iOS bridge port 9090)
         if self._udp_sock and self.config.udp_enabled:
-            try:
-                self._udp_sock.sendto(payload, (self.config.udp_host, self.config.udp_port))
-            except Exception:
-                pass
+            target_ports = {self.config.udp_port, 9090}
+            for port in target_ports:
+                try:
+                    self._udp_sock.sendto(payload, (self.config.udp_host, port))
+                except Exception:
+                    pass
 
         # Send to connected TCP clients
         if self.config.tcp_enabled:

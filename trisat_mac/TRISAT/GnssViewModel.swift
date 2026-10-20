@@ -14,8 +14,8 @@ class GnssViewModel: ObservableObject {
     @Published var currentCoordinate: CLLocationCoordinate2D = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
     @Published var messages: [GalileoINavMessage] = []
 
-    // Mode: 0 = Internal + TLE, 1 = External BLE, 2 = TLE Simulation
-    @Published var selectedMode: Int = 0
+    // Mode: 0 = Internal + TLE, 1 = External BLE / USB Bridge, 2 = TLE Simulation
+    @Published var selectedMode: Int = 1
     @Published var timeOffsetHours: Double = 0.0
 
     // Constellation Filters
@@ -24,8 +24,22 @@ class GnssViewModel: ObservableObject {
     @Published var isGlonassEnabled: Bool = true
     @Published var isBeidouEnabled: Bool = true
 
-    // Computed Satellites for Skyplot
+    // Differential & NMEA Telemetry Metrics
+    @Published var fixTypeDesc: String = "Autonomous GNSS"
+    @Published var numSatellitesInFix: Int = 0
+    @Published var hdopValue: String = "--"
+    @Published var pdopValue: String = "--"
+    @Published var vdopValue: String = "--"
+    @Published var dgpsAge: String = "N/A"
+    @Published var dgpsStationId: String = "N/A"
+    @Published var gstRmsError: String = "N/A"
+    @Published var gstLatLonErr: String = "N/A"
+
+    // Computed Satellites for Skyplot & SNR Bar Chart
     @Published var displayedSatellites: [SatelliteInfo] = []
+
+    // Persistent Anti-Flickering Satellite Store (Key: SatID, Value: (Info, LastSeenTimestamp))
+    private var satelliteStore: [String: (info: SatelliteInfo, lastSeen: Date)] = [:]
 
     init(repository: GnssRepository = GnssRepository(), bluetoothManager: BluetoothManager = BluetoothManager()) {
         self.repository = repository
@@ -75,10 +89,12 @@ class GnssViewModel: ObservableObject {
                 let latDir = lat >= 0 ? "N" : "S"
                 let lonDir = lon >= 0 ? "E" : "W"
 
-                self?.currentCoordinate = loc.coordinate
-                self?.locationText = String(format: "%.6f° %@, %.6f° %@", abs(lat), latDir, abs(lon), lonDir)
-                self?.accuracyText = String(format: "Acc: ±%.1f m | Alt: %.1f m", loc.horizontalAccuracy, loc.altitude)
-                self?.updateSatellites()
+                if self?.selectedMode == 0 {
+                    self?.currentCoordinate = loc.coordinate
+                    self?.locationText = String(format: "%.6f° %@, %.6f° %@", abs(lat), latDir, abs(lon), lonDir)
+                    self?.accuracyText = String(format: "Acc: ±%.1f m | Alt: %.1f m", loc.horizontalAccuracy, loc.altitude)
+                    self?.updateSatellites()
+                }
             }
             .store(in: &cancellables)
         
@@ -86,23 +102,27 @@ class GnssViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .assign(to: &$messages)
 
-        // Bind Bluetooth Manager stream callbacks directly to GnssViewModel
-        bluetoothManager.onInavFrameReceived = { [weak self] msg in
-            self?.repository.appendRealInavMessage(msg)
-        }
+        bluetoothManager.onNmeaLineReceived = { [weak self] line in
+            guard let self = self else { return }
 
-        bluetoothManager.onSatStatusReceived = { [weak self] sats in
-            if self?.selectedMode == 1 {
-                self?.displayedSatellites = sats
+            // 1. Parse $GPGGA / $GNGGA (Coordinates, Fix Quality, DGPS Age, Station ID)
+            if line.contains("$GPGGA") || line.contains("$GNGGA") {
+                self.parseGgaSentence(line)
             }
-        }
 
-        bluetoothManager.onLocationReceived = { [weak self] lat, lon in
-            if self?.selectedMode == 1 {
-                self?.currentCoordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-                let latDir = lat >= 0 ? "N" : "S"
-                let lonDir = lon >= 0 ? "E" : "W"
-                self?.locationText = String(format: "%.6f° %@, %.6f° %@", abs(lat), latDir, abs(lon), lonDir)
+            // 2. Parse $GPGST (Pseudorange Noise & RMS Error Statistics)
+            if line.contains("$GPGST") || line.contains("$GNGST") {
+                self.parseGstSentence(line)
+            }
+
+            // 3. Parse $GPGSA / $GNGSA (DOP Dilution of Precision)
+            if line.contains("$GPGSA") || line.contains("$GNGSA") {
+                self.parseGsaSentence(line)
+            }
+
+            // 4. Parse $GAGSV / $GPGSV / $GLGSV / $BDGSV (Satellites with Anti-Flicker)
+            if line.contains("$GAGSV") || line.contains("$GPGSV") || line.contains("$GLGSV") || line.contains("$BDGSV") {
+                self.parseGsvLine(line)
             }
         }
 
@@ -120,5 +140,137 @@ class GnssViewModel: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.updateSatellites() }
             .store(in: &cancellables)
+    }
+
+    private func parseGgaSentence(_ line: String) {
+        let parts = line.components(separatedBy: ",")
+        if parts.count >= 10 {
+            if let lat = parseNmeaCoord(parts[2], dir: parts[3]),
+               let lon = parseNmeaCoord(parts[4], dir: parts[5]) {
+                let fixQuality = parts[6]
+                let numSats = Int(parts[7]) ?? 0
+                let hdop = parts[8]
+                let alt = parts[9]
+
+                self.numSatellitesInFix = numSats
+                self.hdopValue = hdop.isEmpty ? "--" : hdop
+
+                self.fixTypeDesc = {
+                    switch fixQuality {
+                    case "1": return "GPS Autonomous"
+                    case "2": return "DGPS Differential (SXblue)"
+                    case "4": return "RTK Fixed (Centimeter)"
+                    case "5": return "RTK Float"
+                    case "6": return "Dead Reckoning"
+                    default: return "Fix Mode \(fixQuality)"
+                    }
+                }()
+
+                if parts.count >= 14 {
+                    let age = parts[11]
+                    let station = parts[12].components(separatedBy: "*")[0]
+                    self.dgpsAge = age.isEmpty ? "N/A" : "\(age)s"
+                    self.dgpsStationId = station.isEmpty ? "N/A" : station
+                }
+
+                self.currentCoordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                let latDir = lat >= 0 ? "N" : "S"
+                let lonDir = lon >= 0 ? "E" : "W"
+                self.locationText = String(format: "%.6f° %@, %.6f° %@", abs(lat), latDir, abs(lon), lonDir)
+                self.accuracyText = "Fix: \(fixTypeDesc) | Sats: \(numSats) | HDOP: \(hdopValue) | Alt: \(alt)m"
+            }
+        }
+    }
+
+    private func parseGstSentence(_ line: String) {
+        let parts = line.components(separatedBy: ",")
+        if parts.count >= 8 {
+            let rms = parts[3]
+            let latErr = parts[6]
+            let lonErr = parts[7].components(separatedBy: "*")[0]
+
+            if let rmsVal = Double(rms) {
+                self.gstRmsError = String(format: "±%.2f m", rmsVal)
+            }
+            if let latE = Double(latErr), let lonE = Double(lonErr) {
+                self.gstLatLonErr = String(format: "Lat ±%.2fm, Lon ±%.2fm", latE, lonE)
+            }
+        }
+    }
+
+    private func parseGsaSentence(_ line: String) {
+        let parts = line.components(separatedBy: ",")
+        if parts.count >= 17 {
+            let pdop = parts[15]
+            let hdop = parts[16]
+            let vdop = parts.count >= 18 ? parts[17].components(separatedBy: "*")[0] : "--"
+
+            self.pdopValue = pdop.isEmpty ? "--" : pdop
+            self.hdopValue = hdop.isEmpty ? "--" : hdop
+            self.vdopValue = vdop.isEmpty ? "--" : vdop
+        }
+    }
+
+    private func parseGsvLine(_ text: String) {
+        let parts = text.components(separatedBy: ",")
+        guard parts.count >= 8 else { return }
+
+        let constKind: GnssConstellation
+        if text.contains("$GAGSV") { constKind = .galileo }
+        else if text.contains("$GPGSV") { constKind = .gps }
+        else if text.contains("$GLGSV") { constKind = .glonass }
+        else { constKind = .beidou }
+
+        let now = Date()
+        var idx = 4
+        while idx + 3 < parts.count {
+            let svidStr = parts[idx]
+            let elevStr = parts[idx+1]
+            let azimStr = parts[idx+2]
+            let cnoStr = parts[idx+3].components(separatedBy: "*")[0]
+
+            if let svid = Int(svidStr),
+               let elev = Double(elevStr),
+               let azim = Double(azimStr),
+               let cno = Int(cnoStr) {
+                let key = "\(constKind.rawValue)_\(svid)"
+                let sat = SatelliteInfo(
+                    id: key,
+                    svid: svid,
+                    elevation: elev,
+                    azimuth: azim,
+                    cno: cno,
+                    isGalileo: constKind == .galileo,
+                    constellation: constKind,
+                    usedInFix: cno > 20,
+                    hasInav: constKind == .galileo
+                )
+                satelliteStore[key] = (info: sat, lastSeen: now)
+            }
+            idx += 4
+        }
+
+        // Retain satellites for 30 seconds to prevent any screen flickering
+        let activeThreshold = Date().addingTimeInterval(-30.0)
+        satelliteStore = satelliteStore.filter { $0.value.lastSeen > activeThreshold }
+
+        let activeSats = satelliteStore.values.map { $0.info }
+
+        // Update displayedSatellites without clearing
+        displayedSatellites = activeSats.sorted {
+            if $0.constellation != $1.constellation {
+                return $0.constellation.rawValue < $1.constellation.rawValue
+            }
+            return $0.svid < $1.svid
+        }
+    }
+
+    private func parseNmeaCoord(_ rawVal: String, dir: String) -> Double? {
+        guard let num = Double(rawVal), num > 0 else { return nil }
+        let deg = floor(num / 100.0)
+        let min = num - (deg * 100.0)
+        var decimal = deg + (min / 60.0)
+        if dir == "S" || dir == "W" { decimal = -decimal }
+        return decimal
     }
 }
