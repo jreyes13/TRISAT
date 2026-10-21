@@ -99,6 +99,7 @@ class GnssViewModel: ObservableObject {
             .store(in: &cancellables)
         
         repository.$capturedMessages
+            .filter { !$0.isEmpty }
             .receive(on: DispatchQueue.main)
             .assign(to: &$messages)
 
@@ -128,10 +129,7 @@ class GnssViewModel: ObservableObject {
 
         Publishers.CombineLatest4($selectedMode, $timeOffsetHours, $isGalileoEnabled, $isGpsEnabled)
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] mode, _, _, _ in
-                if mode == 1 {
-                    self?.repository.clearMessages()
-                }
+            .sink { [weak self] _, _, _, _ in
                 self?.updateSatellites()
             }
             .store(in: &cancellables)
