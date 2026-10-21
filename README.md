@@ -11,8 +11,20 @@ TRISAT is built as a cross-ecosystem solution with native, high-performance impl
 | Platform | Directory | Tech Stack | Key Capabilities |
 | :--- | :--- | :--- | :--- |
 | **Android** | `trisat_android/` | Kotlin, Jetpack Compose, Android GNSS HAL APIs | Raw `TYPE_GAL_I` I/NAV frames, AGC levels, RINEX logging, A-GNSS cold-start reset |
-| **iOS** | `trisat_ios/` | Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit | CelesTrak TLE orbit propagator, 24h time scrubbing, BLE GNSS receiver, Live Map |
-| **macOS** | `trisat_mac/` | Swift, SwiftUI, Network.framework, PyUSB, libusb | Geneq SXblue FTDI USB driver, local UDP 9090 telemetry bridge, anti-flicker Skyplot, C/N0 Bar Chart |
+| **iOS** | `trisat_ios/` | Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit, CryptoKit | CelesTrak TLE orbit propagator, 24h time scrubbing, BLE GNSS receiver, EUSPA OSNMA Annex A engine |
+| **macOS** | `trisat_ios/` & `build/TRISAT.app` | Swift, SwiftUI, Network.framework, CryptoKit, PyUSB | Integrated **TRISAT-SDR (E1 OSNMA + E6 HAS-UA)** launcher, Geneq SXblue FTDI USB driver, anti-flicker Skyplot & C/N0 Bar Chart |
+| **SDR Engine** | `trisat_sdr/` | Python 3, NumPy/SciPy, Dual-HackRF (`10 MHz CLKOUT/CLKIN`) | Portable SDR receiver (`E1B/C`, `E5a`, `E5b`, `E5 AltBOC`, `E6B/C HAS`, `GPS L1`), EUSPA **OSNMA v1.1**, **HAS-UA (`PPPSD`/`DIA`/`NTCM-G`)** & Web UI (`:8085`) |
+
+---
+
+## 📓 Interactive Google Colab Notebooks (`notebooks/`)
+
+Run and explore TRISAT's **Galileo I/NAV v2.2**, **OSNMA v1.1**, and **E6 High Accuracy Service (`HAS-UA`)** cryptographic and positioning algorithms directly in your browser using Google Colab:
+
+| # | Notebook | Topics Covered | Launch in Browser |
+| :-: | :--- | :--- | :-: |
+| **01** | [`notebooks/01_galileo_inav_demo.ipynb`](notebooks/01_galileo_inav_demo.ipynb) | **Galileo E1-B I/NAV v2.2 & OSNMA Bit-Level Decoder:** 240-bit nominal page structure, `CRC-24Q` (`0x1864CFB`), `WT 1..6`, `WT 16 RedCED`, `WT 17..20 RS(118,58)`, `WT 22 ARAIM`, `WT 44 TSM`, `HKROOT`/`MACK` extraction & EUSPA Annex A TESLA/HMAC verification. | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jreyes13/TRISAT/blob/main/notebooks/01_galileo_inav_demo.ipynb) |
+| **02** | [`notebooks/02_euspa_osnma_has_complete_suite.ipynb`](notebooks/02_euspa_osnma_has_complete_suite.ipynb) | **Full EUSPA Reference Suite (`OSNMA` + `HAS-UA` + `SIS v2.2`):** Dual-HackRF `CBOC(6,1,1/11)` vs `BPSK(5)`, Merkle Tree + `ECDSA P-256` + `TESLA` + `MACSEQ`, Reed-Solomon `RS(255,32)` over $\text{GF}(2^8)$, `NTW->ECEF` orbit corrections, `PPPSD` EKF + `DIA` Baarda $w$-test, `NTCM-G` 12-coeff ionosphere & `EWSS-CAMF` 122-bit emergency alert ellipse. | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jreyes13/TRISAT/blob/main/notebooks/02_euspa_osnma_has_complete_suite.ipynb) |
 
 ---
 
