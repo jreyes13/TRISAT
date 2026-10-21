@@ -16,6 +16,9 @@ from .drivers.sdr_driver import SIMULATED_SATELLITES, SdrStreamSource, discover_
 from .dsp.acquisition import AcquisitionResult, PcpsAcquisitionEngine
 from .dsp.tracking import GnssTrackingChannel, TrackingTelemetry
 from .nav.frame_decoder import DecodedGnssFrame, GnssFrameDecoder
+from .nav.galileo_advanced_services import GalileoAdvancedServicesEngine, GalileoAdvancedServicesReport
+from .nav.has_ua_engine import GalileoHasUaEngine, HasUaEpochReport
+from .nav.osnma_engine import GalileoOsnmaEngine
 from .nav.pvt_solver import PvtSolution, PvtSolver
 
 
@@ -60,7 +63,16 @@ class TrisatSdrReceiver:
         self.primary_spectrum_db: List[float] = [-55.0] * 64
         self.secondary_spectrum_db: List[float] = [-55.0] * 64
 
-        self.frame_decoder = GnssFrameDecoder()
+        self.osnma_engine = GalileoOsnmaEngine()
+        self.frame_decoder = GnssFrameDecoder(osnma_engine=self.osnma_engine)
+        self.has_ua_engine = GalileoHasUaEngine(
+            ref_lat=self.config.reference_lat,
+            ref_lon=self.config.reference_lon,
+            ref_alt=self.config.reference_alt_m,
+        )
+        self.advanced_services_engine = GalileoAdvancedServicesEngine()
+        self.latest_has_ua: Optional[HasUaEpochReport] = None
+        self.latest_advanced_services: Optional[GalileoAdvancedServicesReport] = None
         self.pvt_solver = PvtSolver(
             ref_lat=self.config.reference_lat,
             ref_lon=self.config.reference_lon,
@@ -202,6 +214,27 @@ class TrisatSdrReceiver:
                         self.decoded_frames = self.decoded_frames[:60]
 
             pvt = self.pvt_solver.solve(tracked)
+            gal_sats_info = [
+                (s.svid, s.elevation_deg, s.cn0_dbhz)
+                for s in pvt.satellites
+                if s.constellation == "GALILEO"
+            ]
+            gps_sats_info = [
+                (s.svid, s.elevation_deg, s.cn0_dbhz)
+                for s in pvt.satellites
+                if s.constellation == "GPS"
+            ]
+            self.latest_has_ua = self.has_ua_engine.process_epoch(
+                lat_deg=pvt.latitude_deg,
+                lon_deg=pvt.longitude_deg,
+                alt_m=pvt.altitude_m,
+                gal_sats=gal_sats_info,
+                gps_sats=gps_sats_info,
+            )
+            self.latest_advanced_services = self.advanced_services_engine.evaluate(
+                rx_lat=pvt.latitude_deg,
+                rx_lon=pvt.longitude_deg,
+            )
             self.latest_tracking = tracked
             self.latest_pvt = pvt
 
@@ -298,6 +331,9 @@ class TrisatSdrReceiver:
                 "tracking_channels": [asdict(ch) for ch in self.latest_tracking],
                 "decoded_frames": [asdict(f) for f in self.decoded_frames[:25]],
                 "pvt": asdict(self.latest_pvt) if self.latest_pvt else None,
+                "osnma": asdict(self.osnma_engine.get_summary()),
+                "has_ua": asdict(self.latest_has_ua) if self.latest_has_ua else None,
+                "galileo_services": asdict(self.latest_advanced_services) if self.latest_advanced_services else None,
                 "bridge": {
                     "udp_target": f"{self.config.telemetry.udp_host}:{self.config.telemetry.udp_port}",
                     "tcp_listen": f"{self.config.telemetry.tcp_bind_host}:{self.config.telemetry.tcp_port}",

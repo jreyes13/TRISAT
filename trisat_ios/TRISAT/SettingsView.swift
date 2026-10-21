@@ -240,9 +240,12 @@ struct SettingsView: View {
             }
             .pickerStyle(.menu)
             .onChange(of: selectedBridgeOption) { opt in
-                if opt == 1 || opt == 2 {
+                if opt == 2 {
+                    telemetryBridge.startTrisatSdrEngine()
+                } else if opt == 1 {
                     telemetryBridge.startUdpListener(port: 9090)
                 } else {
+                    telemetryBridge.stopTrisatSdrEngine()
                     telemetryBridge.stopUdpListener()
                 }
             }
@@ -250,11 +253,42 @@ struct SettingsView: View {
             HStack(spacing: 8) {
                 #if os(macOS)
                 Button(action: {
+                    if telemetryBridge.isSdrEngineRunning {
+                        telemetryBridge.stopTrisatSdrEngine()
+                    } else {
+                        selectedBridgeOption = 2
+                        telemetryBridge.startTrisatSdrEngine()
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: telemetryBridge.isSdrEngineRunning ? "stop.circle.fill" : "antenna.radiowaves.left.and.right")
+                        Text(telemetryBridge.isSdrEngineRunning ? "Stop TRISAT-SDR" : "Launch TRISAT-SDR (HAS + OSNMA)")
+                    }
+                    .font(.caption)
+                    .fontWeight(.bold)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(telemetryBridge.isSdrEngineRunning ? .red : .green)
+
+                Button(action: {
+                    telemetryBridge.openWebDashboard()
+                }) {
+                    HStack {
+                        Image(systemName: "safari.fill")
+                        Text("Web UI (:8085)")
+                    }
+                    .font(.caption)
+                    .fontWeight(.bold)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.cyan)
+
+                Button(action: {
                     launchDaemonWithAdminPrivileges()
                 }) {
                     HStack {
                         Image(systemName: "lock.shield.fill")
-                        Text("Launch SXblue Daemon (sudo)")
+                        Text("SXblue (sudo)")
                     }
                     .font(.caption)
                     .fontWeight(.bold)

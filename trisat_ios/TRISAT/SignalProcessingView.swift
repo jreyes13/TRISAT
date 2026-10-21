@@ -2,7 +2,13 @@ import SwiftUI
 
 struct SignalProcessingView: View {
     @ObservedObject var viewModel: GnssViewModel
+    @ObservedObject var telemetryBridge: GnssTelemetryBridge
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+
+    init(viewModel: GnssViewModel, telemetryBridge: GnssTelemetryBridge = GnssTelemetryBridge()) {
+        self.viewModel = viewModel
+        self.telemetryBridge = telemetryBridge
+    }
 
     var body: some View {
         ScrollView {
@@ -66,6 +72,52 @@ struct SignalProcessingView: View {
                 }
 
                 Spacer()
+
+                #if os(macOS)
+                HStack(spacing: 8) {
+                    Picker("HackRF #1", selection: $telemetryBridge.selectedSdrBand2) {
+                        Text("E6B/C (HAS PPP)").tag("GAL_E6")
+                        Text("E5a (F/NAV)").tag("GAL_E5A")
+                        Text("E5b (I/NAV)").tag("GAL_E5B")
+                        Text("E5 AltBOC").tag("GAL_E5_ALTBOC")
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 175)
+                    .onChange(of: telemetryBridge.selectedSdrBand2) { newBand in
+                        telemetryBridge.switchSdrSecondaryBand(newBand)
+                    }
+
+                    Button(action: {
+                        if telemetryBridge.isSdrEngineRunning {
+                            telemetryBridge.stopTrisatSdrEngine()
+                        } else {
+                            telemetryBridge.startTrisatSdrEngine()
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: telemetryBridge.isSdrEngineRunning ? "stop.circle.fill" : "play.circle.fill")
+                            Text(telemetryBridge.isSdrEngineRunning ? "Stop SDR" : "Start TRISAT-SDR")
+                        }
+                        .font(.caption)
+                        .fontWeight(.bold)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(telemetryBridge.isSdrEngineRunning ? .red : .green)
+
+                    Button(action: {
+                        telemetryBridge.openWebDashboard()
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "safari.fill")
+                            Text("Web Dashboard (:8085)")
+                        }
+                        .font(.caption)
+                        .fontWeight(.bold)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.cyan)
+                }
+                #endif
             }
 
             // Differential & Precision Metrics Badges

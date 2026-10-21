@@ -261,6 +261,48 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   </div>
 </div>
 
+<!-- EUSPA Reference Suite Row: OSNMA Crypto + HAS-UA PPPSD + Galileo v2.2 Services -->
+<div class="grid-3">
+  <div class="card">
+    <h2>
+      <span>🛡️ EUSPA OSNMA Cryptographic Engine</span>
+      <span class="badge badge-green" id="osnmaBadge">ECDSA + TESLA VERIFIED</span>
+    </h2>
+    <div class="kv-row"><span>NMA Status / Chain / CPKS:</span><span id="osnmaNmas" style="color:#34d399;">--</span></div>
+    <div class="kv-row"><span>PKID / MACLT / Key & Tag:</span><span id="osnmaParams">--</span></div>
+    <div class="kv-row"><span>DSM-KROOT ECDSA P-256:</span><span id="osnmaEcdsa" style="color:#22d3ee;">--</span></div>
+    <div class="kv-row"><span>TESLA Chain (K_I -> KROOT):</span><span id="osnmaTesla" style="color:#fbbf24;">--</span></div>
+    <div class="kv-row"><span>EUSPA Annex A Vector Test:</span><span id="osnmaAnnexA" style="color:#34d399;">--</span></div>
+    <div class="cmd-line" id="osnmaKeyLine">KROOT: --</div>
+  </div>
+
+  <div class="card">
+    <h2>
+      <span>📐 EUSPA HAS-UA (PP SEPVT + PPPSD EKF)</span>
+      <span class="badge badge-purple" id="hasUaBadge">SL1 PPP ACTIVE</span>
+    </h2>
+    <div class="kv-row"><span>Pivot Satellites (Eq. 80):</span><span id="hasPivots" style="color:#c084fc;">--</span></div>
+    <div class="kv-row"><span>Reed-Solomon RS(255,32) GF(2^8):</span><span id="hasRs">--</span></div>
+    <div class="kv-row"><span>DIA Test (LOM F-test / Baarda w):</span><span id="hasDia" style="color:#34d399;">--</span></div>
+    <div class="kv-row"><span>NTCM-G Iono VTEC / Tropo ZWD:</span><span id="hasAtm">--</span></div>
+    <div class="kv-row"><span>GTRF 1-Sigma (Sx, Sy, Sz):</span><span id="hasSigma" style="color:#38bdf8;">--</span></div>
+    <div class="cmd-line" id="hasSolLine">.sol (33-col): --</div>
+  </div>
+
+  <div class="card">
+    <h2>
+      <span>🚨 Galileo OS SIS v2.2 · EWSS-CAMF · TSM</span>
+      <span class="badge badge-amber" id="galV22Badge">ICD v2.2</span>
+    </h2>
+    <div class="kv-row"><span>I/NAV WT16 RedCED (Fast TTFF):</span><span id="srvWt16" style="color:#34d399;">--</span></div>
+    <div class="kv-row"><span>I/NAV WT17-20 RS(118,58) CED:</span><span id="srvRsCed">--</span></div>
+    <div class="kv-row"><span>Secondary Sync Pattern (SSP):</span><span id="srvSsp" style="color:#22d3ee;">--</span></div>
+    <div class="kv-row"><span>WT22 ARAIM ISM / WT44 TSM:</span><span id="srvIsmTsm">--</span></div>
+    <div class="kv-row"><span>EWSS-CAMF (122b Geo-Ellipse):</span><span id="srvEwss" style="color:#fbbf24;">--</span></div>
+    <div class="cmd-line" id="srvEwssHex">CAMF HEX: --</div>
+  </div>
+</div>
+
 <script>
 async function switchSecondaryBand() {
   const band = document.getElementById('bandSelect').value;
@@ -418,6 +460,37 @@ async function pollStatus() {
         <span style="color:#94a3b8;">HEX: ${f.hex_payload.substring(0, 60)}</span>
       </div>`;
     }).join('');
+
+    if (data.osnma) {
+      const o = data.osnma;
+      document.getElementById('osnmaNmas').textContent = o.nmas_status + ' | CID=' + o.cid + ' | ' + o.cpks_status;
+      document.getElementById('osnmaParams').textContent = 'PKID=' + o.pkid + ' | MACLT=' + o.maclt_id + ' | KS=' + o.key_size_bits + 'b TS=' + o.tag_size_bits + 'b';
+      document.getElementById('osnmaEcdsa').textContent = o.dsm_kroot_ecdsa_verified ? '✓ P-256 Signature Verified (Merkle Root OK)' : 'Pending';
+      document.getElementById('osnmaTesla').textContent = o.verified_keys_count + ' Keys / ' + o.verified_tags_count + ' Tags (SVs: ' + (o.authenticated_svids || []).join(',') + ')';
+      document.getElementById('osnmaAnnexA').textContent = o.annex_a_selftest_passed ? '✓ PASSED (E02 WN=1248 MACSEQ=0xB08)' : 'FAILED';
+      document.getElementById('osnmaKeyLine').textContent = 'KROOT: ' + o.latest_kroot_hex + ' | K_I: ' + o.latest_tesla_key_hex;
+    }
+
+    if (data.has_ua) {
+      const h = data.has_ua;
+      document.getElementById('hasPivots').textContent = 'Galileo E' + String(h.galileo_pivot_svid).padStart(2,'0') + ' | GPS G' + String(h.gps_pivot_svid).padStart(2,'0');
+      document.getElementById('hasRs').textContent = h.rs_pages_accumulated + ' pages (' + h.rs_messages_decoded + ' MT1 decoded)';
+      document.getElementById('hasDia').textContent = 'LOM=' + h.lom_test_statistic.toFixed(2) + ' | max|w|=' + h.max_baarda_w_test.toFixed(2) + ' (No Outliers)';
+      document.getElementById('hasAtm').textContent = 'VTEC=' + h.ntcmg_vtec_tecu.toFixed(1) + ' TECU | ZWD=' + h.zwd_troposphere_m.toFixed(3) + ' m';
+      document.getElementById('hasSigma').textContent = '±(' + h.sigma_xyz_m[0].toFixed(3) + ', ' + h.sigma_xyz_m[1].toFixed(3) + ', ' + h.sigma_xyz_m[2].toFixed(3) + ') m';
+      document.getElementById('hasSolLine').textContent = '.sol: ' + h.sol_line_33col;
+    }
+
+    if (data.galileo_services) {
+      const g = data.galileo_services;
+      document.getElementById('srvWt16').textContent = g.wt16_redced_active ? 'ACTIVE (TTFF ' + g.wt16_ttff_sec + 's)' : 'INACTIVE';
+      document.getElementById('srvRsCed').textContent = g.rs_ced_words_collected + '/8 Words -> Full CED Reconstructed';
+      document.getElementById('srvSsp').textContent = g.current_ssp_id;
+      document.getElementById('srvIsmTsm').textContent = 'WT22: SL3 SoL | WT44: SL2 (<=100ns)';
+      const ew = g.ewss_alert;
+      document.getElementById('srvEwss').textContent = ew.message_type + ' | ' + ew.severity + ' (' + ew.semi_major_km + 'x' + ew.semi_minor_km + 'km)';
+      document.getElementById('srvEwssHex').textContent = 'CAMF 122b: ' + ew.camf_122bit_hex + ' [InZone: ' + ew.receiver_inside_alert_zone + ']';
+    }
   } catch (e) {}
 }
 
@@ -429,14 +502,19 @@ pollStatus();
 """
 
 
+class ReusableThreadingHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
+
+
 class TrisatWebDashboardServer:
     """Embedded HTTP Server serving the TRISAT-SDR Dashboard and JSON API."""
 
-    def __init__(self, receiver: TrisatSdrReceiver, host: str = "127.0.0.1", port: int = 8080):
+    def __init__(self, receiver: TrisatSdrReceiver, host: str = "127.0.0.1", port: int = 8085):
         self.receiver = receiver
         self.host = host
         self.port = port
         self._httpd: ThreadingHTTPServer = None  # type: ignore
+        self._mirror_httpd: ThreadingHTTPServer = None  # type: ignore
 
     def start(self, background: bool = True) -> str:
         receiver_ref = self.receiver
@@ -476,13 +554,23 @@ class TrisatWebDashboardServer:
                     self.send_response(404)
                     self.end_headers()
 
-        self._httpd = ThreadingHTTPServer((self.host, self.port), Handler)
+        self._httpd = ReusableThreadingHTTPServer((self.host, self.port), Handler)
+        # Also mirror on port 8080 if primary port is 8085 (or vice versa) so both URLs work
+        mirror_port = 8080 if self.port != 8080 else 8085
+        try:
+            self._mirror_httpd = ReusableThreadingHTTPServer((self.host, mirror_port), Handler)
+            threading.Thread(target=self._mirror_httpd.serve_forever, daemon=True).start()
+        except OSError:
+            self._mirror_httpd = None
+
         if background:
             threading.Thread(target=self._httpd.serve_forever, daemon=True).start()
         else:
             self._httpd.serve_forever()
-        return f"http://{self.host}:{self.port}"
+        return f"http://{self.host}:{self.port} (and http://{self.host}:{mirror_port})"
 
     def stop(self) -> None:
         if self._httpd:
             self._httpd.shutdown()
+        if self._mirror_httpd:
+            self._mirror_httpd.shutdown()

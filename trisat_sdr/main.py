@@ -64,8 +64,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--web-port",
         type=int,
-        default=8080,
-        help="Port for the Cross-Platform Web UI Dashboard (default: 8080)",
+        default=8085,
+        help="Port for the Cross-Platform Web UI Dashboard (default: 8085, also mirrors on 8080)",
     )
     parser.add_argument(
         "--headless",

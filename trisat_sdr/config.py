@@ -176,7 +176,7 @@ class ReceiverConfig:
     coherent_integration_ms: int = 4
     telemetry: TelemetryBridgeConfig = field(default_factory=TelemetryBridgeConfig)
     web_ui_host: str = "127.0.0.1"
-    web_ui_port: int = 8080
+    web_ui_port: int = 8085
     reference_lat: float = 40.416775   # Default reference (Madrid, Spain - adjustable)
     reference_lon: float = -3.703790
     reference_alt_m: float = 650.0

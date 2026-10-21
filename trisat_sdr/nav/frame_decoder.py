@@ -8,10 +8,12 @@ Implements:
   - GPS L1 C/A LNAV subframe decoder
 """
 
+from dataclasses import dataclass
 import hashlib
 import time
-from dataclasses import dataclass
 from typing import Dict, List, Optional
+
+from .osnma_engine import GalileoOsnmaEngine
 
 
 CRC24Q_POLY = 0x1864CFB
@@ -63,8 +65,11 @@ class GnssFrameDecoder:
     Galileo E1B (I/NAV + OSNMA), Galileo E6B (C/NAV HAS), Galileo E5a/E5b, and GPS L1.
     """
 
-    def __init__(self):
+    def __init__(self, osnma_engine: Optional[GalileoOsnmaEngine] = None):
         self._frame_counters: Dict[str, int] = {}
+        self.osnma_engine = osnma_engine or GalileoOsnmaEngine()
+        # Cycle through nominal I/NAV Word Types including v2.2 WT16 (RedCED), WT17..20 (RS), WT22 (ISM), WT44 (TSM)
+        self._inav_word_schedule = [1, 2, 3, 4, 5, 6, 16, 17, 19, 22, 44]
 
     def decode_channel_frame(
         self,
@@ -91,30 +96,29 @@ class GnssFrameDecoder:
     def _decode_galileo_e1_inav(
         self, svid: int, seq: int, now_ms: int, cn0_dbhz: float
     ) -> DecodedGnssFrame:
-        # Galileo I/NAV nominal word types cycle 1..6 (Ephemeris 1..4, Iono/BGDs 5, GST-UTC 6)
-        word_type = ((seq - 1) % 6) + 1
+        # Galileo I/NAV nominal word types including OS SIS ICD v2.2 (WT 1..6, 16 RedCED, 17/19 RS, 22 ISM, 44 TSM)
+        word_type = self._inav_word_schedule[(seq - 1) % len(self._inav_word_schedule)]
 
         # Construct deterministic, cryptographically structured 30-byte I/NAV Odd+Even page pair
-        # Byte 0: Even/Odd=0, PageType=0, WordType (6 bits)
         header_byte = (word_type & 0x3F)
-        # Digest for realistic ephemeris + OSNMA TESLA chain key material
         seed_bytes = f"TRISAT_INAV_E1B_SV{svid:02d}_WT{word_type}_SEQ{seq // 2}".encode("utf-8")
         digest = hashlib.sha256(seed_bytes).digest()
 
-        # 16 bytes data field (128 bits) + 5 bytes OSNMA (8-bit HKROOT + 32-bit MACK)
+        # 16 bytes data field (128 bits) + 5 bytes OSNMA (8-bit HKROOT + 32-bit MACK authenticated via TESLA key)
         inav_data_16 = bytes([header_byte]) + digest[:15]
-        hkroot_byte = digest[15:16]
-        mack_bytes = digest[16:20]
+        hkroot_hex, mack_hex = self.osnma_engine.authenticate_subframe_tag(svid, inav_data_16)
+        hkroot_byte = bytes.fromhex(hkroot_hex)
+        mack_bytes = bytes.fromhex(mack_hex)
         osnma_5 = hkroot_byte + mack_bytes
 
-        body_27 = inav_data_16 + osnma_5 + digest[20:26]
+        # Include SSP byte (SSP1=0x04, SSP2=0x2B, SSP3=0x2F) in tail/spare slice
+        ssp_byte = (0x04, 0x2B, 0x2F)[seq % 3]
+        body_27 = inav_data_16 + osnma_5 + digest[20:25] + bytes([ssp_byte])
         crc_val = compute_crc24q(body_27)
         crc_bytes = crc_val.to_bytes(3, byteorder="big")
         full_30_bytes = body_27 + crc_bytes
 
         hex_payload = full_30_bytes.hex().upper()
-        hkroot_hex = hkroot_byte.hex().upper()
-        mack_hex = mack_bytes.hex().upper()
         crc_hex = f"{crc_val:06X}"
 
         # Compatible with trisat_ios BluetoothManager.swift & MacSerialPortManager.swift:

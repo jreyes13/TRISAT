@@ -27,6 +27,9 @@ from trisat_sdr.dsp.codes import (  # noqa: E402
     sample_code_waveform,
 )
 from trisat_sdr.nav.frame_decoder import GnssFrameDecoder, compute_crc24q  # noqa: E402
+from trisat_sdr.nav.galileo_advanced_services import GalileoAdvancedServicesEngine  # noqa: E402
+from trisat_sdr.nav.has_ua_engine import GalileoHasUaEngine, NtcmGIonosphereModel  # noqa: E402
+from trisat_sdr.nav.osnma_engine import GalileoOsnmaEngine  # noqa: E402
 from trisat_sdr.receiver import TrisatSdrReceiver  # noqa: E402
 
 
@@ -69,6 +72,56 @@ class TestTrisatSdr(unittest.TestCase):
         self.assertEqual(e6_has.frame_type, "CNAV_E6_HAS")
         self.assertTrue(e6_has.nmea_custom_sentence.startswith("$GALE6HAS,24,"))
 
+    def test_euspa_osnma_engine_annex_a_vectors(self):
+        osnma = GalileoOsnmaEngine()
+        summary = osnma.get_summary()
+        self.assertTrue(summary.merkle_root_verified)
+        self.assertTrue(summary.dsm_kroot_ecdsa_verified)
+        self.assertTrue(summary.tesla_chain_verified)
+        self.assertTrue(summary.macseq_verified)
+        self.assertTrue(summary.annex_a_selftest_passed)
+
+        # Feed live subframes and verify HMAC-SHA-256 tag generation
+        hkroot_hex, mack_hex = osnma.authenticate_subframe_tag(
+            svid=11, navdata_bytes=b"\x01\x02\x03\x04\x05\x06\x07\x08", tow_sf=345660
+        )
+        self.assertEqual(len(hkroot_hex), 2)
+        self.assertEqual(len(mack_hex), 8)
+        self.assertIn(11, osnma.get_summary().authenticated_svids)
+
+    def test_euspa_has_ua_engine_and_ntcm_g(self):
+        has_ua = GalileoHasUaEngine()
+        report = has_ua.process_epoch(
+            lat_deg=40.4168,
+            lon_deg=-3.7038,
+            alt_m=667.0,
+            gal_sats=[(2, 62.0, 48.0), (11, 54.0, 47.0), (24, 41.0, 45.5), (31, 29.0, 43.0)],
+            gps_sats=[(3, 58.0, 46.5), (17, 44.0, 44.0)],
+        )
+        self.assertEqual(report.solving_mode, 2)
+        self.assertEqual(report.status_flag_8bit, 0b00000011)
+        self.assertFalse(report.dia_outlier_rejected)
+        self.assertEqual(len(report.sol_line_33col.split()), 33)
+
+        # Test NTCM-G 12-coefficient single-frequency ionospheric delay
+        delay_m, vtec_tecu = NtcmGIonosphereModel.compute_slant_delay_m(
+            user_lat_deg=40.4168,
+            user_lon_deg=-3.7038,
+            elev_deg=52.0,
+            azim_deg=145.0,
+        )
+        self.assertGreater(delay_m, 0.5)
+        self.assertLess(delay_m, 40.0)
+        self.assertGreater(vtec_tecu, 1.0)
+
+    def test_galileo_advanced_services_inav_ewss_tsm(self):
+        adv = GalileoAdvancedServicesEngine()
+        rep = adv.evaluate(rx_lat=40.4168, rx_lon=-3.7038)
+        self.assertTrue(rep.wt16_redced_active)
+        self.assertTrue(rep.rs_ced_reconstructed)
+        self.assertTrue(rep.ewss_alert.receiver_inside_alert_zone)
+        self.assertIn("SL2 Operational", rep.wt44_tsm_service_level)
+
     def test_dual_hackrf_receiver_and_band_switching(self):
         cfg = ReceiverConfig()
         cfg.telemetry.udp_enabled = False
@@ -82,6 +135,8 @@ class TestTrisatSdr(unittest.TestCase):
         snap = rx.step_epoch()
         self.assertTrue(snap["pvt"]["valid_fix"])
         self.assertIn("HAS", snap["pvt"]["solution_mode"])
+        self.assertTrue(snap["osnma"]["annex_a_selftest_passed"])
+        self.assertEqual(snap["has_ua"]["solving_mode"], 2)
 
         # Switch HackRF #1 dynamically to Galileo E5a
         rx.switch_secondary_band("GAL_E5A", dual_enabled=True)

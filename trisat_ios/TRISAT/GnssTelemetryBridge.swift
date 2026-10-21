@@ -2,17 +2,25 @@ import Foundation
 import Network
 import CoreLocation
 import Combine
+#if os(macOS)
+import AppKit
+#endif
 
 /// High-performance UDP Telemetry Bridge service utilizing Apple Network.framework NWListener
 class GnssTelemetryBridge: ObservableObject {
     @Published var isListening: Bool = false
     @Published var listenerPort: UInt16 = 9090
-    @Published var statusText: String = "SXblue USB Bridge Idle (Port 9090)"
+    @Published var statusText: String = "SXblue / TRISAT-SDR Bridge Idle (Port 9090)"
     @Published var packetsReceivedCount: Int = 0
+    @Published var isSdrEngineRunning: Bool = false
+    @Published var selectedSdrBand2: String = "GAL_E6"
 
     private var listener: NWListener?
     private weak var viewModel: GnssViewModel?
     private weak var bluetoothManager: BluetoothManager?
+    #if os(macOS)
+    private var sdrProcess: Process?
+    #endif
 
     init(viewModel: GnssViewModel? = nil, bluetoothManager: BluetoothManager? = nil) {
         self.viewModel = viewModel
@@ -23,6 +31,96 @@ class GnssTelemetryBridge: ObservableObject {
     func configure(viewModel: GnssViewModel, bluetoothManager: BluetoothManager) {
         self.viewModel = viewModel
         self.bluetoothManager = bluetoothManager
+    }
+
+    // MARK: - Native macOS TRISAT-SDR Engine Launcher & Controller
+
+    func startTrisatSdrEngine(band2: String? = nil) {
+        #if os(macOS)
+        let targetBand = band2 ?? selectedSdrBand2
+        selectedSdrBand2 = targetBand
+
+        // Stop any previous instance cleanly before starting
+        stopTrisatSdrEngine(quiet: true)
+
+        let scriptPath = "/Users/jreyes13/Documents/GitHub/TRISAT/trisat_sdr/main.py"
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+        proc.arguments = [scriptPath, "--band2", targetBand, "--web-port", "8085"]
+        proc.currentDirectoryURL = URL(fileURLWithPath: "/Users/jreyes13/Documents/GitHub/TRISAT")
+        proc.standardOutput = FileHandle.nullDevice
+        proc.standardError = FileHandle.nullDevice
+
+        proc.terminationHandler = { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.isSdrEngineRunning = false
+            }
+        }
+
+        do {
+            try proc.run()
+            self.sdrProcess = proc
+            self.isSdrEngineRunning = true
+            if !isListening {
+                startUdpListener(port: 9090)
+            }
+            self.statusText = "TRISAT-SDR Active (E1 OSNMA + \(targetBand)) [UDP :9090 | Web :8085]"
+        } catch {
+            self.statusText = "Failed to launch TRISAT-SDR: \(error.localizedDescription)"
+        }
+        #endif
+    }
+
+    func stopTrisatSdrEngine(quiet: Bool = false) {
+        #if os(macOS)
+        if let proc = sdrProcess, proc.isRunning {
+            proc.terminate()
+        }
+        sdrProcess = nil
+
+        // Also stop any background trisat_sdr/main.py process started externally
+        let killProc = Process()
+        killProc.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        killProc.arguments = ["-f", "trisat_sdr/main.py"]
+        try? killProc.run()
+        killProc.waitUntilExit()
+
+        isSdrEngineRunning = false
+        if !quiet {
+            statusText = "TRISAT-SDR Engine Stopped (UDP Listener Ready :\(listenerPort))"
+        }
+        #endif
+    }
+
+    func switchSdrSecondaryBand(_ band: String) {
+        selectedSdrBand2 = band
+        #if os(macOS)
+        if let url = URL(string: "http://127.0.0.1:8085/api/set_band?band=\(band)") {
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            URLSession.shared.dataTask(with: req).resume()
+        }
+        if !isSdrEngineRunning && packetsReceivedCount == 0 {
+            startTrisatSdrEngine(band2: band)
+        } else {
+            statusText = "TRISAT-SDR Active (E1 OSNMA + \(band)) [UDP :9090 | Web :8085]"
+        }
+        #endif
+    }
+
+    func openWebDashboard() {
+        #if os(macOS)
+        if !isSdrEngineRunning && packetsReceivedCount == 0 {
+            startTrisatSdrEngine(band2: selectedSdrBand2)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                if let url = URL(string: "http://127.0.0.1:8085") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+        } else if let url = URL(string: "http://127.0.0.1:8085") {
+            NSWorkspace.shared.open(url)
+        }
+        #endif
     }
 
     func startUdpListener(port: UInt16 = 9090) {

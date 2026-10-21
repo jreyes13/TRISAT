@@ -27,7 +27,7 @@ struct MainTabView: View {
                 .tag(0)
 
             // Tab 2: Signal Processing
-            SignalProcessingView(viewModel: viewModel)
+            SignalProcessingView(viewModel: viewModel, telemetryBridge: telemetryBridge)
                 .tabItem {
                     Image(systemName: "waveform.path.ecg")
                     Text("Signal Proc.")
@@ -43,7 +43,7 @@ struct MainTabView: View {
                 .tag(2)
 
             // Tab 4: Settings & Logs
-            SettingsView(bluetoothManager: bluetoothManager, viewModel: viewModel)
+            SettingsView(bluetoothManager: bluetoothManager, viewModel: viewModel, telemetryBridge: telemetryBridge)
                 .tabItem {
                     Image(systemName: "gearshape.fill")
                     Text("Settings")
