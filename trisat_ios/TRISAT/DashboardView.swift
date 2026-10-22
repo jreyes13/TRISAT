@@ -5,44 +5,43 @@ struct DashboardView: View {
     @ObservedObject var viewModel: GnssViewModel
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @State private var isCopied: Bool = false
+
+    private var isWideLayout: Bool {
+        #if os(macOS)
+        return true
+        #else
+        return horizontalSizeClass == .regular
+        #endif
+    }
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 18) {
-                // Header Banner Logo
-                HStack {
-                    Spacer()
-                    Image("AppLogo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: horizontalSizeClass == .regular ? 420 : .infinity)
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .padding(.top, 8)
+            VStack(spacing: 12) {
+                // Compact Desktop Header Banner
+                topHeaderBanner
 
-                if horizontalSizeClass == .regular {
-                    // iPad 2-Column Side-by-Side Layout
-                    HStack(alignment: .top, spacing: 18) {
-                        // Left Column: Skyplot, Filters, & Constellation Stats Grid
-                        VStack(spacing: 16) {
-                            skyPlotSection(height: 320)
+                if isWideLayout {
+                    // macOS & iPad 2-Column Side-by-Side Layout Fitted to Screen
+                    HStack(alignment: .top, spacing: 14) {
+                        // Left Column: Skyplot, Constellation Filters, & Constellation Matrix
+                        VStack(spacing: 12) {
+                            skyPlotSection(height: 250)
                             constellationSummaryGridSection
                         }
                         .frame(maxWidth: .infinity)
 
-                        // Right Column: Telemetry, DOP Geometry, & MiniMap
-                        VStack(spacing: 16) {
+                        // Right Column: Position Telemetry, DOP Geometry, & Geospatial Map
+                        VStack(spacing: 12) {
                             positionTelemetrySection
                             dopGeometrySection
                             MiniMapView(coordinate: viewModel.currentCoordinate)
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 16)
                 } else {
-                    // iPhone 1-Column Vertical Layout
-                    VStack(spacing: 16) {
+                    // Compact 1-Column Vertical Layout
+                    VStack(spacing: 14) {
                         skyPlotSection(height: 220)
                         positionTelemetrySection
                         constellationSummaryGridSection
@@ -52,15 +51,109 @@ struct DashboardView: View {
                     .padding(.horizontal)
                 }
             }
-            .padding(.bottom, 24)
+            .padding(.bottom, 16)
         }
         .onAppear { viewModel.start() }
+    }
+
+    // MARK: - Top Compact Banner
+
+    private var topHeaderBanner: some View {
+        Group {
+            if isWideLayout {
+                // macOS & iPad: Wide Single-Row Banner
+                HStack(spacing: 14) {
+                    Image("AppLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 52)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("TRISAT — Multi-Constellation GNSS & Security Suite")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        Text("Galileo OSNMA v1.1 • E6 HAS-UA v2.0 • 4-Constellation Skyplot & CelesTrak SGP4")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    // Quick Mode & Threat Status Pills
+                    headerPills
+                }
+            } else {
+                // iPhone: Clean 2-Row Vertical Layout (Prevents title squishing)
+                VStack(alignment: .leading, spacing: 8) {
+                    // Line 1: Logo on the left, Mode & Threat pills on the right
+                    HStack {
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 38)
+
+                        Spacer()
+
+                        headerPills
+                    }
+
+                    // Line 2: Full-width Title & Subtitle
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("TRISAT — Multi-Constellation GNSS & Security Suite")
+                            .font(.subheadline)
+                            .fontWeight(.bold)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("Galileo OSNMA v1.1 • E6 HAS-UA v2.0 • 4-Constellation SGP4")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.gray.opacity(0.08))
+        .cornerRadius(12)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+
+    private var headerPills: some View {
+        HStack(spacing: 6) {
+            Text(modeBadgeTitle)
+                .font(.system(size: 9.5, weight: .bold))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.cyan.opacity(0.18))
+                .foregroundColor(.cyan)
+                .cornerRadius(6)
+
+            if viewModel.simulatedThreatMode != .nominal {
+                Text(viewModel.simulatedThreatMode.badgeText)
+                    .font(.system(size: 9.5, weight: .bold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.red.opacity(0.22))
+                    .foregroundColor(.red)
+                    .cornerRadius(6)
+            }
+        }
+    }
+
+    private var modeBadgeTitle: String {
+        switch viewModel.selectedMode {
+        case 0: return "MODE: INTERNAL + TLE"
+        case 1: return "MODE: LIVE SDR / BRIDGE"
+        case 2: return "MODE: TLE ORBIT SIM"
+        default: return "MODE: ACTIVE"
+        }
     }
 
     // MARK: - Component Sections
 
     private func skyPlotSection(height: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "globe.americas.fill")
                     .foregroundColor(.cyan)
@@ -79,7 +172,7 @@ struct DashboardView: View {
             }
 
             // Constellation Filter Toggles with SF Symbol Icons
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 FilterToggleChip(title: "Galileo", iconName: "globe.europe.africa.fill", isSelected: $viewModel.isGalileoEnabled, color: .cyan)
                 FilterToggleChip(title: "GPS", iconName: "location.north.line.fill", isSelected: $viewModel.isGpsEnabled, color: .orange)
                 FilterToggleChip(title: "GLONASS", iconName: "antenna.radiowaves.left.and.right", isSelected: $viewModel.isGlonassEnabled, color: .red)
@@ -94,7 +187,7 @@ struct DashboardView: View {
                             .font(.caption2)
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text(String(format: "%.1f h (±12h)", viewModel.timeOffsetHours))
+                        Text(String(format: "%+.1f h (±12h)", viewModel.timeOffsetHours))
                             .font(.caption2)
                             .fontWeight(.bold)
                             .foregroundColor(.cyan)
@@ -111,15 +204,15 @@ struct DashboardView: View {
             }
 
             SkyPlotView(satellites: viewModel.displayedSatellites, height: height)
-                .padding(.vertical, 4)
+                .padding(.vertical, 2)
         }
-        .padding()
+        .padding(12)
         .background(Color.gray.opacity(0.08))
         .cornerRadius(14)
     }
 
     private var positionTelemetrySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "location.fill")
                     .foregroundColor(.blue)
@@ -127,7 +220,7 @@ struct DashboardView: View {
                     .font(.subheadline)
                     .fontWeight(.bold)
                 Spacer()
-                Text(isCopied ? "COPIED!" : "3D FIX")
+                Text(isCopied ? "COPIED!" : "3D FIX (\(viewModel.numSatellitesInFix) SVs)")
                     .font(.caption2)
                     .fontWeight(.bold)
                     .padding(.horizontal, 6)
@@ -144,6 +237,7 @@ struct DashboardView: View {
             Text(viewModel.accuracyText)
                 .font(.caption)
                 .foregroundColor(.gray)
+                .lineLimit(1)
 
             HStack(spacing: 10) {
                 Button(action: {
@@ -168,11 +262,12 @@ struct DashboardView: View {
                     .font(.caption)
                     .fontWeight(.bold)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 6)
                     .background(Color.blue)
                     .foregroundColor(.white)
                     .cornerRadius(8)
                 }
+                .buttonStyle(.plain)
                 
                 Button(action: {
                     let lat = viewModel.currentCoordinate.latitude
@@ -192,23 +287,24 @@ struct DashboardView: View {
                     .font(.caption)
                     .fontWeight(.bold)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 6)
                     .background(Color.gray.opacity(0.2))
                     .foregroundColor(.primary)
                     .cornerRadius(8)
                 }
+                .buttonStyle(.plain)
             }
         }
-        .padding()
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.gray.opacity(0.12))
         .cornerRadius(14)
     }
 
-    // MARK: - iPad High-Value Feature Cards
+    // MARK: - Constellation & DOP Feature Cards
 
     private var constellationSummaryGridSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "chart.bar.fill")
                     .foregroundColor(.cyan)
@@ -222,44 +318,65 @@ struct DashboardView: View {
                     .foregroundColor(.secondary)
             }
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                ConstellationStatTile(name: "Galileo", count: viewModel.displayedSatellites.filter { $0.constellation == .galileo }.count, avgCno: "41.5 dB-Hz", color: .cyan)
-                ConstellationStatTile(name: "GPS", count: viewModel.displayedSatellites.filter { $0.constellation == .gps }.count, avgCno: "39.2 dB-Hz", color: .orange)
-                ConstellationStatTile(name: "GLONASS", count: viewModel.displayedSatellites.filter { $0.constellation == .glonass }.count, avgCno: "36.8 dB-Hz", color: .red)
-                ConstellationStatTile(name: "BeiDou", count: viewModel.displayedSatellites.filter { $0.constellation == .beidou }.count, avgCno: "38.0 dB-Hz", color: .green)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ConstellationStatTile(
+                    name: "Galileo",
+                    count: viewModel.displayedSatellites.filter { $0.constellation == .galileo }.count,
+                    avgCno: viewModel.averageCno(for: .galileo),
+                    color: .cyan
+                )
+                ConstellationStatTile(
+                    name: "GPS",
+                    count: viewModel.displayedSatellites.filter { $0.constellation == .gps }.count,
+                    avgCno: viewModel.averageCno(for: .gps),
+                    color: .orange
+                )
+                ConstellationStatTile(
+                    name: "GLONASS",
+                    count: viewModel.displayedSatellites.filter { $0.constellation == .glonass }.count,
+                    avgCno: viewModel.averageCno(for: .glonass),
+                    color: .red
+                )
+                ConstellationStatTile(
+                    name: "BeiDou",
+                    count: viewModel.displayedSatellites.filter { $0.constellation == .beidou }.count,
+                    avgCno: viewModel.averageCno(for: .beidou),
+                    color: .green
+                )
             }
         }
-        .padding()
+        .padding(12)
         .background(Color.gray.opacity(0.08))
         .cornerRadius(14)
     }
 
     private var dopGeometrySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let isDegraded = viewModel.simulatedThreatMode == .jamming || viewModel.simulatedThreatMode == .spoofing
+        return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "scope")
-                    .foregroundColor(.blue)
+                    .foregroundColor(isDegraded ? .orange : .blue)
                 Text("DOP Geometry Quality")
                     .font(.subheadline)
                     .fontWeight(.bold)
                 Spacer()
-                Text("EXCELLENT 3D")
+                Text(isDegraded ? "DEGRADED GEOMETRY" : "EXCELLENT 3D")
                     .font(.caption2)
                     .fontWeight(.bold)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.2))
-                    .foregroundColor(.blue)
+                    .background((isDegraded ? Color.orange : Color.blue).opacity(0.2))
+                    .foregroundColor(isDegraded ? .orange : .blue)
                     .cornerRadius(6)
             }
 
-            HStack(spacing: 12) {
-                DopMetricTile(label: "HDOP", value: "0.85", sub: "Horizontal")
-                DopMetricTile(label: "VDOP", value: "1.10", sub: "Vertical")
-                DopMetricTile(label: "PDOP", value: "1.38", sub: "3D Position")
+            HStack(spacing: 10) {
+                DopMetricTile(label: "HDOP", value: viewModel.hdopValue, sub: "Horizontal")
+                DopMetricTile(label: "VDOP", value: viewModel.vdopValue, sub: "Vertical")
+                DopMetricTile(label: "PDOP", value: viewModel.pdopValue, sub: "3D Position")
             }
         }
-        .padding()
+        .padding(12)
         .background(Color.gray.opacity(0.1))
         .cornerRadius(14)
     }
@@ -277,15 +394,17 @@ struct FilterToggleChip: View {
                 Image(systemName: iconName)
                     .font(.system(size: 10, weight: .bold))
                 Text(title)
-                    .font(.caption2)
-                    .fontWeight(.bold)
+                    .font(.system(size: 11, weight: .bold))
+                    .lineLimit(1)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
             .background(isSelected ? color.opacity(0.25) : Color.gray.opacity(0.15))
             .foregroundColor(isSelected ? color : Color.gray)
             .cornerRadius(6)
         }
+        .buttonStyle(.plain)
     }
 }
 
@@ -314,7 +433,7 @@ struct ConstellationStatTile: View {
                 .font(.system(size: 10))
                 .foregroundColor(.secondary)
         }
-        .padding(10)
+        .padding(8)
         .background(color.opacity(0.12))
         .cornerRadius(10)
     }

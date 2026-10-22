@@ -1,6 +1,6 @@
 # TRISAT - Authenticated Earth Intelligence
 
-> **TRISAT** (**T**ri-band **R**eal-time **I**ntegrity & **S**atellite **A**uthentication **T**erminal) — representing **Tri-Band** Galileo reception (**E1 / E5 / E6**), **Tri-Service** EUSPA verification (**OSNMA** cryptographic authentication, **HAS** high-accuracy PPP, and **EWSS/TSM** integrity), and **Tri-Platform** native execution (**Android, iOS & macOS + SDR**).
+> **TRISAT** (**T**ri-band **R**eal-time **I**ntegrity & **S**atellite **A**uthentication **T**erminal) — representing **Tri-Band** Galileo reception (**E1 / E5 / E6**), **Tri-Service** GNSS verification (**OSNMA** cryptographic authentication, **HAS** high-accuracy PPP, and **EWSS/TSM** integrity), and **Tri-Platform** native execution (**Android, iOS & macOS + SDR**).
 
 TRISAT is an advanced **multiplatform GNSS intelligence application** (Android, iOS, macOS & Software-Defined Radio) designed for **Galileo OSNMA (Open Service Navigation Message Authentication)**, **Galileo E6 HAS (High Accuracy Service)** precise point positioning, multi-constellation GNSS signal analysis, and anti-spoofing diagnostic evaluation.
 
@@ -13,16 +13,16 @@ TRISAT is built as a cross-ecosystem solution with native, high-performance impl
 | Platform | Directory | Tech Stack | Key Capabilities |
 | :--- | :--- | :--- | :--- |
 | **Android** | `trisat_android/` | Kotlin, Jetpack Compose, Android GNSS HAL APIs | Raw `TYPE_GAL_I` I/NAV frames, AGC levels, RINEX logging, A-GNSS cold-start reset |
-| **iOS** | `trisat_ios/` | Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit, CryptoKit | CelesTrak TLE orbit propagator, 24h time scrubbing, BLE GNSS receiver, EUSPA OSNMA Annex A engine |
+| **iOS** | `trisat_ios/` | Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit, CryptoKit | CelesTrak TLE orbit propagator, 24h time scrubbing, BLE GNSS receiver, Galileo OSNMA Annex A engine |
 | **macOS** | `trisat_ios/` & `build/TRISAT.app` | Swift, SwiftUI, Network.framework, CryptoKit, PyUSB | Integrated **TRISAT-SDR (E1 OSNMA + E6 HAS-UA)** launcher, Geneq SXblue FTDI USB driver, anti-flicker Skyplot & C/N0 Bar Chart |
-| **SDR Engine** | `trisat_sdr/` | Python 3, NumPy/SciPy, Dual-HackRF (`10 MHz CLKOUT/CLKIN`) | Portable SDR receiver (`E1B/C`, `E5a`, `E5b`, `E5 AltBOC`, `E6B/C HAS`, `GPS L1`), EUSPA **OSNMA v1.1**, **HAS-UA (`PPPSD`/`DIA`/`NTCM-G`)** & Web UI (`:8085`) |
+| **SDR Engine** | `trisat_sdr/` | Python 3, NumPy/SciPy, Dual-HackRF (`10 MHz CLKOUT/CLKIN`) | Portable SDR receiver (`E1B/C`, `E5a`, `E5b`, `E5 AltBOC`, `E6B/C HAS`, `GPS L1`), **OSNMA v1.1**, **HAS-UA (`PPPSD`/`DIA`/`NTCM-G`)** & Web UI (`:8085`) |
 
 ---
 
 ## 🛰️ Key Features
 
 * 🌌 **Anti-Flicker Open Sky Polar Skyplot:** Interactive 360° skyplot with constellation color coding (Galileo Cyan, GPS Amber, GLONASS Red, BeiDou Green) and a persistent 12-second satellite cache that **eliminates flickering**.
-* 📊 **Satellite C/N0 Signal Strength Bar Chart (Diagrama de Barras):** Real-time vertical SNR bar chart displaying carrier-to-noise ratio in dB-Hz color-coded by signal quality (Green $\ge 35$ dB-Hz, Yellow $\ge 25$ dB-Hz, Red $< 25$ dB-Hz) with constellation PRN badges (`E02`, `G08`, `R05`, `B12`).
+* 📊 **Satellite C/N0 Signal Strength Bar Chart:** Real-time vertical SNR bar chart displaying carrier-to-noise ratio in dB-Hz color-coded by signal quality (Green $\ge 35$ dB-Hz, Yellow $\ge 25$ dB-Hz, Red $< 25$ dB-Hz) with constellation PRN badges (`E02`, `G08`, `R05`, `B12`).
 * 🔌 **Geneq SXblue USB & UDP Telemetry Bridge:** Low-level PyUSB/libusb driver interfacing with the Geneq SXblue FTDI USB chip (`VID: 0x0403`, `PID: 0xb5a0`) at 19200 bps, broadcasting JSON and raw NMEA/$BIN datagrams to `127.0.0.1:9090` via `Network.framework`.
 * 🔒 **Galileo I/NAV & OSNMA Receiver Test:** Direct extraction and inspection of raw `TYPE_GAL_I` navigation frames and 250-bit subframe pages.
 * 🛰️ **CelesTrak TLE Orbital Propagator & 24h Time Slider:** Download real-time satellite orbital elements and simulate constellation geometries across a 24-hour window ($\pm 12\text{h}$).
@@ -49,9 +49,9 @@ sudo ./SX_Blue/run_bridge.sh
 ```
 
 ### 3️⃣ Launch TRISAT macOS Application
-Open TRISAT from Xcode (`trisat_mac`) or Terminal:
+Open TRISAT from Xcode (`trisat_ios/TRISAT.xcodeproj`) or directly from Terminal:
 ```bash
-open /Users/jreyes13/Library/Developer/Xcode/DerivedData/TRISAT-hfmnxvykdnelswdxkwyavntnmwht/Build/Products/Debug/TRISAT.app
+open ./build/TRISAT.app
 ```
 * **Signal Processing:** View live full-width green NMEA stream, Galileo I/NAV cards, and the C/N0 SNR Bar Chart.
 * **Dashboard:** View real-time coordinates, altitude, fix quality (*GPS Fix*, *DGPS Fix*, *RTK Fixed*), and anti-flicker Skyplot.
@@ -62,7 +62,7 @@ open /Users/jreyes13/Library/Developer/Xcode/DerivedData/TRISAT-hfmnxvykdnelswdx
 
 * **User Manual:** For complete usage instructions, technical architecture, and OSNMA/HAS testing workflows, please refer to [USER_MANUAL.md](USER_MANUAL.md).
 * **Interactive Google Colab Notebooks:** For executable demonstrations of Galileo E1-B I/NAV v2.2 decoding, OSNMA Annex A cryptographic verification, and E6 HAS-UA precise point positioning, see [notebooks/README.md](notebooks/README.md).
-* **TRISAT-SDR Documentation:** For Dual-HackRF SDR configuration and EUSPA reference engines, see [trisat_sdr/README.md](trisat_sdr/README.md).
+* **TRISAT-SDR Documentation:** For Dual-HackRF SDR configuration and GNSS reference engines, see [trisat_sdr/README.md](trisat_sdr/README.md).
 
 ---
 

@@ -1,7 +1,7 @@
 import Foundation
 import CryptoKit
 
-/// OS-NMA Cryptographic Authentication Engine for macOS & iOS (EUSPA OSNMA SIS ICD v1.1 & RX Guidelines v1.3)
+/// OS-NMA Cryptographic Authentication Engine for macOS & iOS (Galileo OSNMA SIS ICD v1.1 & RX Guidelines v1.3)
 enum OsnmaAuthStatus {
     case verified
     case unauthenticated
@@ -22,7 +22,7 @@ class OsnmaEngine {
 
     static let crc24qPoly: UInt32 = 0x1864CFB
 
-    // Official EUSPA Annex A Reference Constants (Configuration 2, Sat E02, WN=1248, TOW=345660)
+    // Official Galileo Annex A Reference Constants (Configuration 2, Sat E02, WN=1248, TOW=345660)
     static let annexAKrootHex = "5BF8C9CBFCF70422081475FD445DF0FF"
     static let annexAK4Hex    = "69C00AA7364237A65EBF006AD8DDBC73"
     static let annexAAlphaHex = "610BDF26D77B"
@@ -42,7 +42,7 @@ class OsnmaEngine {
         return crc & 0xFFFFFF
     }
 
-    /// Performs one step of the EUSPA OSNMA TESLA chain one-way function:
+    /// Performs one step of the Galileo OSNMA TESLA chain one-way function:
     /// K_I = trunc(128, SHA256(K_{I+1} || GST_{SF,I} || alpha))
     static func computeTeslaKeyStep(nextKeyHex: String, wnTarget: UInt32, towTarget: UInt32, alphaHex: String) -> String {
         guard let kNext = hexToData(nextKeyHex),
@@ -60,7 +60,7 @@ class OsnmaEngine {
         return digest.prefix(16).map { String(format: "%02X", $0) }.joined()
     }
 
-    /// Runs the official EUSPA Annex A TESLA & HMAC-SHA256 verification self-test using Apple CryptoKit
+    /// Runs the official Galileo Annex A TESLA & HMAC-SHA256 verification self-test using Apple CryptoKit
     static func verifyEuspaAnnexATestVector() -> Bool {
         let k3 = computeTeslaKeyStep(nextKeyHex: annexAK4Hex, wnTarget: 1248, towTarget: 345660, alphaHex: annexAAlphaHex)
         let k2 = computeTeslaKeyStep(nextKeyHex: k3, wnTarget: 1248, towTarget: 345630, alphaHex: annexAAlphaHex)

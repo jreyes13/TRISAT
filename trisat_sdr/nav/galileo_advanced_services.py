@@ -104,7 +104,7 @@ class GalileoAdvancedServicesEngine:
             message_type="TEST (00)",
             country_id=500,  # EU Organisations
             provider_id=1,
-            hazard_category="OTHER - EUSPA EWSS Test Alert (113)",
+            hazard_category="OTHER - EWSS Test Alert (113)",
             severity="MODERATE (01)",
             ellipse_center_lat=c_lat,
             ellipse_center_lon=c_lon,

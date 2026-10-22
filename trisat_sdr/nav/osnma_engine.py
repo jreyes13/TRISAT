@@ -1,5 +1,5 @@
 """
-EUSPA-Compliant Galileo OSNMA Cryptographic Verification Engine for TRISAT-SDR.
+Galileo OSNMA Cryptographic Verification Engine for TRISAT-SDR.
 Implements the exact specifications from:
   - Galileo OSNMA SIS ICD (Issue 1.1)
   - Galileo OSNMA Receiver Guidelines (Issue 1.3, including Annex A Reference Test Vectors)
@@ -13,7 +13,7 @@ Capabilities:
   4. TESLA Key Chain one-way function F(K_{I+1}) = trunc(l_K, SHA256(K_{I+1} || GST_{SF,I} || alpha)).
   5. MAC Look-Up Table (MACLT IDs 27..41) & 12-bit MACSEQ verification over FLX slots.
   6. HMAC-SHA-256 Tag0 & Tag_k verification for ADKD=0 (549b), ADKD=4 (141b), and ADKD=12 (Slow MAC).
-  7. Built-in EUSPA Annex A Reference Test Vector validator (Satellite E02, WN=1248, TOW=345660).
+  7. Built-in Annex A Reference Test Vector validator (Satellite E02, WN=1248, TOW=345660).
 """
 
 from dataclasses import dataclass, field
@@ -169,7 +169,7 @@ class GalileoOsnmaEngine:
     (Merkle Tree, DSM-KROOT ECDSA P-256, TESLA Key Chain, MACSEQ, and ADKD=0/4/12 Tags).
     """
 
-    # Official EUSPA Annex A Reference Constants (Configuration 2, Sat E02, WN=1248)
+    # Official Galileo Annex A Reference Constants (Configuration 2, Sat E02, WN=1248)
     ANNEX_A_MERKLE_ROOT = "A10C440F3AA62453526DB4AF76DF8D9410D35D8277397D7053C700D192702B0D"
     ANNEX_A_NPK_COMPRESSED = "0303B2CE64BC207BDD8BC4DF859187FCB686320D63FFA091410FC158FBB77980EA"
     ANNEX_A_LEAF_M1 = "120303B2CE64BC207BDD8BC4DF859187FCB686320D63FFA091410FC158FBB77980EA"
@@ -292,7 +292,7 @@ class GalileoOsnmaEngine:
 
     def run_euspa_annex_a_self_test(self) -> bool:
         """
-        Executes the official EUSPA Annex A (RX Guidelines v1.3) step-by-step verification:
+        Executes the official Galileo Annex A (RX Guidelines v1.3) step-by-step verification:
           1. Verifies DSM-PKR padding P_DP = trunc(48, SHA256(x_{4,0} || m_1)) == 0xB8884C0D33D6
           2. Verifies DSM-KROOT ECDSA P-256 signature DS over M using compressed NPK
           3. Verifies DSM-KROOT padding P_DK = trunc(88, SHA256(M || DS)) == 0x5E130DA4B44BBE7EC29522

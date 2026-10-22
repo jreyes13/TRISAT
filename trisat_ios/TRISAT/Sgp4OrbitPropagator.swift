@@ -1,7 +1,7 @@
 import Foundation
 import CoreLocation
 
-/// Simplified Keplerian SGP4 Orbit Propagator for Open Sky Simulation
+/// Keplerian SGP4 Orbit Propagator for 4-Constellation Open Sky Simulation (Galileo, GPS, GLONASS, BeiDou)
 class Sgp4OrbitPropagator {
 
     /// Calculates Greenwich Mean Sidereal Time (GMST) in radians for a given UTC Date + offset
@@ -18,11 +18,9 @@ class Sgp4OrbitPropagator {
     static func propagateToSkyplot(
         tles: [TleData],
         timeOffsetHours: Double,
-        observerLocation: CLLocationCoordinate2D = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
+        observerLocation: CLLocationCoordinate2D
     ) -> [SatelliteInfo] {
-        if tles.isEmpty {
-            return generateFallbackModel(timeOffsetHours: timeOffsetHours)
-        }
+        let catalog = tles.isEmpty ? TleDownloader.generateBuiltInFourConstellationCatalog() : tles
 
         var satList: [SatelliteInfo] = []
         let deltaMinutes = timeOffsetHours * 60.0
@@ -31,31 +29,26 @@ class Sgp4OrbitPropagator {
         let obsLatRad = observerLocation.latitude * .pi / 180.0
         let obsLonRad = observerLocation.longitude * .pi / 180.0
 
-        for (index, tle) in tles.enumerated() {
+        var perConstCounter: [GnssConstellation: Int] = [:]
+
+        for tle in catalog {
             let meanAnomalyRad = (tle.meanAnomalyDegrees + (tle.meanMotionRevsPerDay * 360.0 * (deltaMinutes / 1440.0))).truncatingRemainder(dividingBy: 360.0) * .pi / 180.0
             let raanRad = (tle.raanDegrees + (deltaMinutes * 0.25)).truncatingRemainder(dividingBy: 360.0) * .pi / 180.0
             let incRad = tle.inclinationDegrees * .pi / 180.0
             let argPerigeeRad = tle.argPerigeeDegrees * .pi / 180.0
 
-            // Argument of latitude u
             let uRad = meanAnomalyRad + argPerigeeRad
-
-            // Sub-satellite declination and Greenwich right ascension
             let satDeclination = asin(sin(incRad) * sin(uRad))
             let satRightAscension = raanRad + atan2(cos(incRad) * sin(uRad), cos(uRad))
-
-            // Hour Angle relative to observer: HA = GMST + obsLon - RightAscension
             let hourAngle = gmstRad + obsLonRad - satRightAscension
 
-            // Topocentric Elevation angle
             let sinElev = sin(obsLatRad) * sin(satDeclination) + cos(obsLatRad) * cos(satDeclination) * cos(hourAngle)
             let elevRad = asin(Swift.min(Swift.max(sinElev, -1.0), 1.0))
             let elevDeg = elevRad * 180.0 / .pi
 
-            // ELEVATION MASK: Filter satellites below 15° elevation
-            guard elevDeg >= 15.0 else { continue }
+            // Elevation mask: 10° so all 4 constellations have plenty of visible satellites
+            guard elevDeg >= 10.0 else { continue }
 
-            // Azimuth calculation
             let cosHA = cos(hourAngle)
             let sinHA = sin(hourAngle)
             let azimRad = atan2(-sinHA, cos(obsLatRad) * tan(satDeclination) - sin(obsLatRad) * cosHA)
@@ -71,51 +64,39 @@ class Sgp4OrbitPropagator {
                 }
             }()
 
-            let svidNum = (index % 32) + 1
-            let isUsed = elevDeg > 25.0
+            let nextIdx = (perConstCounter[constKind] ?? 0) + 1
+            perConstCounter[constKind] = nextIdx
+            let svidNum = Int(tle.svid) ?? nextIdx
+            let isUsed = elevDeg > 18.0
             let isGal = constKind == .galileo
-            let hasInav = isGal && (svidNum % 2 == 1)
-            let uniqueId = "\(constKind.rawValue)_PRN_\(svidNum)_\(index)"
+            let canonicalId = "\(constKind.rawValue)_\(svidNum)"
+
+            // Natural realistic receiver C/N0 curve: 31 dB-Hz at horizon (10°), peaking up to 48 dB-Hz at zenith
+            let cno = Int(31.0 + (elevDeg / 90.0) * 17.5)
 
             let sat = SatelliteInfo(
-                id: uniqueId,
+                id: canonicalId,
                 svid: svidNum,
                 elevation: elevDeg,
                 azimuth: azimDeg,
-                cno: Int(28.0 + (elevDeg / 90.0) * 22.0),
+                cno: cno,
                 isGalileo: isGal,
                 constellation: constKind,
                 usedInFix: isUsed,
-                hasInav: hasInav
+                hasInav: isGal
             )
             satList.append(sat)
         }
 
-        if satList.isEmpty {
-            return generateFallbackModel(timeOffsetHours: timeOffsetHours)
-        }
-
-        // Group by constellation and cap at top 7 highest-elevation satellites per constellation
+        // Group by constellation and select up to 6 highest-elevation satellites per constellation (up to 24 total)
         var finalCappedList: [SatelliteInfo] = []
         for const in GnssConstellation.allCases {
             let constSats = satList.filter { $0.constellation == const }
                 .sorted { $0.elevation > $1.elevation }
-                .prefix(7)
+                .prefix(6)
             finalCappedList.append(contentsOf: constSats)
         }
 
         return finalCappedList
-    }
-
-    private static func generateFallbackModel(timeOffsetHours: Double) -> [SatelliteInfo] {
-        let delta = timeOffsetHours * 15.0
-        return [
-            SatelliteInfo(id: "Galileo_PRN01", svid: 1, elevation: Swift.min(Swift.max(65.0 + delta, 10), 85), azimuth: 45.0, cno: 42, isGalileo: true, constellation: .galileo, usedInFix: true, hasInav: true),
-            SatelliteInfo(id: "Galileo_PRN02", svid: 2, elevation: Swift.min(Swift.max(30.0 + delta, 10), 85), azimuth: 120.0, cno: 38, isGalileo: true, constellation: .galileo, usedInFix: true, hasInav: true),
-            SatelliteInfo(id: "Galileo_PRN05", svid: 5, elevation: Swift.min(Swift.max(80.0 - delta, 10), 85), azimuth: 210.0, cno: 45, isGalileo: true, constellation: .galileo, usedInFix: true, hasInav: true),
-            SatelliteInfo(id: "GPS_PRN12", svid: 12, elevation: Swift.min(Swift.max(45.0 + delta, 10), 85), azimuth: 180.0, cno: 40, isGalileo: false, constellation: .gps, usedInFix: true, hasInav: false),
-            SatelliteInfo(id: "GLONASS_PRN08", svid: 8, elevation: Swift.min(Swift.max(25.0 + delta, 10), 85), azimuth: 300.0, cno: 35, isGalileo: false, constellation: .glonass, usedInFix: false, hasInav: false),
-            SatelliteInfo(id: "BeiDou_PRN24", svid: 24, elevation: Swift.min(Swift.max(15.0 + delta, 10), 85), azimuth: 75.0, cno: 29, isGalileo: false, constellation: .beidou, usedInFix: false, hasInav: false)
-        ]
     }
 }

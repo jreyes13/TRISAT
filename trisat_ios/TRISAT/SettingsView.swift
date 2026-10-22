@@ -8,7 +8,7 @@ struct SettingsView: View {
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @State private var showBlePickerSheet: Bool = false
     @State private var selectedBleDeviceName: String = ""
-    @State private var selectedBridgeOption: Int = 1
+    @State private var selectedBridgeOption: Int = 2
 
     #if os(macOS)
     @StateObject private var macSerialManager = MacSerialPortManager()
@@ -20,100 +20,76 @@ struct SettingsView: View {
         self.telemetryBridge = telemetryBridge
     }
 
+    private var isWideLayout: Bool {
+        #if os(macOS)
+        return true
+        #else
+        return horizontalSizeClass == .regular
+        #endif
+    }
+
     var body: some View {
         ScrollView {
-            VStack(spacing: 18) {
-                // Top Header Banner
+            VStack(spacing: 12) {
+                // Compact Top Header Banner
                 HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Settings & Configuration")
-                            .font(.title2)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Settings & Hardware Configuration")
+                            .font(.headline)
                             .bold()
-                        Text("Receiver Modes, CelesTrak TLE Orbits & OSNMA")
+                        Text("Centralized SDR / BLE / USB Receiver Control, 4-Constellation CelesTrak TLE Orbits & OSNMA Keys")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     Spacer()
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 16)
                 .padding(.top, 8)
 
-                if horizontalSizeClass == .regular {
-                    // iPad & Mac 2-Column Full Screen Layout
-                    HStack(alignment: .top, spacing: 20) {
-                        // Left Column: All Settings Sections
-                        VStack(spacing: 16) {
-                            bluetoothSection
+                if isWideLayout {
+                    // macOS & iPad Balanced 2-Column Desktop Layout
+                    HStack(alignment: .top, spacing: 14) {
+                        // Left Column: Receiver Mode, Dual-SDR & Bridges, Bluetooth, Serial
+                        VStack(spacing: 12) {
+                            receiverModeSection
                             usbBridgeSectionCard
+                            bluetoothSection
                             #if os(macOS)
                             macSerialSection
                             #endif
-                            receiverModeSection
-                            tleDownloadSection
-                            osnmaSection
-                            aboutSection
                         }
                         .frame(maxWidth: .infinity)
 
-                        // Right Column: Live Orbit Simulation SkyPlot Preview Card
-                        VStack(alignment: .leading, spacing: 14) {
-                            HStack {
-                                Image(systemName: "globe.americas.fill")
-                                    .foregroundColor(.cyan)
-                                Text("Live Orbit Simulation Preview")
-                                    .font(.headline)
-                                    .fontWeight(.bold)
-                                Spacer()
-                                Text("\(viewModel.displayedSatellites.count) SATS")
-                                    .font(.caption2)
-                                    .fontWeight(.bold)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(Color.green.opacity(0.2))
-                                    .foregroundColor(.green)
-                                    .cornerRadius(6)
+                        // Right Column: 4-Constellation CelesTrak TLE Manager + Live SkyPlot Preview + OSNMA & About
+                        VStack(spacing: 12) {
+                            tleAndOrbitPreviewCard
+                            HStack(alignment: .top, spacing: 12) {
+                                osnmaSection
+                                    .frame(maxWidth: .infinity)
+                                aboutSection
+                                    .frame(maxWidth: .infinity)
                             }
-
-                            SkyPlotView(satellites: viewModel.displayedSatellites, height: 320)
-                                .padding(.vertical, 8)
-
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Orbit Offset: \(String(format: "%.1f", viewModel.timeOffsetHours)) Hours")
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.blue)
-
-                                Slider(value: $viewModel.timeOffsetHours, in: -12.0...12.0, step: 0.5) { _ in
-                                    viewModel.updateSatellites()
-                                }
-                            }
-                            .padding(10)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(10)
                         }
-                        .padding(18)
-                        .background(Color.gray.opacity(0.08))
-                        .cornerRadius(16)
                         .frame(maxWidth: .infinity)
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 16)
                 } else {
-                    // iPhone 1-Column Full Screen Layout
-                    VStack(spacing: 16) {
-                        bluetoothSection
+                    // Compact 1-Column Layout
+                    VStack(spacing: 14) {
+                        receiverModeSection
                         usbBridgeSectionCard
+                        tleAndOrbitPreviewCard
+                        bluetoothSection
                         #if os(macOS)
                         macSerialSection
                         #endif
-                        receiverModeSection
-                        tleDownloadSection
                         osnmaSection
                         aboutSection
                     }
                     .padding(.horizontal)
                 }
             }
-            .padding(.bottom, 24)
+            .padding(.bottom, 16)
         }
         .sheet(isPresented: $showBlePickerSheet) {
             BleDevicePickerSheet(bluetoothManager: bluetoothManager)
@@ -135,101 +111,61 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Menú 1: Bluetooth GNSS Receivers
+    // MARK: - Section 1: GNSS Receiver Mode
 
-    private var bluetoothSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private var receiverModeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Image(systemName: "antenna.radiowaves.left.and.right")
-                    .foregroundColor(.blue)
-                Text("Bluetooth GNSS Receivers")
+                Image(systemName: "cpu")
+                    .foregroundColor(.cyan)
+                Text("GNSS Receiver & Telemetry Mode")
                     .font(.subheadline)
                     .fontWeight(.bold)
                 Spacer()
-                Text(bluetoothManager.isConnected ? "CONNECTED" : "DISCONNECTED")
+                Text(viewModel.selectedMode == 2 ? "SGP4 ORBIT SIM" : (viewModel.selectedMode == 1 ? "LIVE SDR / BRIDGE" : "INTERNAL + TLE"))
                     .font(.system(size: 9, weight: .bold))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background(bluetoothManager.isConnected ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
-                    .foregroundColor(bluetoothManager.isConnected ? .green : .red)
+                    .background(Color.cyan.opacity(0.2))
+                    .foregroundColor(.cyan)
                     .cornerRadius(6)
             }
 
-            HStack {
-                Text("Discovered BLE Devices:")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Button(bluetoothManager.isScanning ? "Stop Scan" : "Scan BLE") {
-                    if bluetoothManager.isScanning {
-                        bluetoothManager.stopScanning()
-                    } else {
-                        bluetoothManager.startScanning(trisatOnly: false)
-                    }
-                }
-                .font(.caption2)
+            Picker("Receiver Mode", selection: $viewModel.selectedMode) {
+                Text("Internal + TLE").tag(0)
+                Text("External BLE / SDR Bridge").tag(1)
+                Text("CelesTrak TLE Simulation").tag(2)
             }
-
-            if !bluetoothManager.discoveredPeripherals.isEmpty {
-                Picker("BLE Receiver", selection: $selectedBleDeviceName) {
-                    Text("Select a BLE Receiver...").tag("")
-                    ForEach(bluetoothManager.discoveredPeripherals) { item in
-                        Text(item.name).tag(item.name)
-                    }
+            .pickerStyle(.segmented)
+            .onChange(of: viewModel.selectedMode) { newValue in
+                viewModel.updateSatellites()
+                if newValue == 1 {
+                    bluetoothManager.startScanning(trisatOnly: false)
                 }
-                .pickerStyle(.menu)
-                .onChange(of: selectedBleDeviceName) { newName in
-                    if let target = bluetoothManager.discoveredPeripherals.first(where: { $0.name == newName }) {
-                        bluetoothManager.connect(to: target)
-                    }
-                }
-            } else {
-                Text("No BLE devices discovered yet. Click 'Scan BLE' to search.")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-
-            if bluetoothManager.isConnected {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("Active: \(bluetoothManager.connectedPeripheralName)")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                    Spacer()
-                    Button("Disconnect") {
-                        bluetoothManager.disconnect()
-                    }
-                    .font(.caption2)
-                    .foregroundColor(.red)
-                }
-                .padding(8)
-                .background(Color.green.opacity(0.1))
-                .cornerRadius(8)
             }
         }
-        .padding()
+        .padding(12)
         .background(Color.gray.opacity(0.08))
         .cornerRadius(14)
     }
 
-    // MARK: - Menú 2: USB / Local Bridges (Daemon)
+    // MARK: - Section 2: TRISAT-SDR Dual-HackRF & Local UDP Bridge Configuration
 
     private var usbBridgeSectionCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Image(systemName: "network")
                     .foregroundColor(.green)
-                Text("USB / Local Bridges (Daemon)")
+                Text("TRISAT-SDR Dual-HackRF & Local Bridges")
                     .font(.subheadline)
                     .fontWeight(.bold)
                 Spacer()
-                Text(telemetryBridge.statusText.uppercased())
+                Text(telemetryBridge.isSdrEngineRunning ? "SDR RUNNING" : (telemetryBridge.isListening ? "UDP READY" : "IDLE"))
                     .font(.system(size: 9, weight: .bold))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 3)
-                    .background(telemetryBridge.isListening ? Color.green.opacity(0.2) : Color.orange.opacity(0.2))
-                    .foregroundColor(telemetryBridge.isListening ? .green : .orange)
+                    .background((telemetryBridge.isSdrEngineRunning || telemetryBridge.isListening) ? Color.green.opacity(0.2) : Color.orange.opacity(0.2))
+                    .foregroundColor((telemetryBridge.isSdrEngineRunning || telemetryBridge.isListening) ? .green : .orange)
                     .cornerRadius(6)
             }
 
@@ -250,6 +186,28 @@ struct SettingsView: View {
                 }
             }
 
+            #if os(macOS)
+            // Centralized HackRF #1 Secondary Band Selector (moved from Signal Processing)
+            HStack {
+                Text("HackRF #1 Secondary Band:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Picker("HackRF #1 Band", selection: $telemetryBridge.selectedSdrBand2) {
+                    Text("E6B/C (HAS PPP SL1 - 1278.75 MHz)").tag("GAL_E6")
+                    Text("E5a (F/NAV Dual-Freq - 1176.45 MHz)").tag("GAL_E5A")
+                    Text("E5b (I/NAV Dual-Freq - 1207.14 MHz)").tag("GAL_E5B")
+                    Text("E5 Full AltBOC (1191.795 MHz)").tag("GAL_E5_ALTBOC")
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .frame(maxWidth: 250)
+                .onChange(of: telemetryBridge.selectedSdrBand2) { newBand in
+                    telemetryBridge.switchSdrSecondaryBand(newBand)
+                }
+            }
+            #endif
+
             HStack(spacing: 8) {
                 #if os(macOS)
                 Button(action: {
@@ -257,12 +215,13 @@ struct SettingsView: View {
                         telemetryBridge.stopTrisatSdrEngine()
                     } else {
                         selectedBridgeOption = 2
+                        viewModel.selectedMode = 1
                         telemetryBridge.startTrisatSdrEngine()
                     }
                 }) {
-                    HStack {
-                        Image(systemName: telemetryBridge.isSdrEngineRunning ? "stop.circle.fill" : "antenna.radiowaves.left.and.right")
-                        Text(telemetryBridge.isSdrEngineRunning ? "Stop TRISAT-SDR" : "Launch TRISAT-SDR (HAS + OSNMA)")
+                    HStack(spacing: 4) {
+                        Image(systemName: telemetryBridge.isSdrEngineRunning ? "stop.circle.fill" : "play.circle.fill")
+                        Text(telemetryBridge.isSdrEngineRunning ? "Stop TRISAT-SDR" : "Start TRISAT-SDR")
                     }
                     .font(.caption)
                     .fontWeight(.bold)
@@ -273,9 +232,9 @@ struct SettingsView: View {
                 Button(action: {
                     telemetryBridge.openWebDashboard()
                 }) {
-                    HStack {
+                    HStack(spacing: 4) {
                         Image(systemName: "safari.fill")
-                        Text("Web UI (:8085)")
+                        Text("Web Dashboard (:8085)")
                     }
                     .font(.caption)
                     .fontWeight(.bold)
@@ -286,7 +245,7 @@ struct SettingsView: View {
                 Button(action: {
                     launchDaemonWithAdminPrivileges()
                 }) {
-                    HStack {
+                    HStack(spacing: 4) {
                         Image(systemName: "lock.shield.fill")
                         Text("SXblue (sudo)")
                     }
@@ -299,7 +258,7 @@ struct SettingsView: View {
 
                 Spacer()
 
-                Button(telemetryBridge.isListening ? "Deactivate UDP" : "Activate UDP") {
+                Button(telemetryBridge.isListening ? "Stop UDP" : "Start UDP") {
                     if telemetryBridge.isListening {
                         telemetryBridge.stopUdpListener()
                         selectedBridgeOption = 0
@@ -313,24 +272,29 @@ struct SettingsView: View {
             }
 
             HStack {
+                Text(telemetryBridge.statusText)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                Spacer()
                 Text("Datagrams Rx: \(telemetryBridge.packetsReceivedCount)")
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(.blue)
-                Spacer()
-                Text("Run: ./SX_Blue/run_bridge.sh")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.cyan)
             }
         }
-        .padding()
+        .padding(12)
         .background(Color.gray.opacity(0.08))
         .cornerRadius(14)
     }
 
     private func launchDaemonWithAdminPrivileges() {
         #if os(macOS)
-        let scriptPath = "/Users/jreyes13/Documents/GitHub/TRISAT/SX_Blue/run_bridge.sh"
+        let repoRootUrl = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let scriptPath = repoRootUrl.appendingPathComponent("SX_Blue/run_bridge.sh").path
         let source = "do shell script \"\(scriptPath)\" with administrator privileges"
         if let script = NSAppleScript(source: source) {
             var error: NSDictionary?
@@ -342,48 +306,246 @@ struct SettingsView: View {
         #endif
     }
 
-    // MARK: - macOS Serial Port Section
+    // MARK: - Section 3: CelesTrak 4-Constellation TLE Manager & Live Orbit Preview
+
+    private var tleAndOrbitPreviewCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "globe.americas.fill")
+                    .foregroundColor(.cyan)
+                Text("CelesTrak 4-Constellation TLE Orbits & Skyplot")
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                Spacer()
+                Text("\(viewModel.displayedSatellites.count) SATS VISIBLE")
+                    .font(.system(size: 9, weight: .bold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.green.opacity(0.2))
+                    .foregroundColor(.green)
+                    .cornerRadius(6)
+            }
+
+            // 4-Constellation TLE Catalog Badges
+            HStack(spacing: 8) {
+                tleCountBadge(name: "Galileo", count: viewModel.tleDownloader.galileoCount, color: .cyan)
+                tleCountBadge(name: "GPS", count: viewModel.tleDownloader.gpsCount, color: .orange)
+                tleCountBadge(name: "GLONASS", count: viewModel.tleDownloader.glonassCount, color: .red)
+                tleCountBadge(name: "BeiDou", count: viewModel.tleDownloader.beidouCount, color: .green)
+            }
+
+            // Interactive Constellation Filter Toggles
+            HStack(spacing: 6) {
+                FilterToggleChip(title: "Galileo", iconName: "globe.europe.africa.fill", isSelected: $viewModel.isGalileoEnabled, color: .cyan)
+                FilterToggleChip(title: "GPS", iconName: "location.north.line.fill", isSelected: $viewModel.isGpsEnabled, color: .orange)
+                FilterToggleChip(title: "GLONASS", iconName: "antenna.radiowaves.left.and.right", isSelected: $viewModel.isGlonassEnabled, color: .red)
+                FilterToggleChip(title: "BeiDou", iconName: "star.fill", isSelected: $viewModel.isBeidouEnabled, color: .green)
+            }
+
+            SkyPlotView(satellites: viewModel.displayedSatellites, height: 210)
+                .padding(.vertical, 2)
+
+            // 24-Hour Keplerian Orbit Propagation Slider (auto-activates Mode 2 TLE Simulation when scrubbed)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Keplerian Orbit Time Offset:")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                    Spacer()
+                    Text(String(format: "%+.1f Hours (±12h)", viewModel.timeOffsetHours))
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.cyan)
+                    if viewModel.timeOffsetHours != 0.0 {
+                        Button("Reset 0h") {
+                            viewModel.timeOffsetHours = 0.0
+                            viewModel.updateSatellites()
+                        }
+                        .font(.caption2)
+                        .buttonStyle(.plain)
+                        .foregroundColor(.orange)
+                    }
+                }
+
+                Slider(value: $viewModel.timeOffsetHours, in: -12.0...12.0, step: 0.5) { _ in
+                    if viewModel.selectedMode != 2 {
+                        viewModel.selectedMode = 2
+                    }
+                    viewModel.updateSatellites()
+                }
+            }
+            .padding(8)
+            .background(Color.cyan.opacity(0.08))
+            .cornerRadius(8)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(viewModel.tleDownloader.downloadStatusText)
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.cyan)
+                    Text("Updated: \(viewModel.tleDownloader.formattedLastDownloadDate)")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Button(action: {
+                    Task {
+                        await viewModel.tleDownloader.fetchAllTleOrbits()
+                        viewModel.selectedMode = 2
+                        viewModel.updateSatellites()
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.clockwise.icloud")
+                        Text(viewModel.tleDownloader.isDownloading ? "Syncing..." : "Refresh CelesTrak TLEs")
+                    }
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.blue.opacity(0.2))
+                    .foregroundColor(.blue)
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.tleDownloader.isDownloading)
+            }
+        }
+        .padding(12)
+        .background(Color.gray.opacity(0.08))
+        .cornerRadius(14)
+    }
+
+    private func tleCountBadge(name: String, count: Int, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(name)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(.secondary)
+            Text("\(count) TLEs")
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundColor(color)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 5)
+        .background(color.opacity(0.1))
+        .cornerRadius(6)
+    }
+
+    // MARK: - Section 4: Bluetooth GNSS Receivers
+
+    private var bluetoothSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .foregroundColor(.blue)
+                Text("Bluetooth GNSS Receivers")
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                Spacer()
+                Text(bluetoothManager.isConnected ? "CONNECTED" : "DISCONNECTED")
+                    .font(.system(size: 9, weight: .bold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(bluetoothManager.isConnected ? Color.green.opacity(0.2) : Color.red.opacity(0.2))
+                    .foregroundColor(bluetoothManager.isConnected ? .green : .red)
+                    .cornerRadius(6)
+            }
+
+            HStack {
+                Text("Discovered BLE Devices (\(bluetoothManager.discoveredPeripherals.count)):")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Button(bluetoothManager.isScanning ? "Stop Scan" : "Scan BLE") {
+                    if bluetoothManager.isScanning {
+                        bluetoothManager.stopScanning()
+                    } else {
+                        bluetoothManager.startScanning(trisatOnly: false)
+                    }
+                }
+                .font(.caption)
+                .buttonStyle(.bordered)
+            }
+
+            if !bluetoothManager.discoveredPeripherals.isEmpty {
+                Picker("BLE Receiver", selection: $selectedBleDeviceName) {
+                    Text("Select a BLE Receiver...").tag("")
+                    ForEach(bluetoothManager.discoveredPeripherals) { item in
+                        Text(item.name).tag(item.name)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: selectedBleDeviceName) { newName in
+                    if let target = bluetoothManager.discoveredPeripherals.first(where: { $0.name == newName }) {
+                        bluetoothManager.connect(to: target)
+                    }
+                }
+            }
+
+            if bluetoothManager.isConnected {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Active: \(bluetoothManager.connectedPeripheralName)")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .lineLimit(1)
+                    Spacer()
+                    Button("Disconnect") {
+                        bluetoothManager.disconnect()
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.red)
+                }
+                .padding(6)
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(8)
+            }
+        }
+        .padding(12)
+        .background(Color.gray.opacity(0.08))
+        .cornerRadius(14)
+    }
+
+    // MARK: - Section 5: macOS Hardware Serial Ports
 
     #if os(macOS)
     private var macSerialSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "cable.connector.horizontal")
                     .foregroundColor(.green)
                 Text("Hardware USB / Serial Ports")
                     .font(.subheadline)
                     .fontWeight(.bold)
-            }
-
-            HStack {
-                Text("Detected USB Ports:")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
                 Spacer()
                 Button(action: { macSerialManager.refreshPorts() }) {
-                    Image(systemName: "arrow.clockwise")
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                        .font(.caption2)
                 }
-                .font(.caption2)
+                .buttonStyle(.bordered)
             }
 
             if !macSerialManager.availablePorts.isEmpty {
-                Picker("USB Serial Port", selection: $macSerialManager.selectedPortPath) {
-                    ForEach(macSerialManager.availablePorts) { port in
-                        Text(port.name).tag(port.path)
-                    }
-                }
-                .pickerStyle(.menu)
-
                 HStack {
+                    Picker("USB Serial Port", selection: $macSerialManager.selectedPortPath) {
+                        ForEach(macSerialManager.availablePorts) { port in
+                            Text(port.name).tag(port.path)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+
                     if macSerialManager.isConnected {
-                        Button("Disconnect Port") {
+                        Button("Disconnect") {
                             macSerialManager.closePort()
                         }
                         .font(.caption)
                         .buttonStyle(.borderedProminent)
                         .tint(.red)
                     } else {
-                        Button("Connect Hardware Serial Port") {
+                        Button("Connect") {
                             macSerialManager.connectToSelectedPort()
                         }
                         .font(.caption)
@@ -392,209 +554,105 @@ struct SettingsView: View {
                     }
                 }
             } else {
-                Text("No direct POSIX /dev/cu.usbserial ports found (Use 'Launch SXblue Daemon' above).")
+                Text("No direct POSIX /dev/cu.usbserial ports found (Use 'TRISAT-SDR' or 'SXblue' above).")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
-
-            if !macSerialManager.logText.isEmpty {
-                Text(macSerialManager.logText)
-                    .font(.caption2)
-                    .foregroundColor(.cyan)
-            }
         }
-        .padding()
+        .padding(12)
         .background(Color.gray.opacity(0.08))
         .cornerRadius(14)
     }
     #endif
 
-    // MARK: - Settings Section Cards
-
-    private var receiverModeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "cpu")
-                    .foregroundColor(.cyan)
-                Text("GNSS Receiver Mode")
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-            }
-
-            Picker("Receiver Mode", selection: $viewModel.selectedMode) {
-                Text("Internal").tag(0)
-                Text("External BLE / USB Bridge").tag(1)
-                Text("TLE Simulation").tag(2)
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: viewModel.selectedMode) { newValue in
-                viewModel.updateSatellites()
-                if newValue == 1 {
-                    bluetoothManager.startScanning(trisatOnly: false)
-                }
-            }
-        }
-        .padding()
-        .background(Color.gray.opacity(0.08))
-        .cornerRadius(14)
-    }
-
-    private var tleDownloadSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "icloud.and.arrow.down")
-                    .foregroundColor(.blue)
-                Text("CelesTrak TLE Orbital Data")
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-            }
-
-            HStack {
-                Text("Status:")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text(viewModel.tleDownloader.downloadStatusText)
-                    .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(.cyan)
-            }
-
-            HStack {
-                Text("Last Download:")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text(viewModel.tleDownloader.formattedLastDownloadDate)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-            }
-
-            if viewModel.tleDownloader.totalTleCount > 0 {
-                Text("Galileo: \(viewModel.tleDownloader.galileoCount) | GPS: \(viewModel.tleDownloader.gpsCount) | GLO: \(viewModel.tleDownloader.glonassCount) | BDS: \(viewModel.tleDownloader.beidouCount)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-
-            Button(action: {
-                Task {
-                    await viewModel.tleDownloader.fetchAllTleOrbits()
-                    viewModel.updateSatellites()
-                }
-            }) {
-                HStack {
-                    Image(systemName: "arrow.clockwise.icloud")
-                    Text(viewModel.tleDownloader.isDownloading ? "Downloading Orbits..." : "Download Fresh TLE Orbits (CelesTrak)")
-                }
-                .font(.caption)
-                .fontWeight(.bold)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Color.blue.opacity(0.15))
-                .foregroundColor(.blue)
-                .cornerRadius(8)
-            }
-            .disabled(viewModel.tleDownloader.isDownloading)
-
-            if viewModel.selectedMode == 2 && horizontalSizeClass == .compact {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text("Orbit Time Offset:")
-                            .font(.caption)
-                        Spacer()
-                        Text(String(format: "%.1f Hours (±12h)", viewModel.timeOffsetHours))
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.blue)
-                    }
-
-                    Slider(value: $viewModel.timeOffsetHours, in: -12.0...12.0, step: 0.5) { _ in
-                        viewModel.updateSatellites()
-                    }
-                }
-                .padding(.top, 4)
-            }
-        }
-        .padding()
-        .background(Color.gray.opacity(0.08))
-        .cornerRadius(14)
-    }
+    // MARK: - Section 6: OSNMA & About Cards
 
     private var osnmaSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: "key.fill")
                     .foregroundColor(.orange)
-                Text("OSNMA Security Engine")
+                Text("OSNMA Engine")
                     .font(.subheadline)
                     .fontWeight(.bold)
             }
 
             HStack {
-                Text("Public Key Root")
-                    .font(.caption)
-                Spacer()
-                Text("Galileo HKROOT v1")
-                    .font(.caption)
-                    .fontWeight(.bold)
+                Text("Root Key")
+                    .font(.caption2)
                     .foregroundColor(.secondary)
+                Spacer()
+                Text("Galileo HKROOT v1.1")
+                    .font(.caption2)
+                    .fontWeight(.bold)
             }
 
             HStack {
-                Text("Verification Mode")
-                    .font(.caption)
-                Spacer()
-                Text("Loose / Strict MAC")
-                    .font(.caption)
-                    .fontWeight(.bold)
+                Text("ECDSA / MAC")
+                    .font(.caption2)
                     .foregroundColor(.secondary)
+                Spacer()
+                Text("P-256 / HMAC-256")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+            }
+
+            HStack {
+                Text("HAS Decoder")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("RS(255,32) SL1")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.cyan)
             }
         }
-        .padding()
+        .padding(12)
         .background(Color.gray.opacity(0.08))
         .cornerRadius(14)
     }
 
     private var aboutSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: "info.circle.fill")
                     .foregroundColor(.gray)
-                Text("About TRISAT iOS")
+                Text("About TRISAT")
                     .font(.subheadline)
                     .fontWeight(.bold)
             }
 
             HStack {
-                Text("Application Version")
-                    .font(.caption)
+                Text("Version")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
                 Spacer()
                 Text("v\(BuildInfo.version) (\(BuildInfo.buildNumber))")
-                    .font(.caption)
+                    .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(.secondary)
             }
 
             HStack {
-                Text("Compilation Timestamp")
-                    .font(.caption)
+                Text("Build Date")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
                 Spacer()
                 Text(BuildInfo.buildDateString)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(.caption2)
             }
 
             HStack {
-                Text("Target Architecture")
-                    .font(.caption)
-                Spacer()
-                Text("Multiplatform (Android / iOS)")
-                    .font(.caption)
+                Text("Platform")
+                    .font(.caption2)
                     .foregroundColor(.secondary)
+                Spacer()
+                Text("macOS / iOS / Android")
+                    .font(.caption2)
+                    .fontWeight(.semibold)
             }
         }
-        .padding()
+        .padding(12)
         .background(Color.gray.opacity(0.08))
         .cornerRadius(14)
     }

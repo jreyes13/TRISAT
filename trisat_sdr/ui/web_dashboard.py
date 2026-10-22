@@ -261,24 +261,24 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   </div>
 </div>
 
-<!-- EUSPA Reference Suite Row: OSNMA Crypto + HAS-UA PPPSD + Galileo v2.2 Services -->
+<!-- Security Suite Row: OSNMA Crypto + HAS-UA PPPSD + Galileo v2.2 Services -->
 <div class="grid-3">
   <div class="card">
     <h2>
-      <span>🛡️ EUSPA OSNMA Cryptographic Engine</span>
+      <span>🛡️ Galileo OSNMA Cryptographic Engine</span>
       <span class="badge badge-green" id="osnmaBadge">ECDSA + TESLA VERIFIED</span>
     </h2>
     <div class="kv-row"><span>NMA Status / Chain / CPKS:</span><span id="osnmaNmas" style="color:#34d399;">--</span></div>
     <div class="kv-row"><span>PKID / MACLT / Key & Tag:</span><span id="osnmaParams">--</span></div>
     <div class="kv-row"><span>DSM-KROOT ECDSA P-256:</span><span id="osnmaEcdsa" style="color:#22d3ee;">--</span></div>
     <div class="kv-row"><span>TESLA Chain (K_I -> KROOT):</span><span id="osnmaTesla" style="color:#fbbf24;">--</span></div>
-    <div class="kv-row"><span>EUSPA Annex A Vector Test:</span><span id="osnmaAnnexA" style="color:#34d399;">--</span></div>
+    <div class="kv-row"><span>Annex A Vector Test:</span><span id="osnmaAnnexA" style="color:#34d399;">--</span></div>
     <div class="cmd-line" id="osnmaKeyLine">KROOT: --</div>
   </div>
 
   <div class="card">
     <h2>
-      <span>📐 EUSPA HAS-UA (PP SEPVT + PPPSD EKF)</span>
+      <span>📐 Galileo HAS-UA (PP SEPVT + PPPSD EKF)</span>
       <span class="badge badge-purple" id="hasUaBadge">SL1 PPP ACTIVE</span>
     </h2>
     <div class="kv-row"><span>Pivot Satellites (Eq. 80):</span><span id="hasPivots" style="color:#c084fc;">--</span></div>

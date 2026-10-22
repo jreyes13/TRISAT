@@ -247,7 +247,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = LT5ANEE9LF;
@@ -265,8 +266,11 @@
 				ENABLE_RESOURCE_ACCESS_USB = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleIconFile = AppIcon;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers and stream raw satellite telemetry.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers.";
+				INFOPLIST_KEY_NSLocationUsageDescription = "TRISAT requires location access to stream satellite telemetry and calculate position fixes.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TRISAT requires location access to stream satellite telemetry and calculate position fixes.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -304,7 +308,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = LT5ANEE9LF;
@@ -322,8 +327,11 @@
 				ENABLE_RESOURCE_ACCESS_USB = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleIconFile = AppIcon;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers and stream raw satellite telemetry.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "TRISAT requires Bluetooth access to connect to external GNSS receivers.";
+				INFOPLIST_KEY_NSLocationUsageDescription = "TRISAT requires location access to stream satellite telemetry and calculate position fixes.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TRISAT requires location access to stream satellite telemetry and calculate position fixes.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;

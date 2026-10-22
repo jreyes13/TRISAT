@@ -1,5 +1,5 @@
 """
-Official EUSPA Galileo HAS Reference User Algorithm (HAS-UA) & NTCM-G Engine for TRISAT-SDR.
+Official Galileo HAS Reference User Algorithm (HAS-UA) & NTCM-G Engine for TRISAT-SDR.
 Implements the specifications from:
   1. Galileo_HAS_Reference_User_Algorithm_TN_in_force.pdf (Issue 1.0, Nov 2025)
   2. Galileo-HASUA_SW_User_Manual_in_force.pdf (Issue 1.0, Jun 2026)
@@ -202,7 +202,7 @@ class HasSatelliteCorrection:
 
 @dataclass
 class HasUaEpochReport:
-    """Output of the EUSPA HAS-UA Pipeline (PP SEPVT + PPPSD EKF + DIA + Pivot Selection)."""
+    """Output of the Galileo HAS-UA Pipeline (PP SEPVT + PPPSD EKF + DIA + Pivot Selection)."""
     gps_week: int
     tow_sec: float
     solving_mode: int           # 1 = SEPVT, 2 = PPPSD
@@ -227,7 +227,7 @@ class HasUaEpochReport:
 
 class GalileoHasUaEngine:
     """
-    Implements the EUSPA Galileo HAS Reference User Algorithm (HAS-UA):
+    Implements the Galileo HAS Reference User Algorithm (HAS-UA):
       - Reed-Solomon RS(255, 32) page accumulation across tracked E6-B satellites
       - NTW -> ECEF orbit transformation (Eq. 19) & Cylindrical Eclipse screening (Eqs. 8-9)
       - Pivot satellite selection via weighted normalized score p_S (Eq. 80)

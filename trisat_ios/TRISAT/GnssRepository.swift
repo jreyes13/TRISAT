@@ -15,10 +15,17 @@ class GnssRepository: NSObject, ObservableObject, CLLocationManagerDelegate {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = kCLDistanceFilterNone
+        #if os(macOS)
+        locationManager.startUpdatingLocation()
+        #endif
     }
     
     func requestPermissions() {
+        #if os(iOS)
         locationManager.requestWhenInUseAuthorization()
+        #else
+        locationManager.startUpdatingLocation()
+        #endif
     }
     
     func startLocationUpdates() {
@@ -53,7 +60,7 @@ class GnssRepository: NSObject, ObservableObject, CLLocationManagerDelegate {
             #else
             let isAuthorized = manager.authorizationStatus == .authorizedAlways || manager.authorizationStatus == .authorized
             #endif
-            if isAuthorized {
+            if isAuthorized || manager.authorizationStatus == .notDetermined {
                 self.startLocationUpdates()
             }
         }
@@ -64,5 +71,11 @@ class GnssRepository: NSObject, ObservableObject, CLLocationManagerDelegate {
         DispatchQueue.main.async {
             self.lastLocation = location
         }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        #if DEBUG
+        print("Location manager error: \(error.localizedDescription)")
+        #endif
     }
 }
