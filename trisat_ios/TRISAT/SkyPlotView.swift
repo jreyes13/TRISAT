@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Enumeración para identificar la constelación GNSS
+/// Enumeration identifying the GNSS constellation
 enum GnssConstellation: String, CaseIterable, Codable {
     case galileo = "Galileo"
     case gps = "GPS"
@@ -17,17 +17,17 @@ enum GnssConstellation: String, CaseIterable, Codable {
     }
 }
 
-/// Representa un satélite en la bóveda celeste con ID único garantizado
+/// Represents a satellite in the celestial sphere with a guaranteed unique ID
 struct SatelliteInfo: Identifiable {
     let id: String                // Unique Identifier (e.g., "Galileo_01", "GPS_12")
     let svid: Int                 // PRN / SVID number (1...36)
-    let elevation: Double         // Elevación en grados (0° en horizonte, 90° en cénit)
-    let azimuth: Double           // Acimut en grados (0° a 360°, relativo al Norte)
-    let cno: Int                  // Relación señal-ruido C/N0 (en dB-Hz)
-    let isGalileo: Bool           // Flag rápido para Galileo
-    let constellation: GnssConstellation // Constelación asociada
-    let usedInFix: Bool           // Si el satélite participa en la solución PVT
-    let hasInav: Bool             // Si dispone de tramas I/NAV para OSNMA
+    let elevation: Double         // Elevation in degrees (0° at horizon, 90° at zenith)
+    let azimuth: Double           // Azimuth in degrees (0° to 360°, clockwise from True North)
+    let cno: Int                  // Carrier-to-Noise Ratio C/N0 (in dB-Hz)
+    let isGalileo: Bool           // Quick flag for Galileo
+    let constellation: GnssConstellation // Associated constellation
+    let usedInFix: Bool           // Whether satellite is used in PVT solution
+    let hasInav: Bool             // Whether I/NAV frames are present for OSNMA
 
     var formattedLabel: String {
         switch constellation {
@@ -39,7 +39,7 @@ struct SatelliteInfo: Identifiable {
     }
 }
 
-/// Vista personalizada que renderiza la bóveda celeste (Skyplot polar)
+/// Custom view rendering the celestial dome (polar Skyplot)
 struct SkyPlotView: View {
     let satellites: [SatelliteInfo]
     var height: CGFloat = 220
@@ -50,7 +50,7 @@ struct SkyPlotView: View {
             let radius = min(geometry.size.width, geometry.size.height) / 2 - 20
             
             ZStack {
-                // 1. Círculos concéntricos de elevación (0°, 30°, 60°)
+                // 1. Concentric elevation circles (0°, 30°, 60°)
                 Circle()
                     .stroke(Color.gray.opacity(0.3), lineWidth: 1.5)
                     .frame(width: radius * 2, height: radius * 2)
@@ -63,7 +63,7 @@ struct SkyPlotView: View {
                     .stroke(Color.gray.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [4]))
                     .frame(width: radius * 2/3, height: radius * 2/3)
                 
-                // 2. Líneas de los puntos cardinales (N-S, E-O)
+                // 2. Cardinal direction axes (N-S, E-W)
                 Path { path in
                     path.move(to: CGPoint(x: center.x, y: center.y - radius))
                     path.addLine(to: CGPoint(x: center.x, y: center.y + radius))
@@ -72,13 +72,13 @@ struct SkyPlotView: View {
                 }
                 .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                 
-                // Labels de Puntos Cardinales
+                // Cardinal Direction Labels
                 Text("N").font(.caption2).bold().position(x: center.x, y: center.y - radius - 12)
                 Text("S").font(.caption2).bold().position(x: center.x, y: center.y + radius + 12)
                 Text("E").font(.caption2).bold().position(x: center.x + radius + 12, y: center.y)
                 Text("W").font(.caption2).bold().position(x: center.x - radius - 12, y: center.y)
                 
-                // 3. Dibujar cada satélite en su posición polar como Círculo simple unificado
+                // 3. Draw each satellite in its polar position as a unified circle
                 ForEach(satellites, id: \.id) { sat in
                     let point = pointForSatellite(sat, center: center, radius: radius)
                     

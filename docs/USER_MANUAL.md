@@ -16,8 +16,11 @@ TRISAT is a **multiplatform GNSS intelligence solution** designed for **Galileo 
   * `sxblue_config.py`: One-time EEPROM setup tool for FTDI UART at 19200 bps ($JBIN 94/95).
   * `sxblue_reader.py`: Continuous USB reader and local UDP telemetry broadcaster (`127.0.0.1:9090`).
   * `run_bridge.sh`: Executable launcher with privilege elevation (`sudo arch -x86_64`).
+* 📂 **`docs/`**: Comprehensive project documentation:
+  * `USER_MANUAL.md`: Complete user manual and technical reference guide.
+  * `WEB_SERVER_GUIDE.md`: Guide for the SDR Web Dashboard and telemetry REST API.
+* 📂 **`notebooks/`**: Interactive Google Colab / Jupyter computational notebooks.
 * 📄 **`README.md`**: Project overview, feature summary, and build instructions.
-* 📄 **`USER_MANUAL.md`**: Complete user manual and technical reference guide.
 
 ---
 

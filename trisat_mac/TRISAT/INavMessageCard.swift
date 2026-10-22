@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Vista reutilizable para renderizar cada trama I/NAV individual con su payload en hexadecimal
+/// Reusable card view to render each individual I/NAV frame with its hexadecimal payload
 struct INavMessageCard: View {
     let message: GalileoINavMessage
     

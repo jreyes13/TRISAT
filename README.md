@@ -60,9 +60,10 @@ open ./build/TRISAT.app
 
 ## 📖 Documentation & Interactive Colab Notebooks
 
-* **User Manual:** For complete usage instructions, technical architecture, and OSNMA/HAS testing workflows, please refer to [USER_MANUAL.md](USER_MANUAL.md).
+* **User Manual:** For complete usage instructions, technical architecture, and OSNMA/HAS testing workflows, please refer to [docs/USER_MANUAL.md](docs/USER_MANUAL.md).
+* **Web Server & SDR Dashboard Guide:** For instructions on running the real-time SDR web cockpit (`http://127.0.0.1:8085`) and REST API, please refer to [docs/WEB_SERVER_GUIDE.md](docs/WEB_SERVER_GUIDE.md).
 * **Interactive Google Colab Notebooks:** For executable demonstrations of Galileo E1-B I/NAV v2.2 decoding, OSNMA Annex A cryptographic verification, and E6 HAS-UA precise point positioning, see [notebooks/README.md](notebooks/README.md).
-* **TRISAT-SDR Documentation:** For Dual-HackRF SDR configuration and GNSS reference engines, see [trisat_sdr/README.md](trisat_sdr/README.md).
+* **TRISAT-SDR Engine Documentation:** For Dual-HackRF SDR configuration, front-end clock sync, and GNSS baseband engines, see [trisat_sdr/README.md](trisat_sdr/README.md).
 
 ---
 

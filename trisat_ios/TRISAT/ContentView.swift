@@ -3,7 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel: GnssViewModel
     
-    // Lista de satélites simulados con todos los parámetros requeridos y SVID único
+    // Simulated satellite list with all required parameters and unique SVID
     @State private var mockSatellites: [SatelliteInfo] = [
         SatelliteInfo(id: "Galileo_01", svid: 1, elevation: 65, azimuth: 45, cno: 42, isGalileo: true, constellation: .galileo, usedInFix: true, hasInav: true),
         SatelliteInfo(id: "Galileo_02", svid: 2, elevation: 30, azimuth: 120, cno: 38, isGalileo: true, constellation: .galileo, usedInFix: true, hasInav: true),
