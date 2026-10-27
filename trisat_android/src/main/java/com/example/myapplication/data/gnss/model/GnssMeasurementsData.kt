@@ -12,6 +12,9 @@ data class GnssMeasurementsData(
     val isMock: Boolean = false,
     val timestampMillis: Long = System.currentTimeMillis()
 ) {
+    val hardwareClockDiscontinuityCount: Int
+        get() = clockHardwareClockDiscontinuityCount
+
     val averageAgcDb: Double
         get() {
             val agcMeasurements = measurements.filter { it.hasAgc }

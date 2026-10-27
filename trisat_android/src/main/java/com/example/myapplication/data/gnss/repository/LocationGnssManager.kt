@@ -21,12 +21,15 @@ import com.example.myapplication.data.gnss.model.ConstellationType
 import com.example.myapplication.data.gnss.model.GalileoInavMessage
 import com.example.myapplication.data.gnss.model.GnssMeasurementDetail
 import com.example.myapplication.data.gnss.model.GnssMeasurementsData
+import com.example.myapplication.data.gnss.model.GnssReceiverMode
 import com.example.myapplication.data.gnss.model.GnssStatusData
 import com.example.myapplication.data.gnss.model.LocationData
 import com.example.myapplication.data.gnss.model.OsnmaStatus
 import com.example.myapplication.data.gnss.model.SatelliteDetail
 import com.example.myapplication.data.gnss.model.ThreatScenario
 import com.example.myapplication.data.gnss.model.TrustReport
+import com.example.myapplication.data.gnss.tle.Sgp4OrbitPropagator
+import com.example.myapplication.data.gnss.tle.TleDownloader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -46,7 +49,16 @@ class LocationGnssManager(private val context: Context) {
     private val mockGnssGenerator = MockGnssGenerator()
     private val trustScoringEngine = TrustScoringEngine()
     private val osnmaEngine = OsnmaVerificationEngine()
+    val tleDownloader = TleDownloader()
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    // 3 Operating Modes: 0: INTERNAL_TLE, 1: EXTERNAL_HARDWARE, 2: SIMULATION_TLE
+    private val _receiverMode = MutableStateFlow(GnssReceiverMode.INTERNAL_TLE)
+    val receiverMode: StateFlow<GnssReceiverMode> = _receiverMode.asStateFlow()
+
+    // 24h Keplerian time scrubbing offset (±12.0h)
+    private val _timeOffsetHours = MutableStateFlow(0f)
+    val timeOffsetHours: StateFlow<Float> = _timeOffsetHours.asStateFlow()
 
     private val _gnssStatusData = MutableStateFlow(GnssStatusData())
     val gnssStatusData: StateFlow<GnssStatusData> = _gnssStatusData.asStateFlow()
@@ -84,7 +96,6 @@ class LocationGnssManager(private val context: Context) {
     private val _permissionGranted = MutableStateFlow(false)
     val permissionGranted: StateFlow<Boolean> = _permissionGranted.asStateFlow()
 
-    private var forceMockMode = false
     private var mockJob: Job? = null
     private var hardwareCheckJob: Job? = null
 
@@ -164,7 +175,7 @@ class LocationGnssManager(private val context: Context) {
                 )
             }
 
-            if (!forceMockMode) {
+            if (_receiverMode.value == GnssReceiverMode.INTERNAL_TLE) {
                 stopMockStream()
                 _isMockMode.value = false
                 val newStatus = GnssStatusData(
@@ -188,72 +199,59 @@ class LocationGnssManager(private val context: Context) {
             val clock = event.clock
             val clockTimeNanos = clock.timeNanos
             val discontinuity = clock.hardwareClockDiscontinuityCount
-            val fullBias = if (clock.hasFullBiasNanos()) clock.fullBiasNanos else null
-            val bias = if (clock.hasBiasNanos()) clock.biasNanos else null
-            val biasUncertainty = if (clock.hasBiasUncertaintyNanos()) clock.biasUncertaintyNanos else null
-            val drift = if (clock.hasDriftNanosPerSecond()) clock.driftNanosPerSecond else null
-            val driftUncertainty = if (clock.hasDriftUncertaintyNanosPerSecond()) clock.driftUncertaintyNanosPerSecond else null
+            val biasNanos = if (clock.hasBiasNanos()) clock.biasNanos else 0.0
+            val driftNanosPerSecond = if (clock.hasDriftNanosPerSecond()) clock.driftNanosPerSecond else 0.0
 
-            val measList = mutableListOf<GnssMeasurementDetail>()
-            for (m in event.measurements) {
+            val measurements = event.measurements
+            val detailList = mutableListOf<GnssMeasurementDetail>()
+
+            for (m in measurements) {
+                val svid = m.svid
                 val constType = ConstellationType.fromGnssStatusConstellation(m.constellationType)
-                var carrierFreqHz = 0f
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && m.hasCarrierFrequencyHz()) {
-                    carrierFreqHz = m.carrierFrequencyHz
-                }
+                val cn0 = m.cn0DbHz
+                val state = m.state
 
-                var agc = 0.0
+                var agcDb = 0.0
                 var hasAgc = false
-                @Suppress("DEPRECATION")
-                val hasAgcLevel = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && m.hasAutomaticGainControlLevelDb()
-                if (hasAgcLevel) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && m.hasAutomaticGainControlLevelDb()) {
                     @Suppress("DEPRECATION")
-                    agc = m.automaticGainControlLevelDb
+                    agcDb = m.automaticGainControlLevelDb
                     hasAgc = true
                 }
 
-                measList.add(
+                detailList.add(
                     GnssMeasurementDetail(
-                        svid = m.svid,
+                        svid = svid,
                         constellation = constType,
-                        state = m.state,
+                        state = state,
                         receivedSvTimeNanos = m.receivedSvTimeNanos,
-                        cn0DbHz = m.cn0DbHz,
+                        cn0DbHz = cn0,
                         pseudorangeRateMetersPerSecond = m.pseudorangeRateMetersPerSecond,
                         pseudorangeRateUncertaintyMetersPerSecond = m.pseudorangeRateUncertaintyMetersPerSecond,
-                        accumulatedDeltaRangeState = m.accumulatedDeltaRangeState,
-                        accumulatedDeltaRangeMeters = m.accumulatedDeltaRangeMeters,
-                        carrierFrequencyHz = carrierFreqHz,
-                        automaticGainControlLevelDb = agc,
-                        hasAgc = hasAgc,
-                        multipathIndicator = m.multipathIndicator,
-                        snrInDb = if (m.hasSnrInDb()) m.snrInDb else 0.0
+                        carrierFrequencyHz = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && m.hasCarrierFrequencyHz()) m.carrierFrequencyHz else 0f,
+                        automaticGainControlLevelDb = agcDb,
+                        hasAgc = hasAgc
                     )
                 )
             }
 
-            if (!forceMockMode && measList.isNotEmpty()) {
-                val newMeasurements = GnssMeasurementsData(
+            if (_receiverMode.value == GnssReceiverMode.INTERNAL_TLE) {
+                val newMeas = GnssMeasurementsData(
                     clockTimeNanos = clockTimeNanos,
                     clockHardwareClockDiscontinuityCount = discontinuity,
-                    fullBiasNanos = fullBias,
-                    biasNanos = bias,
-                    biasUncertaintyNanos = biasUncertainty,
-                    driftNanosPerSecond = drift,
-                    driftUncertaintyNanosPerSecond = driftUncertainty,
-                    measurements = measList,
-                    isMock = false,
+                    biasNanos = biasNanos,
+                    driftNanosPerSecond = driftNanosPerSecond,
+                    measurements = detailList,
                     timestampMillis = System.currentTimeMillis()
                 )
-                _gnssMeasurementsData.value = newMeasurements
-                reevaluateTrust(newMeasurements = newMeasurements)
+                _gnssMeasurementsData.value = newMeas
+                reevaluateTrust(newMeasurements = newMeas)
             }
         }
     }
 
     private val locationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
-            lastHardwareEventTime = System.currentTimeMillis()
             val isMockLocation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 location.isMock
             } else {
@@ -278,7 +276,7 @@ class LocationGnssManager(private val context: Context) {
                 hasFix = true
             )
 
-            if (!forceMockMode) {
+            if (_receiverMode.value == GnssReceiverMode.INTERNAL_TLE) {
                 _locationData.value = locData
                 _positionHistory.value = (_positionHistory.value + locData).takeLast(200)
                 reevaluateTrust(newLocation = locData)
@@ -297,7 +295,100 @@ class LocationGnssManager(private val context: Context) {
     fun setThreatScenario(scenario: ThreatScenario) {
         _activeScenario.value = scenario
         mockGnssGenerator.setScenario(scenario)
+        if (_receiverMode.value == GnssReceiverMode.SIMULATION_TLE) {
+            updateTleSimulation()
+        }
         reevaluateTrust()
+    }
+
+    fun setReceiverMode(mode: GnssReceiverMode) {
+        _receiverMode.value = mode
+        when (mode) {
+            GnssReceiverMode.INTERNAL_TLE -> {
+                stopMockStream()
+                _isMockMode.value = false
+                if (hasLocationPermission()) {
+                    try {
+                        registerHardwareCallbacks()
+                        scheduleHardwareCheckTimer()
+                    } catch (_: Exception) {
+                        propagateTleFallback()
+                    }
+                } else {
+                    propagateTleFallback()
+                }
+            }
+            GnssReceiverMode.EXTERNAL_HARDWARE -> {
+                unregisterHardwareCallbacks()
+                stopMockStream()
+                _isMockMode.value = false
+            }
+            GnssReceiverMode.SIMULATION_TLE -> {
+                unregisterHardwareCallbacks()
+                stopMockStream()
+                _isMockMode.value = true
+                updateTleSimulation()
+            }
+        }
+    }
+
+    fun setTimeOffsetHours(offset: Float) {
+        _timeOffsetHours.value = offset.coerceIn(-12f, 12f)
+        if (_receiverMode.value == GnssReceiverMode.SIMULATION_TLE) {
+            updateTleSimulation()
+        }
+    }
+
+    fun updateTleSimulation() {
+        val lat = if (_locationData.value.hasFix && _locationData.value.latitude != 0.0) _locationData.value.latitude else 40.4168
+        val lon = if (_locationData.value.hasFix && _locationData.value.longitude != 0.0) _locationData.value.longitude else -3.7038
+        var sats = Sgp4OrbitPropagator.propagateToSkyplot(
+            tles = tleDownloader.parsedTles.value,
+            timeOffsetHours = _timeOffsetHours.value.toDouble(),
+            observerLat = lat,
+            observerLon = lon
+        )
+
+        // Apply Threat Scenario transformation on simulated satellites
+        when (_activeScenario.value) {
+            ThreatScenario.SPOOFING_SIMULATOR -> {
+                sats = sats.map { it.copy(cn0DbHz = 48.5f) }
+            }
+            ThreatScenario.RF_JAMMING -> {
+                sats = sats.map { it.copy(cn0DbHz = (it.cn0DbHz - 18f).coerceAtLeast(12f), usedInFix = false) }
+            }
+            else -> {}
+        }
+
+        val status = GnssStatusData(
+            satellites = sats,
+            isMock = true,
+            timestampMillis = System.currentTimeMillis()
+        )
+        _gnssStatusData.value = status
+        reevaluateTrust(newStatus = status)
+
+        if (bleServer.isServerActive) {
+            bleServer.broadcastSatStatus(sats)
+        }
+    }
+
+    private fun propagateTleFallback() {
+        val lat = if (_locationData.value.hasFix && _locationData.value.latitude != 0.0) _locationData.value.latitude else 40.4168
+        val lon = if (_locationData.value.hasFix && _locationData.value.longitude != 0.0) _locationData.value.longitude else -3.7038
+        val sats = Sgp4OrbitPropagator.propagateToSkyplot(
+            tles = tleDownloader.parsedTles.value,
+            timeOffsetHours = 0.0,
+            observerLat = lat,
+            observerLon = lon
+        )
+        val status = GnssStatusData(
+            satellites = sats,
+            isMock = true,
+            timestampMillis = System.currentTimeMillis()
+        )
+        _gnssStatusData.value = status
+        reevaluateTrust(newStatus = status)
     }
 
     fun reevaluateTrust(
@@ -338,28 +429,19 @@ class LocationGnssManager(private val context: Context) {
             bundle.putBoolean("svsteer", true)
             bundle.putBoolean("sadata", true)
             bundle.putBoolean("rti", true)
+            bundle.putBoolean("celldb-info", true)
+            bundle.putBoolean("all", true)
+            locationManager.sendExtraCommand("gps", "delete_aiding_data", bundle)
+        } catch (_: Exception) {}
 
-            locationManager.sendExtraCommand(
-                LocationManager.GPS_PROVIDER,
-                "delete_a_gps_data",
-                bundle
-            )
-        } catch (_: Exception) {
-            // Ignore if extra commands not supported on platform
-        }
+        _gnssStatusData.value = GnssStatusData()
+        _gnssMeasurementsData.value = GnssMeasurementsData()
+        _locationData.value = LocationData()
 
-        // Clear location fix and satellite telemetry
-        _locationData.value = LocationData(hasFix = false)
-        _gnssStatusData.value = GnssStatusData(isMock = false)
-        _gnssMeasurementsData.value = GnssMeasurementsData(isMock = false)
-        _inavMessages.value = emptyList()
-        _positionHistory.value = emptyList()
-
-        // Temporarily pause location updates to force HAL cold-start re-acquisition
         try {
             locationManager.removeUpdates(locationListener)
             handler.postDelayed({
-                if (_isMonitoringActive.value && !forceMockMode) {
+                if (_isMonitoringActive.value && _receiverMode.value == GnssReceiverMode.INTERNAL_TLE) {
                     try {
                         if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                             locationManager.requestLocationUpdates(
@@ -400,8 +482,8 @@ class LocationGnssManager(private val context: Context) {
 
         val permissionOk = hasLocationPermission()
 
-        if (!permissionOk || forceMockMode) {
-            startMockStream()
+        if (!permissionOk || _receiverMode.value == GnssReceiverMode.SIMULATION_TLE) {
+            updateTleSimulation()
             return
         }
 
@@ -410,9 +492,9 @@ class LocationGnssManager(private val context: Context) {
             scheduleHardwareCheckTimer()
         } catch (_: SecurityException) {
             _permissionGranted.value = false
-            startMockStream()
+            propagateTleFallback()
         } catch (_: Exception) {
-            startMockStream()
+            propagateTleFallback()
         }
     }
 
@@ -424,28 +506,7 @@ class LocationGnssManager(private val context: Context) {
     }
 
     fun setForceMockMode(enabled: Boolean) {
-        forceMockMode = enabled
-        if (enabled) {
-            unregisterHardwareCallbacks()
-            startMockStream()
-        } else {
-            stopMockStream()
-            _isMockMode.value = false
-            _gnssStatusData.value = GnssStatusData()
-            _gnssMeasurementsData.value = GnssMeasurementsData()
-            if (_isMonitoringActive.value) {
-                if (hasLocationPermission()) {
-                    try {
-                        registerHardwareCallbacks()
-                        scheduleHardwareCheckTimer()
-                    } catch (_: Exception) {
-                        startMockStream()
-                    }
-                } else {
-                    startMockStream()
-                }
-            }
-        }
+        setReceiverMode(if (enabled) GnssReceiverMode.SIMULATION_TLE else GnssReceiverMode.INTERNAL_TLE)
     }
 
     private val gnssNavigationCallback = object : GnssNavigationMessage.Callback() {
@@ -517,18 +578,15 @@ class LocationGnssManager(private val context: Context) {
             locationManager.unregisterGnssMeasurementsCallback(gnssMeasurementsCallback)
             locationManager.unregisterGnssNavigationMessageCallback(gnssNavigationCallback)
             locationManager.removeUpdates(locationListener)
-        } catch (_: Exception) {
-            // Ignore if already unregistered
-        }
+        } catch (_: Exception) {}
     }
 
     private fun scheduleHardwareCheckTimer() {
         hardwareCheckJob?.cancel()
         hardwareCheckJob = scope.launch {
             delay(3500L)
-            // Only start mock stream if explicitly forced or if location permissions are missing
-            if (forceMockMode || !hasLocationPermission()) {
-                startMockStream()
+            if (_receiverMode.value == GnssReceiverMode.INTERNAL_TLE && _gnssStatusData.value.satellites.isEmpty()) {
+                propagateTleFallback()
             }
         }
     }
@@ -540,7 +598,7 @@ class LocationGnssManager(private val context: Context) {
         mockJob = scope.launch {
             launch {
                 mockGnssGenerator.createGnssStatusFlow().collect { status ->
-                    if (_isMockMode.value || forceMockMode) {
+                    if (_isMockMode.value) {
                         _gnssStatusData.value = status
                         reevaluateTrust(newStatus = status)
                     }
@@ -548,7 +606,7 @@ class LocationGnssManager(private val context: Context) {
             }
             launch {
                 mockGnssGenerator.createGnssMeasurementsFlow().collect { measurements ->
-                    if (_isMockMode.value || forceMockMode) {
+                    if (_isMockMode.value) {
                         _gnssMeasurementsData.value = measurements
                         reevaluateTrust(newMeasurements = measurements)
                     }
@@ -556,7 +614,7 @@ class LocationGnssManager(private val context: Context) {
             }
             launch {
                 mockGnssGenerator.createLocationFlow().collect { location ->
-                    if (_isMockMode.value || forceMockMode) {
+                    if (_isMockMode.value) {
                         _locationData.value = location
                         reevaluateTrust(newLocation = location)
                     }

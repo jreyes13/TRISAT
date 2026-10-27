@@ -67,6 +67,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.myapplication.data.gnss.model.GnssReceiverMode
 import com.example.myapplication.data.gnss.model.LocationData
 import com.example.myapplication.data.gnss.model.ThreatScenario
 import com.example.myapplication.data.gnss.model.ThreatType
@@ -78,6 +79,7 @@ import com.example.myapplication.ui.components.StatusLevel
 import com.example.myapplication.ui.components.TrustabilityGaugeMeter
 import com.example.myapplication.ui.theme.TRISATTheme
 import com.example.myapplication.ui.viewmodel.GnssViewModel
+import androidx.compose.material3.Slider
 import java.util.Locale
 
 @Composable
@@ -86,6 +88,8 @@ fun DashboardScreen(
     onNavigateToSignal: () -> Unit = {},
     onNavigateToThreats: () -> Unit = {}
 ) {
+    val receiverMode by gnssViewModel.receiverMode.collectAsState()
+    val timeOffsetHours by gnssViewModel.timeOffsetHours.collectAsState()
     val trustReport by gnssViewModel.trustReportState.collectAsState()
     val gnssStatus by gnssViewModel.gnssStatusState.collectAsState()
     val locationData by gnssViewModel.locationState.collectAsState()
@@ -109,7 +113,7 @@ fun DashboardScreen(
         contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // 0. TRISAT Image Banner Card
+        // 0. TRISAT Image Banner Card with Mode Badge
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -119,26 +123,65 @@ fun DashboardScreen(
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(16.dp)
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.trisat_logo),
-                        contentDescription = "TRISAT Logo",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.FillWidth
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.trisat_logo),
+                            contentDescription = "TRISAT Logo",
+                            modifier = Modifier
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Fit
+                        )
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = when (receiverMode) {
+                                GnssReceiverMode.INTERNAL_TLE -> MaterialTheme.colorScheme.primaryContainer
+                                GnssReceiverMode.EXTERNAL_HARDWARE -> MaterialTheme.colorScheme.secondaryContainer
+                                GnssReceiverMode.SIMULATION_TLE -> MaterialTheme.colorScheme.tertiaryContainer
+                            }
+                        ) {
+                            Text(
+                                text = receiverMode.badge,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = when (receiverMode) {
+                                    GnssReceiverMode.INTERNAL_TLE -> MaterialTheme.colorScheme.onPrimaryContainer
+                                    GnssReceiverMode.EXTERNAL_HARDWARE -> MaterialTheme.colorScheme.onSecondaryContainer
+                                    GnssReceiverMode.SIMULATION_TLE -> MaterialTheme.colorScheme.onTertiaryContainer
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "TRISAT — Multi-Constellation GNSS & Security Suite",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Galileo OSNMA v1.1 • E6 HAS-UA v2.0 • 4-Constellation CelesTrak SGP4",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
 
         // Location Permission Banner
-        if (!permissionGranted) {
+        if (!permissionGranted && receiverMode != GnssReceiverMode.SIMULATION_TLE) {
             item {
                 LocationPermissionHandler(
                     isPermissionGranted = permissionGranted,
@@ -151,6 +194,46 @@ fun DashboardScreen(
                         }
                     }
                 )
+            }
+        }
+
+        // TLE Simulation 24h Time Scrubbing Slider Card (Active in Mode 2)
+        if (receiverMode == GnssReceiverMode.SIMULATION_TLE) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Orbit Propagation Offset:",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = String.format(Locale.US, "%+.1f h (±12h)", timeOffsetHours),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Slider(
+                            value = timeOffsetHours,
+                            onValueChange = { gnssViewModel.setTimeOffsetHours(it) },
+                            valueRange = -12f..12f,
+                            steps = 47,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
+                }
             }
         }
 
