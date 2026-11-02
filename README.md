@@ -8,53 +8,53 @@ TRISAT is an advanced **multiplatform GNSS intelligence application** (Android, 
 
 ## 🌐 Multiplatform Architecture
 
-TRISAT is built as a cross-ecosystem solution with native, high-performance implementations for Android, iOS, and macOS:
+TRISAT is built as a cross-ecosystem solution with native, high-performance implementations for iOS, macOS, Android, and embedded telemetry bridges:
 
-| Platform | Directory | Tech Stack | Key Capabilities |
+| Platform / Module | Directory | Tech Stack | Key Capabilities |
 | :--- | :--- | :--- | :--- |
+| **iOS / iPadOS** | `trisat_ios/` | Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit, CryptoKit | 3-mode operation (Internal TLE, BLE Nordic UART, UDP Simulator), Galileo OSNMA verification, CelesTrak 24h orbit propagator |
+| **macOS** | `trisat_mac/` & `trisat_ios/` | Swift, SwiftUI, Network.framework, POSIX Serial, PyUSB | Native macOS desktop app, integrated **TRISAT-SDR (E1 OSNMA + E6 HAS-UA)** launcher, POSIX direct USB serial for u-blox & SXblue |
+| **Hardware Bridges** | `trisat_hw/` | Arduino / C++, Python 3, PyUSB, libusb | SparkFun u-blox ZED-F9P + ESP32 hybrid bridge (BLE NUS + WiFi UDP), Geneq SXblue USB daemon, u-blox USB-CDC bridge |
 | **Android** | `trisat_android/` | Kotlin, Jetpack Compose, Android GNSS HAL APIs | Raw `TYPE_GAL_I` I/NAV frames, AGC levels, RINEX logging, A-GNSS cold-start reset |
-| **iOS** | `trisat_ios/` | Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit, CryptoKit | CelesTrak TLE orbit propagator, 24h time scrubbing, BLE GNSS receiver, Galileo OSNMA Annex A engine |
-| **macOS** | `trisat_ios/` & `build/TRISAT.app` | Swift, SwiftUI, Network.framework, CryptoKit, PyUSB | Integrated **TRISAT-SDR (E1 OSNMA + E6 HAS-UA)** launcher, Geneq SXblue FTDI USB driver, anti-flicker Skyplot & C/N0 Bar Chart |
 | **SDR Engine** | `trisat_sdr/` | Python 3, NumPy/SciPy, Dual-HackRF (`10 MHz CLKOUT/CLKIN`) | Portable SDR receiver (`E1B/C`, `E5a`, `E5b`, `E5 AltBOC`, `E6B/C HAS`, `GPS L1`), **OSNMA v1.1**, **HAS-UA (`PPPSD`/`DIA`/`NTCM-G`)** & Web UI (`:8085`) |
 
 ---
 
 ## 🛰️ Key Features
 
-* 🌌 **Anti-Flicker Open Sky Polar Skyplot:** Interactive 360° skyplot with constellation color coding (Galileo Cyan, GPS Amber, GLONASS Red, BeiDou Green) and a persistent 12-second satellite cache that **eliminates flickering**.
-* 📊 **Satellite C/N0 Signal Strength Bar Chart:** Real-time vertical SNR bar chart displaying carrier-to-noise ratio in dB-Hz color-coded by signal quality (Green $\ge 35$ dB-Hz, Yellow $\ge 25$ dB-Hz, Red $< 25$ dB-Hz) with constellation PRN badges (`E02`, `G08`, `R05`, `B12`).
-* 🔌 **Geneq SXblue USB & UDP Telemetry Bridge:** Low-level PyUSB/libusb driver interfacing with the Geneq SXblue FTDI USB chip (`VID: 0x0403`, `PID: 0xb5a0`) at 19200 bps, broadcasting JSON and raw NMEA/$BIN datagrams to `127.0.0.1:9090` via `Network.framework`.
-* 🔒 **Galileo I/NAV & OSNMA Receiver Test:** Direct extraction and inspection of raw `TYPE_GAL_I` navigation frames and 250-bit subframe pages.
-* 🛰️ **CelesTrak TLE Orbital Propagator & 24h Time Slider:** Download real-time satellite orbital elements and simulate constellation geometries across a 24-hour window ($\pm 12\text{h}$).
-* 📱 **Adaptive Multiplatform Layouts:** Wide 2-column iPad & macOS layouts with full-width centered terminals, DOP quality cards, and clean settings panels.
-* 🗺️ **Embedded Geospatial Mini Map:** Interactive Map displaying current GPS/Galileo position pin marked `GNSS LIVE`.
+* 🌌 **Anti-Flicker Open Sky Polar Skyplot:** Interactive 360° celestial skyplot with constellation color coding (Galileo Cyan, GPS Amber, GLONASS Red, BeiDou Green) and a persistent 25-second tracking cache that eliminates flickering.
+* 📊 **Satellite C/N0 Signal Strength Bar Chart:** Real-time vertical SNR bar chart displaying carrier-to-noise ratio in dB-Hz color-coded by signal quality (Green $\ge 35$ dB-Hz, Yellow $\ge 25$ dB-Hz, Red $< 25$ dB-Hz) with constellation PRN badges (`E02`, `G10`, `R80`, `B28`).
+* 📡 **Three Mutually Exclusive Operating Modes:**
+  * **Mode 0 (`🛰️ Internal + TLE`):** Uses iPhone / Mac internal CoreLocation coordinates with live CelesTrak SGP4 24-hour Keplerian orbit propagation ($\pm 12\text{h}$ slider). Raw RF telemetry and threat analysis views enter a clean Standby state.
+  * **Mode 1 (`📡 Bluetooth`):** Direct wireless connection to the physical **TRISAT ESP32 Hybrid Bridge** via Nordic UART Service (NUS). Streams real-time NMEA sentences (`$GNGGA`, `$GAGSV`, `$GPGSV`) and paced Galileo I/NAV subframes (`$GALINAV`) without requiring Apple MFi licensing.
+  * **Mode 2 (`🌐 UDP Telemetry / Simulator`):** In-process Swift telemetry generator and high-performance UDP receiver (`Network.framework` port 9090) for HackRF SDR streams or standalone testing.
+* 🔒 **Galileo I/NAV & OSNMA Subframe Decoder:** Real-time extraction, inspection, and verification of 240-bit Galileo I/NAV navigation subframes (`WT 1..6, 16, 17..20, 22, 44`) with CRC-24Q validation and quick "Clear" controls for both terminal and navigation cards.
+* 🛡️ **Interactive Threat Analysis & Anti-Spoofing:** Dynamic RF health scoring (0–100%) with real-time attack simulation for broadband Jamming, coherent Spoofing, Meaconing (replay delay), and OSNMA MAC tampering.
+* 🗺️ **Embedded Geospatial Mini Map:** Live interactive MapKit view displaying real-time coordinate position marked `GNSS LIVE`.
 
 ---
 
-## ⚡ Geneq SXblue USB Telemetry Bridge (macOS)
+## ⚡ Hardware Bridges & Receivers (`trisat_hw`)
 
-Because Geneq SXblue receivers use a custom FTDI Product ID (`VID: 0x0403, PID: 0xb5a0`), macOS does not create a standard `/dev/cu.usbserial` device. TRISAT bridges the receiver to the macOS app using a local UDP daemon.
+TRISAT supports both professional sub-meter receivers and multi-frequency RTK sensor pods:
 
-### 1️⃣ One-Time Receiver EEPROM Configuration
-Program the SXblue EEPROM to enable Galileo I/NAV subframes (`$JBIN,94,1` & `$JBIN,95,1`):
-```bash
-sudo arch -x86_64 python3 ./SX_Blue/sxblue_config.py
-```
+### 1️⃣ SparkFun u-blox ZED-F9P + ESP32 DevKit (Hybrid BLE & WiFi)
+Located in [`trisat_hw/esp32/esp32_hybrid_bridge/`](trisat_hw/esp32/esp32_hybrid_bridge/esp32_hybrid_bridge.ino):
+* **Wiring:** u-blox TX $\to$ ESP32 RX2 (GPIO 19), u-blox RX $\leftarrow$ ESP32 TX2 (GPIO 18) at 115200 bps.
+* **BLE Stream:** Advertises as `TRISAT-GNSS-BLE` using Nordic UART Service (`6E400001-B5A3-F393-E0A9-E50E24DCCA9E`). Paces Galileo I/NAV subframes to 1 frame per 1200 ms to guarantee zero BLE packet drops on iOS.
+* **WiFi UDP Broadcast:** Creates access point `TRISAT-GNSS` (password: `trisat4ever`) and broadcasts all NMEA sentences to UDP port `9090`.
+* **Flashing:** Open sketch in Arduino IDE, select board **ESP32 Dev Module**, port `/dev/cu.usbserial-*`, and upload.
 
-### 2️⃣ Continuous Telemetry Daemon
-Start the continuous USB reader and local UDP broadcaster (`127.0.0.1:9090`):
-```bash
-sudo ./SX_Blue/run_bridge.sh
-# or: sudo arch -x86_64 python3 ./SX_Blue/sxblue_reader.py
-```
+### 2️⃣ u-blox ZED-F9P Native USB Bridge
+Located in [`trisat_hw/zed_f9p/`](trisat_hw/zed_f9p/):
+* Direct USB-C connection to Mac `/dev/cu.usbmodem*`.
+* Run daemon: `python3 trisat_hw/zed_f9p/f9p_bridge.py` to bridge NMEA and `UBX-RXM-SFRBX` binary packets to UDP `127.0.0.1:9090`.
 
-### 3️⃣ Launch TRISAT macOS Application
-Open TRISAT from Xcode (`trisat_ios/TRISAT.xcodeproj`) or directly from Terminal:
-```bash
-open ./build/TRISAT.app
-```
-* **Signal Processing:** View live full-width green NMEA stream, Galileo I/NAV cards, and the C/N0 SNR Bar Chart.
-* **Dashboard:** View real-time coordinates, altitude, fix quality (*GPS Fix*, *DGPS Fix*, *RTK Fixed*), and anti-flicker Skyplot.
+### 3️⃣ Geneq SXblue USB FTDI Bridge
+Located in [`trisat_hw/sxblue/`](trisat_hw/sxblue/):
+* Interfaces with Geneq SXblue FTDI USB chip (`VID: 0x0403, PID: 0xb5a0`) at 19200 bps.
+* One-time EEPROM configuration: `sudo python3 trisat_hw/sxblue/sxblue_config.py`.
+* Continuous reader daemon: `sudo ./trisat_hw/sxblue/run_bridge.sh`.
 
 ---
 

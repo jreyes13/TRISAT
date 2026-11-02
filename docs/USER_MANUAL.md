@@ -9,17 +9,16 @@ Welcome to the **TRISAT (Authenticated Earth Intelligence)** multiplatform appli
 TRISAT is a **multiplatform GNSS intelligence solution** designed for **Galileo OSNMA (Open Service Navigation Message Authentication) testing**, multi-constellation GNSS signal analysis, anti-spoofing diagnostic evaluation, and spatial coordinate verification.
 
 ### Repository Layout:
+* 📂 **`trisat_ios/`**: Native iOS & iPadOS Application (Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit, CryptoKit).
+* 📂 **`trisat_mac/`**: Native macOS Application (Swift, SwiftUI, Network.framework, POSIX serial port).
 * 📂 **`trisat_android/`**: Native Android Application (Kotlin, Jetpack Compose, Android GNSS HAL Location APIs).
-* 📂 **`trisat_ios/`**: Native iOS & iPadOS Application (Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit).
-* 📂 **`trisat_mac/`**: Native macOS Application (Swift, SwiftUI, Network.framework, PyUSB, libusb, POSIX serial port).
-* 📂 **`SX_Blue/`**: Python USB hardware drivers and telemetry bridges for Geneq SXblue receivers:
-  * `sxblue_config.py`: One-time EEPROM setup tool for FTDI UART at 19200 bps ($JBIN 94/95).
-  * `sxblue_reader.py`: Continuous USB reader and local UDP telemetry broadcaster (`127.0.0.1:9090`).
-  * `run_bridge.sh`: Executable launcher with privilege elevation (`sudo arch -x86_64`).
-* 📂 **`docs/`**: Comprehensive project documentation:
-  * `USER_MANUAL.md`: Complete user manual and technical reference guide.
-  * `WEB_SERVER_GUIDE.md`: Guide for the SDR Web Dashboard and telemetry REST API.
-* 📂 **`notebooks/`**: Interactive Google Colab / Jupyter computational notebooks.
+* 📂 **`trisat_hw/`**: Hardware firmwares, drivers, and telemetry bridges for physical GNSS receivers:
+  * `esp32/esp32_hybrid_bridge/`: ESP32 DevKit firmware bridging u-blox ZED-F9P via Bluetooth Low Energy (Nordic UART NUS) and Wi-Fi UDP (`:9090`).
+  * `zed_f9p/`: Python USB-CDC bridge daemon and factory restore scripts for u-blox ZED-F9P.
+  * `sxblue/`: Python USB driver and EEPROM configurator for Geneq SXblue sub-meter receivers.
+* 📂 **`trisat_sdr/`**: Software-Defined Radio engine (Python 3, Dual-HackRF, E1 OSNMA, E6 HAS-UA, Web UI `:8085`).
+* 📂 **`docs/`**: Comprehensive documentation suite (`USER_MANUAL.md`, `WEB_SERVER_GUIDE.md`).
+* 📂 **`notebooks/`**: Interactive computational notebooks for OSNMA Annex A and HAS PPP.
 * 📄 **`README.md`**: Project overview, feature summary, and build instructions.
 
 ---
@@ -89,42 +88,53 @@ The **Signal Processing** tab provides a clean, desktop-fitted 2×2 view of all 
 ---
 
 ### ⚙️ Settings Tab
-All hardware, SDR, and orbital configuration controls are centralized in the **Settings** tab:
-1. **GNSS Receiver & Telemetry Mode:**
-   * Segmented selector for `Internal + TLE`, `External BLE / SDR Bridge`, and `CelesTrak TLE Simulation`.
-2. **TRISAT-SDR Dual-HackRF & Local Bridges:**
-   * Centralized **HackRF #1 Secondary Band** selector (`E6B/C HAS PPP SL1`, `E5a F/NAV`, `E5b I/NAV`, `E5 Full AltBOC`), `Start / Stop TRISAT-SDR` engine control, one-click `Web Dashboard (:8085)` launcher, and `SXblue (sudo)` USB bridge launcher.
-3. **CelesTrak 4-Constellation TLE Orbits & Live Skyplot Preview:**
+All hardware, telemetry, and constellation orbital controls are centralized in the **Settings** tab via three mutually exclusive operating modes:
+
+1. **Operating Mode Selector:**
+   * **`🛰️ Internal + TLE` (Mode 0):** Internal iPhone / Mac GPS (CoreLocation) coordinates combined with the 116-satellite CelesTrak SGP4 24-hour orbital propagator. Signal Processing and Threat Analysis views enter a clean Standby mode.
+   * **`📡 Bluetooth` (Mode 1):** Connects to the external physical **TRISAT ESP32 Hybrid Bridge** via BLE Nordic UART Service (`TRISAT-GNSS-BLE`) or MFi receivers. Automatically activates when Bluetooth connects and streams real-time `$GNGGA`, `$GAGSV`, `$GPGSV`, and paced `$GALINAV` subframes.
+   * **`🌐 UDP` (Mode 2):** Connects to localhost/Wi-Fi UDP port `9090` or launches the internal Swift telemetry simulator (`Start Simulator`) with multi-frequency Galileo E1/E6 + GPS L1/L5 dynamic carrier streams.
+2. **CelesTrak 4-Constellation TLE Orbits & Live Skyplot Preview:**
    * Built-in 116-satellite 4-constellation Keplerian Walker catalog (`30 Galileo`, `31 GPS`, `24 GLONASS`, `31 BeiDou`) with live CelesTrak cloud refresh, interactive constellation filter chips, and a $\pm 12\text{h}$ Keplerian orbit time-offset slider.
-4. **Bluetooth GNSS Receivers & Hardware USB Serial Ports:**
-   * Dedicated BLE scanner and POSIX `/dev/cu.usbserial*` port connector.
+3. **Bluetooth GNSS Receivers & Hardware USB Serial Ports:**
+   * Dedicated BLE scanner listing discovered devices with RSSI metrics and single-tap connection.
+   * On macOS: Direct POSIX `/dev/cu.usbserial*` (CH340 ESP32 bridge) and `/dev/cu.usbmodem*` (u-blox CDC) port selectors.
 
 ---
 
-## 4. How to Connect the Geneq SXblue Receiver (macOS)
+## 4. Hardware Receiver Setup & Deployment
 
-Because Geneq SXblue USB receivers use a custom FTDI Product ID (`VID: 0x0403, PID: 0xb5a0`), macOS does not generate a standard `/dev/cu.usbserial` node. Follow these steps to connect:
+### 1️⃣ SparkFun u-blox ZED-F9P + ESP32 Hybrid Bridge (BLE & WiFi)
+The recommended portable setup for iOS field testing:
+* **Connections:**
+  * u-blox ZED-F9P TX1 $\to$ ESP32 GPIO 19 (RX2)
+  * u-blox ZED-F9P RX1 $\leftarrow$ ESP32 GPIO 18 (TX2)
+  * Baud rate: 115200 bps
+* **Firmware:** Located in `trisat_hw/esp32/esp32_hybrid_bridge/esp32_hybrid_bridge.ino`.
+* **Flash with Arduino IDE:**
+  1. Open `trisat_hw/esp32/esp32_hybrid_bridge/esp32_hybrid_bridge.ino`.
+  2. Select board **ESP32 Dev Module**, speed **115200**, and serial port `/dev/cu.usbserial-*`.
+  3. Upload sketch.
+* **Operation:**
+  * Power the unit via USB.
+  * In the TRISAT iOS app, open **Settings** $\to$ **Bluetooth**, tap **Scan BLE**, and select **`🛰️ TRISAT-GNSS-BLE`**.
+  * The app will automatically connect, switch to Mode 1, and stream live NMEA sentences and paced Galileo I/NAV frames.
 
-### 1️⃣ Run the USB Reader Daemon
-Open Terminal and run the launcher script:
+### 2️⃣ Geneq SXblue USB Receiver (macOS)
+Because Geneq SXblue USB receivers use a custom FTDI Product ID (`VID: 0x0403, PID: 0xb5a0`), macOS does not generate a standard `/dev/cu.usbserial` node.
+1. Run the bridge launcher:
+   ```bash
+   sudo ./trisat_hw/sxblue/run_bridge.sh
+   ```
+2. Open TRISAT macOS (`open build/TRISAT.app` or Run from Xcode).
+3. The app will ingest UDP telemetry on port `9090`.
+
+### 3️⃣ Direct USB u-blox ZED-F9P Bridge (macOS)
+For bench testing the ZED-F9P directly on a Mac via USB-C:
 ```bash
-sudo ./SX_Blue/run_bridge.sh
+python3 trisat_hw/zed_f9p/f9p_bridge.py
 ```
-*(Enter your Mac password when prompted)*. Terminal will confirm:
-```text
-======================================================
- TRISAT SXblue USB Telemetry Daemon (Localhost UDP 9090)
-======================================================
-[+] UDP Socket Active -> 127.0.0.1:9090
-[+] Attached to SXblue Receiver (VID: 0x403, PID: 0xb5a0)
-[+] FTDI UART configured at 19200 bps.
-
-[+] Streaming USB Telemetry to localhost:9090... Press Ctrl+C to stop.
-```
-
-### 2️⃣ Launch TRISAT macOS App
-Open TRISAT in Xcode (`trisat_mac`) and press **`Run`** (`Cmd + R`).
-* In **Signal Processing**, all 4 quadrants (Skyplot, C/N0 Bar Chart, NMEA Stream, Galileo I/NAV) will update live in real-time.
+This script configures the u-blox ZED-F9P for high-rate NMEA and binary `UBX-RXM-SFRBX` output, forwarding all packets to UDP `:9090`.
 
 ---
 

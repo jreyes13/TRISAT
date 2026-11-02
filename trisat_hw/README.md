@@ -1,68 +1,103 @@
-# TRISAT Hardware Bridges & Adapters (`trisat_hw`)
+# TRISAT Hardware Bridges & Receivers (`trisat_hw`)
 
-Este directorio centraliza los controladores, scripts puente de telemetría y firmwares de hardware de todos los receptores GNSS físicos de la suite **TRISAT** (macOS, iOS, Android).
+This directory houses the hardware firmware, drivers, and local telemetry bridges for physical GNSS receivers supported by the **TRISAT** multiplatform suite (iOS, macOS, Android).
 
 ---
 
-## 📁 Estructura del Directorio
+## 📁 Directory Structure
 
-```
+```text
 trisat_hw/
-├── sxblue/                        # Receptor profesional Geneq SXblue (USB FTDI)
-│   ├── sxblue_reader.py           # Daemon lector USB y emisor UDP 127.0.0.1:9090
-│   ├── sxblue_config.py           # Programador EEPROM para activar tramas I/NAV ($JBIN)
-│   ├── run_bridge.sh              # Script lanzador del daemon con privilegios
-│   └── PDFs/ & SDK/               # Documentación técnica, manuales y SDK original
+├── esp32/
+│   ├── esp32_hybrid_bridge/       # Arduino firmware: BLE Nordic UART + WiFi UDP :9090
+│   │   └── esp32_hybrid_bridge.ino
+│   └── esp32_sniffer/             # Hardware UART/SPI logic analyzer & baud detector
+│       └── esp32_sniffer.ino
 │
-├── zed_f9p/                       # Receptor de alta precisión u-blox ZED-F9P (USB Nativo)
-│   ├── f9p_bridge.py              # Puente USB CDC/ACM (/dev/cu.usbmodem*) hacia UDP :9090
-│   └── f9p_factory_reset.py       # Restauración completa y optimización permanente en Flash
+├── zed_f9p/                       # SparkFun u-blox ZED-F9P High-Precision GNSS
+│   ├── f9p_bridge.py              # USB-CDC daemon (/dev/cu.usbmodem*) to UDP :9090
+│   └── f9p_factory_reset.py       # Configuration restore and persistent Flash optimizer
 │
-└── esp32/                         # Módulos de firmware para ESP32
-    ├── esp32_hybrid_bridge/       # Firmware Arduino (BLE Nordic UART NUS + WiFi AP UDP :9090)
-    │   └── esp32_hybrid_bridge.ino
-    └── esp32_sniffer/             # Diagnóstico de líneas lógicas, SPI y baud rates
-        └── esp32_sniffer.ino
+└── sxblue/                        # Geneq SXblue Sub-Meter Survey Receiver
+    ├── sxblue_reader.py           # USB FTDI reader daemon to UDP 127.0.0.1:9090
+    ├── sxblue_config.py           # EEPROM programmer for Galileo I/NAV ($JBIN)
+    ├── run_bridge.sh              # Elevated launcher script for macOS
+    └── PDFs/ & SDK/               # Original Geneq manuals and manufacturer SDK
 ```
 
 ---
 
-## 1. Geneq SXblue (`trisat_hw/sxblue`)
-* **Hardware:** Receptor sub-métrico Geneq SXblue II/II+ con chip USB FTDI (`VID: 0x0403, PID: 0xb5a0`).
-* **Configuración EEPROM (Una vez):**
-  ```bash
-  sudo python3 trisat_hw/sxblue/sxblue_config.py
-  ```
-* **Lanzar el daemon hacia TRISAT:**
-  ```bash
-  sudo ./trisat_hw/sxblue/run_bridge.sh
-  # O bien:
-  sudo python3 trisat_hw/sxblue/sxblue_reader.py
-  ```
+## 1. ESP32 Hybrid Telemetry Bridge (`trisat_hw/esp32/esp32_hybrid_bridge`)
+
+The **ESP32 Hybrid Bridge** is the recommended wireless adapter for portable field testing with an iPhone or iPad. It bridges high-rate NMEA and binary Galileo navigation messages from the u-blox ZED-F9P across Bluetooth Low Energy and Wi-Fi.
+
+### Hardware Specifications & Pinout:
+* **Microcontroller:** ESP32-D0WDQ6 DevKit (with CH340 or CP2102 USB UART).
+* **GNSS Receiver:** SparkFun GPS-RTK-SMA (u-blox ZED-F9P, firmware HPG 1.13+).
+* **Physical UART Wiring:**
+  * **ESP32 GPIO 19 (RX2)** $\leftarrow$ **u-blox TX1** (Orange wire)
+  * **ESP32 GPIO 18 (TX2)** $\to$ **u-blox RX1** (White wire)
+  * **GND** $\leftrightarrow$ **GND**
+  * **Baud Rate:** 115200 bps (8N1) with an expanded 4096-byte hardware ring buffer (`Serial2.setRxBufferSize(4096)`).
+
+### Transmission Protocols:
+1. **Bluetooth Low Energy (Nordic UART Service - NUS):**
+   * Service UUID: `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`
+   * RX Char UUID: `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`
+   * TX Char UUID: `6E400003-B5A3-F393-E0A9-E50E24DCCA9E`
+   * Advertises as: `TRISAT-GNSS-BLE`
+   * **Paced Galileo I/NAV Delivery:** Demodulates binary `UBX-RXM-SFRBX` frames (Class `0x02`, ID `0x13`) from the u-blox receiver and formats `$GALINAV` sentences. Transmits **1 subframe every 1200 ms** over BLE with 4 ms inter-chunk pacing to guarantee zero packet drops in the iOS CoreBluetooth stack.
+   * **Filtered NMEA Stream:** Forwards essential `$GNGGA`, `$GAGSV`, and `$GPGSV` sentences over BLE to maintain high responsiveness.
+2. **Wi-Fi SoftAP & UDP Broadcast:**
+   * SSID: `TRISAT-GNSS`
+   * Password: `trisat4ever`
+   * Broadcast Target: `192.168.4.255:9090`
+   * Streams all raw NMEA sentences and `$GALINAV` frames via UDP datagrams.
+3. **USB Serial Monitor:**
+   * Concurrent USB mirror at 115200 bps for debugging on Mac or PC.
+
+### Flashing Instructions (Arduino IDE):
+1. Install the **ESP32 Board Package** in Arduino IDE (`esp32 by Espressif Systems`).
+2. Open [`esp32_hybrid_bridge/esp32_hybrid_bridge.ino`](esp32_hybrid_bridge/esp32_hybrid_bridge.ino).
+3. Select Board: **ESP32 Dev Module**.
+4. Select Port: `/dev/cu.usbserial-*` (or `/dev/cu.wchusbserial*`).
+5. Upload the sketch.
 
 ---
 
-## 2. u-blox ZED-F9P (`trisat_hw/zed_f9p`)
-* **Hardware:** Placa SparkFun GPS-RTK-SMA con u-blox ZED-F9P (Firmware HPG 1.13, multiconstelación Galileo E1/E5b, GPS, GLONASS, BeiDou).
-* **Conexión:** Cable USB-C directo a la placa roja ZED-F9P (`/dev/cu.usbmodem*`).
-* **Lanzar el daemon hacia TRISAT:**
+## 2. u-blox ZED-F9P Direct USB (`trisat_hw/zed_f9p`)
+
+Used for direct USB-C connection between the SparkFun ZED-F9P board and a Mac or Linux laptop.
+
+* **Hardware:** SparkFun GPS-RTK-SMA board connected directly via USB-C (`/dev/cu.usbmodem*`).
+* **Run Telemetry Daemon:**
   ```bash
   python3 trisat_hw/zed_f9p/f9p_bridge.py
   ```
-  Habilita automáticamente tramas NMEA y paquetes binarios de navegación cruda `UBX-RXM-SFRBX` (Galileo OSNMA).
+  Automatically enables Galileo I/NAV subframes (`UBX-RXM-SFRBX`), multi-constellation GSV (`UBX-NAV-SAT`), and high-rate GGA/RMC, broadcasting them to UDP `127.0.0.1:9090`.
+
+* **Factory Restore:**
+  ```bash
+  python3 trisat_hw/zed_f9p/f9p_factory_reset.py
+  ```
+  Restores default 38400 bps u-blox settings if communication is ever lost.
 
 ---
 
-## 3. Módulo ESP32 Híbrido (`trisat_hw/esp32/esp32_hybrid_bridge`)
-* **Hardware:** Placa ESP32-D0WDQ6 con puerto USB CH340 (`/dev/cu.usbserial*`).
-* **Conexión física:** Conectada internamente a la UART del ZED-F9P (GPIO 19 RX / GPIO 18 TX).
-* **Capacidades:**
-  * **Bluetooth Low Energy (BLE):** Publica el servicio estándar *Nordic UART Service (NUS)* como `TRISAT-GNSS-BLE`. Conexión nativa con iPhone, iPad y Mac sin requerir licencias Apple MFi.
-  * **WiFi Access Point:** Creates WiFi network `TRISAT-GNSS` (WPA2: `trisat4ever`) and broadcasts NMEA sentences via **UDP Broadcast to port `9090`**.
-  * **Consola Serie USB:** Salida en paralelo a 115200 bps para depuración en Mac.
+## 3. Geneq SXblue Sub-Meter Receiver (`trisat_hw/sxblue`)
 
-### Instrucciones de carga (Arduino IDE)
-1. Abrir `esp32_hybrid_bridge/esp32_hybrid_bridge.ino` en **Arduino IDE**.
-2. Seleccionar placa: **ESP32 Dev Module**.
-3. Seleccionar puerto: `/dev/cu.usbserial-130` (con el cable USB blanco conectado al ESP32).
-4. Subir el sketch.
+Used for professional GIS receivers featuring custom FTDI USB chips (`VID: 0x0403, PID: 0xb5a0`).
+
+* **One-Time EEPROM Configuration:**
+  ```bash
+  sudo python3 trisat_hw/sxblue/sxblue_config.py
+  ```
+  Programs the SXblue EEPROM to output `$JBIN,94` and `$JBIN,95` Galileo navigation pages.
+
+* **Run Daemon:**
+  ```bash
+  sudo ./trisat_hw/sxblue/run_bridge.sh
+  # or:
+  sudo python3 trisat_hw/sxblue/sxblue_reader.py
+  ```
+  Reads raw FTDI packets and broadcasts NMEA sentences to `127.0.0.1:9090`.
