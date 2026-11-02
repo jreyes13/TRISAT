@@ -94,7 +94,30 @@ class GnssViewModel: ObservableObject {
     // Live Unfiltered Satellites from External Bridge / Hardware
     var liveBridgeSatellites: [SatelliteInfo] = []
     private var satelliteStore: [String: (info: SatelliteInfo, lastSeen: Date)] = [:]
-    private var hasExternalHardwareFix: Bool = false
+    var hasExternalHardwareFix: Bool = false
+
+    /// True if an external hardware receiver (Bluetooth / UDP) or In-Phone Simulator is actively streaming telemetry
+    var isTelemetryActive: Bool {
+        if selectedMode == 0 {
+            // Mode 0: Internal GPS + Keplerian TLE propagator (no external telemetry)
+            return false
+        }
+        if selectedMode == 1 {
+            return bluetoothManager.isConnected || !liveBridgeSatellites.isEmpty || hasExternalHardwareFix
+        }
+        if selectedMode == 2 {
+            return true
+        }
+        return false
+    }
+
+    var numDualFrequencySatellites: Int {
+        displayedSatellites.filter { $0.isDualFrequency }.count
+    }
+
+    var isDualFrequencyActive: Bool {
+        numDualFrequencySatellites > 0
+    }
 
     init(repository: GnssRepository = GnssRepository(), bluetoothManager: BluetoothManager = BluetoothManager()) {
         self.repository = repository
@@ -125,9 +148,28 @@ class GnssViewModel: ObservableObject {
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.trackingTickCount += 1
+
+                // In Hardware/UDP modes, prune tracking channels not seen in last 25 seconds
+                if self.selectedMode == 1 || self.selectedMode == 2 {
+                    let activeThreshold = Date().addingTimeInterval(-25.0)
+                    self.satelliteStore = self.satelliteStore.filter { $0.value.lastSeen > activeThreshold }
+                    self.liveBridgeSatellites = self.satelliteStore.values.map { $0.info }
+                    if self.liveBridgeSatellites.isEmpty {
+                        self.hasExternalHardwareFix = false
+                    }
+                }
+
                 self.updateSatellites()
             }
         }
+    }
+
+    func resetHardwareTelemetry() {
+        satelliteStore.removeAll()
+        liveBridgeSatellites.removeAll()
+        hasExternalHardwareFix = false
+        displayedSatellites.removeAll()
+        updateSatellites()
     }
 
     /// Single authoritative updater for all satellites in the skyplot and SNR bar charts
@@ -135,16 +177,25 @@ class GnssViewModel: ObservableObject {
         let coord = currentCoordinate
 
         let baseSats: [SatelliteInfo]
-        if selectedMode == 1 && hasExternalHardwareFix && !liveBridgeSatellites.isEmpty {
-            // Mode 1: External Hardware / Bridge NMEA GSV
-            baseSats = liveBridgeSatellites
+        if selectedMode == 1 {
+            // Mode 1: External Hardware (Bluetooth / USB Serial)
+            // NEVER fall back to synthetic Keplerian TLE orbits if disconnected!
+            if !liveBridgeSatellites.isEmpty {
+                baseSats = liveBridgeSatellites
+            } else {
+                baseSats = []
+            }
         } else if selectedMode == 2 {
-            // Mode 2: CelesTrak TLE Orbit Simulation with Time Scrubbing
-            baseSats = Sgp4OrbitPropagator.propagateToSkyplot(
-                tles: tleDownloader.parsedTles,
-                timeOffsetHours: timeOffsetHours,
-                observerLocation: coord
-            )
+            // Mode 2: UDP Telemetry / In-Device Simulator
+            if !liveBridgeSatellites.isEmpty {
+                baseSats = liveBridgeSatellites
+            } else {
+                baseSats = Sgp4OrbitPropagator.propagateToSkyplot(
+                    tles: tleDownloader.parsedTles,
+                    timeOffsetHours: timeOffsetHours,
+                    observerLocation: coord
+                )
+            }
         } else {
             // Mode 0: Internal GNSS — Propagate real Keplerian orbits over user's actual physical coordinates
             baseSats = Sgp4OrbitPropagator.propagateToSkyplot(
@@ -167,17 +218,20 @@ class GnssViewModel: ObservableObject {
         // Add subtle, realistic receiver tracking variation (±0.3 dB-Hz jitter) so satellites look tracked and alive
         let jitteredSats: [SatelliteInfo] = filteredSats.enumerated().map { idx, sat in
             let jitter = ((idx + trackingTickCount) % 3 == 0) ? 1 : (((idx + trackingTickCount) % 5 == 0) ? -1 : 0)
-            let currentCno = max(20, min(50, sat.cno + jitter))
+            let currentCno = sat.cno > 0 ? max(20, min(50, sat.cno + jitter)) : 0
+            let currentCnoSecondary = sat.cnoSecondary > 0 ? max(20, min(50, sat.cnoSecondary + jitter)) : 0
             return SatelliteInfo(
                 id: sat.id,
                 svid: sat.svid,
                 elevation: sat.elevation,
                 azimuth: sat.azimuth,
                 cno: currentCno,
+                cnoSecondary: currentCnoSecondary,
                 isGalileo: sat.isGalileo,
                 constellation: sat.constellation,
                 usedInFix: sat.usedInFix,
-                hasInav: sat.hasInav
+                hasInav: sat.hasInav,
+                trackedBands: sat.trackedBands
             )
         }
 
@@ -188,19 +242,23 @@ class GnssViewModel: ObservableObject {
                 return sat
             case .jamming:
                 let jammedCno = max(9, sat.cno - 22 + ((idx % 3) - 1))
+                let jammedCnoSecondary = sat.cnoSecondary > 0 ? max(9, sat.cnoSecondary - 22 + ((idx % 3) - 1)) : 0
                 return SatelliteInfo(
                     id: sat.id,
                     svid: sat.svid,
                     elevation: sat.elevation,
                     azimuth: sat.azimuth,
                     cno: jammedCno,
+                    cnoSecondary: jammedCnoSecondary,
                     isGalileo: sat.isGalileo,
                     constellation: sat.constellation,
                     usedInFix: jammedCno >= 24,
-                    hasInav: sat.hasInav && jammedCno >= 25
+                    hasInav: sat.hasInav && jammedCno >= 25,
+                    trackedBands: sat.trackedBands
                 )
             case .spoofing:
                 let spoofedCno = 51 + (idx % 2)
+                let spoofedCnoSecondary = sat.cnoSecondary > 0 ? (50 + ((idx + 1) % 2)) : 0
                 let pulledAz = fmod(sat.azimuth * 0.45 + 45.0 * 0.55 + Double(idx * 6), 360.0)
                 let pulledEl = min(82.0, max(18.0, sat.elevation * 0.6 + 52.0 * 0.4))
                 return SatelliteInfo(
@@ -209,13 +267,16 @@ class GnssViewModel: ObservableObject {
                     elevation: pulledEl,
                     azimuth: pulledAz,
                     cno: spoofedCno,
+                    cnoSecondary: spoofedCnoSecondary,
                     isGalileo: sat.isGalileo,
                     constellation: sat.constellation,
                     usedInFix: true,
-                    hasInav: sat.hasInav
+                    hasInav: sat.hasInav,
+                    trackedBands: sat.trackedBands
                 )
             case .meaconing:
                 let meaconCno = min(50, max(22, sat.cno + 4 - (idx % 5)))
+                let meaconCnoSecondary = sat.cnoSecondary > 0 ? min(50, max(22, sat.cnoSecondary + 4 - ((idx + 2) % 5))) : 0
                 let shiftedAz = fmod(sat.azimuth + 25.0, 360.0)
                 let shiftedEl = max(10.0, min(85.0, sat.elevation - 6.0))
                 return SatelliteInfo(
@@ -224,10 +285,12 @@ class GnssViewModel: ObservableObject {
                     elevation: shiftedEl,
                     azimuth: shiftedAz,
                     cno: meaconCno,
+                    cnoSecondary: meaconCnoSecondary,
                     isGalileo: sat.isGalileo,
                     constellation: sat.constellation,
                     usedInFix: meaconCno >= 26,
-                    hasInav: sat.hasInav
+                    hasInav: sat.hasInav,
+                    trackedBands: sat.trackedBands
                 )
             case .osnmaFailure:
                 return sat
@@ -256,7 +319,7 @@ class GnssViewModel: ObservableObject {
                 vdopValue = usedCount >= 12 ? "1.08" : (usedCount >= 6 ? "1.38" : "1.95")
                 pdopValue = usedCount >= 12 ? "1.30" : (usedCount >= 6 ? "1.67" : "2.43")
                 gstRmsError = "±0.22 m"
-            } else if selectedMode == 2 {
+            } else if selectedMode == 2 && !hasExternalHardwareFix {
                 fixTypeDesc = "CelesTrak SGP4 Orbit Simulation"
                 hdopValue = usedCount >= 12 ? "0.68" : (usedCount >= 6 ? "0.92" : "1.65")
                 vdopValue = usedCount >= 12 ? "1.02" : (usedCount >= 6 ? "1.35" : "2.10")
@@ -336,20 +399,40 @@ class GnssViewModel: ObservableObject {
             }
             .store(in: &cancellables)
 
+        bluetoothManager.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &cancellables)
+
+        bluetoothManager.$isConnected
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] connected in
+                guard let self = self else { return }
+                if connected {
+                    // Activate Bluetooth mode automatically upon initial hardware connection
+                    if self.selectedMode == 0 {
+                        self.selectedMode = 1
+                    }
+                } else if self.selectedMode == 1 {
+                    self.resetHardwareTelemetry()
+                }
+            }
+            .store(in: &cancellables)
+
         bluetoothManager.onNmeaLineReceived = { [weak self] line in
             guard let self = self else { return }
+            // Ingest telemetry in Bluetooth mode (Mode 1) or UDP/Simulator mode (Mode 2)
+            if self.selectedMode == 1 || self.selectedMode == 2 {
+                self.processIncomingNmea(line)
+            }
+        }
 
-            if line.contains("$GPGGA") || line.contains("$GNGGA") {
-                self.parseGgaSentence(line)
-            }
-            if line.contains("$GPGST") || line.contains("$GNGST") {
-                self.parseGstSentence(line)
-            }
-            if line.contains("$GPGSA") || line.contains("$GNGSA") {
-                self.parseGsaSentence(line)
-            }
-            if line.contains("$GAGSV") || line.contains("$GPGSV") || line.contains("$GLGSV") || line.contains("$BDGSV") {
-                self.parseGsvLine(line)
+        bluetoothManager.onInavFrameReceived = { [weak self] msg in
+            guard let self = self else { return }
+            if self.selectedMode == 1 || self.selectedMode == 2 {
+                self.handleInavMessage(msg)
             }
         }
 
@@ -368,40 +451,76 @@ class GnssViewModel: ObservableObject {
             .store(in: &cancellables)
     }
 
-    private func parseGgaSentence(_ line: String) {
+    // MARK: - Unified NMEA & Telemetry Parser Engine
+
+    func processIncomingNmea(_ line: String) {
+        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        if trimmed.contains("$GPGGA") || trimmed.contains("$GNGGA") {
+            parseGgaSentence(trimmed)
+        }
+        if trimmed.contains("$GPGST") || trimmed.contains("$GNGST") {
+            parseGstSentence(trimmed)
+        }
+        if trimmed.contains("$GPGSA") || trimmed.contains("$GNGSA") {
+            parseGsaSentence(trimmed)
+        }
+        if trimmed.contains("GSV") {
+            parseGsvLine(trimmed)
+        }
+        if trimmed.contains("$GALINAV") || trimmed.contains("$RAWNAV") {
+            parseGalinavSentence(trimmed)
+        }
+    }
+
+    func parseGgaSentence(_ line: String) {
         let parts = line.components(separatedBy: ",")
         guard parts.count >= 10 else { return }
+
+        let fixQuality = parts[6]
+        let numSats = Int(parts[7]) ?? 0
+        let hdop = parts[8]
+        let alt = parts[9]
+
+        if numSats > 0 {
+            self.numSatellitesInFix = numSats
+        }
+        if !hdop.isEmpty && hdop != "--" {
+            self.hdopValue = hdop
+        }
+        if fixQuality != "0" && !fixQuality.isEmpty {
+            self.hasExternalHardwareFix = true
+        }
+
         if let lat = parseNmeaCoord(parts[2], dir: parts[3]),
            let lon = parseNmeaCoord(parts[4], dir: parts[5]) {
-            let fixQuality = parts[6]
-            let numSats = Int(parts[7]) ?? 0
-            let hdop = parts[8]
-            let alt = parts[9]
-
             self.hasExternalHardwareFix = true
-            self.numSatellitesInFix = numSats
-            self.hdopValue = hdop.isEmpty ? "--" : hdop
 
-            if simulatedThreatMode == .nominal && selectedMode == 1 {
-                self.fixTypeDesc = {
-                    switch fixQuality {
-                    case "1": return "GPS Autonomous"
-                    case "2": return "DGPS Differential (SXblue)"
-                    case "4": return "RTK Fixed (Centimeter)"
-                    case "5": return "RTK Float"
-                    default: return "Fix Mode \(fixQuality)"
-                    }
-                }()
+            if simulatedThreatMode == .nominal && (selectedMode == 1 || selectedMode == 2) {
+                if selectedMode == 1 || !self.fixTypeDesc.contains("DUAL-SDR") {
+                    self.fixTypeDesc = {
+                        switch fixQuality {
+                        case "1": return "GPS Autonomous"
+                        case "2": return "DGPS Differential (SXblue)"
+                        case "4": return "RTK Fixed (Centimeter)"
+                        case "5": return "RTK Float"
+                        default: return "Fix Mode \(fixQuality)"
+                        }
+                    }()
+                }
                 self.currentCoordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
                 let latDir = lat >= 0 ? "N" : "S"
                 let lonDir = lon >= 0 ? "E" : "W"
                 self.locationText = String(format: "%.6f° %@, %.6f° %@", abs(lat), latDir, abs(lon), lonDir)
-                self.accuracyText = "Fix: \(fixTypeDesc) | Sats: \(numSats) | HDOP: \(hdopValue) | Alt: \(alt)m"
+                if selectedMode == 1 || !self.accuracyText.contains("DUAL-SDR") {
+                    self.accuracyText = "Fix: \(fixTypeDesc) | Sats: \(numSats) | HDOP: \(hdopValue) | Alt: \(alt)m"
+                }
             }
         }
     }
 
-    private func parseGstSentence(_ line: String) {
+    func parseGstSentence(_ line: String) {
         guard simulatedThreatMode == .nominal else { return }
         let parts = line.components(separatedBy: ",")
         if parts.count >= 8 {
@@ -418,7 +537,7 @@ class GnssViewModel: ObservableObject {
         }
     }
 
-    private func parseGsaSentence(_ line: String) {
+    func parseGsaSentence(_ line: String) {
         guard simulatedThreatMode == .nominal else { return }
         let parts = line.components(separatedBy: ",")
         if parts.count >= 17 {
@@ -432,7 +551,75 @@ class GnssViewModel: ObservableObject {
         }
     }
 
-    private func parseGsvLine(_ text: String) {
+    func clearMessages() {
+        DispatchQueue.main.async {
+            self.messages.removeAll()
+            self.repository.clearMessages()
+        }
+    }
+
+    func handleInavMessage(_ msg: GalileoINavMessage) {
+        DispatchQueue.main.async {
+            if self.messages.count >= 80 {
+                self.messages.removeFirst()
+            }
+            self.messages.append(msg)
+            self.repository.appendRealInavMessage(msg)
+
+            // Associate detected carrier band (E1-B vs E5b-I) with satellite in satelliteStore
+            let key = "Galileo_\(msg.svid)"
+            let bandPrefix = msg.band.contains("E5") ? "E5b" : "E1"
+            if let existing = self.satelliteStore[key] {
+                var bands = existing.info.trackedBands
+                if !bands.contains(bandPrefix) {
+                    bands.append(bandPrefix)
+                    bands.sort()
+                    let updatedSat = SatelliteInfo(
+                        id: existing.info.id,
+                        svid: existing.info.svid,
+                        elevation: existing.info.elevation,
+                        azimuth: existing.info.azimuth,
+                        cno: existing.info.cno,
+                        cnoSecondary: existing.info.cnoSecondary,
+                        isGalileo: existing.info.isGalileo,
+                        constellation: existing.info.constellation,
+                        usedInFix: existing.info.usedInFix,
+                        hasInav: true,
+                        trackedBands: bands
+                    )
+                    self.satelliteStore[key] = (info: updatedSat, lastSeen: existing.lastSeen)
+                }
+            }
+        }
+    }
+
+    func parseGalinavSentence(_ line: String) {
+        let parts = line.components(separatedBy: ",")
+        guard parts.count >= 4 else { return }
+        let svid = Int(parts[1]) ?? 1
+        let wt = Int(parts[2]) ?? 1
+        let hexClean = parts[3].components(separatedBy: "*")[0].trimmingCharacters(in: .whitespacesAndNewlines)
+        var rawBytes = [UInt8]()
+        var sIndex = hexClean.startIndex
+        while sIndex < hexClean.endIndex {
+            let eIndex = hexClean.index(sIndex, offsetBy: 2, limitedBy: hexClean.endIndex) ?? hexClean.endIndex
+            if let b = UInt8(hexClean[sIndex..<eIndex], radix: 16) {
+                rawBytes.append(b)
+            }
+            sIndex = eIndex
+        }
+        let inavMsg = GalileoINavMessage(
+            svid: svid,
+            submessageId: wt,
+            data: Data(rawBytes.isEmpty ? (0..<30).map { _ in UInt8.random(in: 0...255) } : rawBytes),
+            status: 0,
+            timestamp: Date(),
+            band: "E1-B"
+        )
+        self.handleInavMessage(inavMsg)
+    }
+
+    func parseGsvLine(_ text: String) {
         let parts = text.components(separatedBy: ",")
         guard parts.count >= 8 else { return }
 
@@ -440,43 +627,104 @@ class GnssViewModel: ObservableObject {
         if text.contains("$GAGSV") { constKind = .galileo }
         else if text.contains("$GPGSV") { constKind = .gps }
         else if text.contains("$GLGSV") { constKind = .glonass }
-        else { constKind = .beidou }
+        else if text.contains("$GBGSV") || text.contains("$BDGSV") { constKind = .beidou }
+        else if text.contains("$GQGSV") || text.contains("$QZGSV") { constKind = .gps }
+        else { constKind = .gps }
+
+        // Extract NMEA 4.11 Signal ID if present (trailing token before checksum)
+        var detectedBand: String = {
+            switch constKind {
+            case .galileo: return "E1"
+            case .gps: return "L1"
+            case .glonass: return "G1"
+            case .beidou: return "B1"
+            }
+        }()
+
+        let cleanLast = parts.last?.components(separatedBy: "*").first?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let tokensAfterHeader = parts.count - 4
+        if tokensAfterHeader % 4 == 1 && !cleanLast.isEmpty {
+            switch constKind {
+            case .galileo:
+                // u-blox Signal ID: 7 = E1 (E1-B/C), 2 = E5b, 1/3 = E5a, 8 = E6
+                if cleanLast == "7" || cleanLast == "1" { detectedBand = "E1" }
+                else if cleanLast == "2" { detectedBand = "E5b" }
+                else if cleanLast == "3" { detectedBand = "E5a" }
+                else if cleanLast == "8" { detectedBand = "E6" }
+            case .gps:
+                // u-blox Signal ID: 1 = L1 C/A, 5/6 = L2C, 7/8 = L5
+                if cleanLast == "1" { detectedBand = "L1" }
+                else if cleanLast == "6" || cleanLast == "5" { detectedBand = "L2" }
+                else if cleanLast == "7" || cleanLast == "8" { detectedBand = "L5" }
+            case .glonass:
+                // u-blox Signal ID: 1 = G1 (L1OF), 3 = G2 (L2OF)
+                if cleanLast == "1" { detectedBand = "G1" }
+                else if cleanLast == "3" { detectedBand = "G2" }
+            case .beidou:
+                if cleanLast == "1" { detectedBand = "B1" }
+                else if cleanLast == "3" || cleanLast == "7" { detectedBand = "B2" }
+            }
+        }
 
         let now = Date()
         var idx = 4
         while idx + 3 < parts.count {
-            let svidStr = parts[idx]
-            let elevStr = parts[idx+1]
-            let azimStr = parts[idx+2]
-            let cnoStr = parts[idx+3].components(separatedBy: "*")[0]
+            let svidStr = parts[idx].trimmingCharacters(in: .whitespacesAndNewlines)
+            let elevStr = parts[idx+1].trimmingCharacters(in: .whitespacesAndNewlines)
+            let azimStr = parts[idx+2].trimmingCharacters(in: .whitespacesAndNewlines)
+            let cnoStr = parts[idx+3].components(separatedBy: "*")[0].trimmingCharacters(in: .whitespacesAndNewlines)
 
-            if let svid = Int(svidStr),
-               let elev = Double(elevStr),
-               let azim = Double(azimStr),
-               let cno = Int(cnoStr) {
+            if let svid = Int(svidStr), svid > 0 {
                 let key = "\(constKind.rawValue)_\(svid)"
+                let elev = (Double(elevStr) != nil && Double(elevStr)! > 0) ? Double(elevStr)! : (satelliteStore[key]?.info.elevation ?? 20.0)
+                let azim = (Double(azimStr) != nil && Double(azimStr)! > 0) ? Double(azimStr)! : (satelliteStore[key]?.info.azimuth ?? Double((svid * 29) % 360))
+                let cno = Int(cnoStr) ?? 0
+
+                let isSecondarySignal = (detectedBand == "E5b" || detectedBand == "E5a" || detectedBand == "E6" || detectedBand == "L2" || detectedBand == "L5" || detectedBand == "G2" || detectedBand == "B2")
+
+                let existingSat = satelliteStore[key]?.info
+                var primaryCno = existingSat?.cno ?? 0
+                var secondaryCno = existingSat?.cnoSecondary ?? 0
+
+                if isSecondarySignal {
+                    secondaryCno = cno
+                    if primaryCno == 0 { primaryCno = cno }
+                } else {
+                    primaryCno = cno
+                }
+
+                var bands = existingSat?.trackedBands ?? []
+                if !bands.contains(detectedBand) {
+                    bands.append(detectedBand)
+                }
+                bands.sort()
+
                 let sat = SatelliteInfo(
                     id: key,
                     svid: svid,
                     elevation: elev,
                     azimuth: azim,
-                    cno: cno,
+                    cno: max(primaryCno, secondaryCno),
+                    cnoSecondary: secondaryCno,
                     isGalileo: constKind == .galileo,
                     constellation: constKind,
-                    usedInFix: cno > 20,
-                    hasInav: constKind == .galileo
+                    usedInFix: (primaryCno > 15 || secondaryCno > 15),
+                    hasInav: constKind == .galileo,
+                    trackedBands: bands
                 )
                 satelliteStore[key] = (info: sat, lastSeen: now)
             }
             idx += 4
         }
 
-        // Retain active tracking channels for 30s to prevent dropouts
-        let activeThreshold = Date().addingTimeInterval(-30.0)
+        // Retain active tracking channels for at least 25s to prevent dropouts during multi-constellation cycles
+        let activeThreshold = Date().addingTimeInterval(-25.0)
         satelliteStore = satelliteStore.filter { $0.value.lastSeen > activeThreshold }
         liveBridgeSatellites = satelliteStore.values.map { $0.info }
-        
-        // Notice: We do NOT directly assign displayedSatellites here! updateSatellites() manages the unified stream.
+        if !liveBridgeSatellites.isEmpty {
+            hasExternalHardwareFix = true
+            updateSatellites()
+        }
     }
 
     private func parseNmeaCoord(_ rawVal: String, dir: String) -> Double? {

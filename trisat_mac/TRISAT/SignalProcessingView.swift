@@ -270,6 +270,14 @@ struct SignalProcessingView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.secondary)
                 Spacer()
+                if !viewModel.messages.isEmpty {
+                    Button("Clear") {
+                        viewModel.clearMessages()
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.red)
+                    .buttonStyle(.plain)
+                }
             }
 
             if viewModel.messages.isEmpty {

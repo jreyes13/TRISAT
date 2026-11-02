@@ -2,7 +2,13 @@ import SwiftUI
 
 struct ThreatAnalysisView: View {
     @ObservedObject var viewModel: GnssViewModel
+    @ObservedObject var telemetryBridge: GnssTelemetryBridge
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+
+    init(viewModel: GnssViewModel, telemetryBridge: GnssTelemetryBridge = GnssTelemetryBridge()) {
+        self.viewModel = viewModel
+        self.telemetryBridge = telemetryBridge
+    }
 
     private var isWideLayout: Bool {
         #if os(macOS)
@@ -10,6 +16,11 @@ struct ThreatAnalysisView: View {
         #else
         return horizontalSizeClass == .regular
         #endif
+    }
+
+    private var isTelemetryActive: Bool {
+        if viewModel.selectedMode == 0 { return false }
+        return viewModel.isTelemetryActive || telemetryBridge.isSdrEngineRunning
     }
 
     // Computed Real-Time Threat Score (0.0 to 100.0)
@@ -43,61 +54,127 @@ struct ThreatAnalysisView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                // MARK: - Top Threat Header & Interactive Attack Simulator Bar
-                threatSimulatorBanner
+        if !isTelemetryActive {
+            threatStandbyView
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    // MARK: - Top Threat Header & Interactive Attack Simulator Bar
+                    threatSimulatorBanner
 
-                // MARK: - Live Visual Telemetry Row: Skyplot + C/N0 SNR Bars
-                if isWideLayout {
-                    HStack(alignment: .top, spacing: 14) {
-                        threatSkyplotCard
-                            .frame(width: 245)
+                    // MARK: - Live Visual Telemetry Row: Skyplot + C/N0 SNR Bars
+                    if isWideLayout {
+                        HStack(alignment: .top, spacing: 14) {
+                            threatSkyplotCard
+                                .frame(width: 245)
 
-                        threatSnrBarChartCard
+                            threatSnrBarChartCard
+                                .frame(maxWidth: .infinity)
+                        }
+                        .padding(.horizontal, 16)
+                    } else {
+                        VStack(spacing: 12) {
+                            threatSkyplotCard
+                            threatSnrBarChartCard
+                        }
+                        .padding(.horizontal)
+                    }
+
+                    // MARK: - 6 Real-Time Threat Diagnostic Cards (2 Columns on Mac/iPad)
+                    if isWideLayout {
+                        HStack(alignment: .top, spacing: 14) {
+                            VStack(spacing: 10) {
+                                osnmaThreatCard
+                                jammingThreatCard
+                                hasUaSecurityCard
+                            }
                             .frame(maxWidth: .infinity)
-                    }
-                    .padding(.horizontal, 16)
-                } else {
-                    VStack(spacing: 12) {
-                        threatSkyplotCard
-                        threatSnrBarChartCard
-                    }
-                    .padding(.horizontal)
-                }
 
-                // MARK: - 6 Real-Time Threat Diagnostic Cards (2 Columns on Mac/iPad)
-                if isWideLayout {
-                    HStack(alignment: .top, spacing: 14) {
+                            VStack(spacing: 10) {
+                                spoofingThreatCard
+                                meaconingThreatCard
+                                ewssAndTimingCard
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .padding(.horizontal, 16)
+                    } else {
                         VStack(spacing: 10) {
                             osnmaThreatCard
                             jammingThreatCard
-                            hasUaSecurityCard
-                        }
-                        .frame(maxWidth: .infinity)
-
-                        VStack(spacing: 10) {
                             spoofingThreatCard
                             meaconingThreatCard
+                            hasUaSecurityCard
                             ewssAndTimingCard
                         }
-                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal, 16)
-                } else {
-                    VStack(spacing: 10) {
-                        osnmaThreatCard
-                        jammingThreatCard
-                        spoofingThreatCard
-                        meaconingThreatCard
-                        hasUaSecurityCard
-                        ewssAndTimingCard
-                    }
-                    .padding(.horizontal)
                 }
+                .padding(.bottom, 16)
             }
-            .padding(.bottom, 16)
         }
+    }
+
+    // MARK: - Standby Mode when no receiver/simulator is active
+
+    private var threatStandbyView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.12))
+                    .frame(width: 96, height: 96)
+                Image(systemName: "shield.slash.fill")
+                    .font(.system(size: 44))
+                    .foregroundColor(.orange)
+            }
+
+            VStack(spacing: 8) {
+                Text("Threat Analysis Standby")
+                    .font(.title3)
+                    .fontWeight(.bold)
+
+                Text("Electronic warfare, jamming, spoofing, and OSNMA verification metrics require an active RF telemetry stream from a Bluetooth receiver, UDP, or the Simulator.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 36)
+            }
+
+            Button(action: {
+                viewModel.selectedMode = 2
+                telemetryBridge.startTrisatSdrEngine()
+            }) {
+                Label("Start Simulator", systemImage: "play.fill")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
+            .padding(.top, 4)
+
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(Color.gray)
+                    .frame(width: 8, height: 8)
+                Text("Sensor Status: Offline (No Active RF Stream)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(12)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        #if os(macOS)
+        .background(Color(NSColor.windowBackgroundColor))
+        #else
+        .background(Color(UIColor.systemBackground))
+        #endif
     }
 
     // MARK: - Interactive Threat Simulator & Score Banner
@@ -300,18 +377,56 @@ struct ThreatAnalysisView: View {
                     HStack(alignment: .bottom, spacing: 9) {
                         ForEach(viewModel.displayedSatellites) { sat in
                             VStack(spacing: 3) {
-                                Text("\(sat.cno)")
-                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                    .foregroundColor(barColor(for: sat))
+                                if sat.isDualFrequency {
+                                    HStack(spacing: 2) {
+                                        Text("\(sat.cno)")
+                                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                            .foregroundColor(barColor(for: sat))
+                                        Text("/")
+                                            .font(.system(size: 6.5, weight: .light))
+                                            .foregroundColor(.secondary)
+                                        Text("\(sat.cnoSecondary)")
+                                            .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                            .foregroundColor(secondaryBarColor(for: sat))
+                                    }
 
-                                ZStack(alignment: .bottom) {
-                                    RoundedRectangle(cornerRadius: 3)
-                                        .fill(Color.gray.opacity(0.15))
-                                        .frame(width: 19, height: 120)
+                                    HStack(alignment: .bottom, spacing: 2.5) {
+                                        // Primary Carrier Bar
+                                        ZStack(alignment: .bottom) {
+                                            RoundedRectangle(cornerRadius: 2.5)
+                                                .fill(Color.gray.opacity(0.15))
+                                                .frame(width: 10, height: 120)
 
-                                    RoundedRectangle(cornerRadius: 3)
-                                        .fill(barColor(for: sat))
-                                        .frame(width: 19, height: CGFloat(min(max(sat.cno, 0), 54)) * 2.2)
+                                            RoundedRectangle(cornerRadius: 2.5)
+                                                .fill(barColor(for: sat))
+                                                .frame(width: 10, height: CGFloat(min(max(sat.cno, 0), 54)) * 2.2)
+                                        }
+
+                                        // Secondary Carrier Bar
+                                        ZStack(alignment: .bottom) {
+                                            RoundedRectangle(cornerRadius: 2.5)
+                                                .fill(Color.gray.opacity(0.15))
+                                                .frame(width: 10, height: 120)
+
+                                            RoundedRectangle(cornerRadius: 2.5)
+                                                .fill(secondaryBarColor(for: sat))
+                                                .frame(width: 10, height: CGFloat(min(max(sat.cnoSecondary, 0), 54)) * 2.2)
+                                        }
+                                    }
+                                } else {
+                                    Text("\(sat.cno)")
+                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                        .foregroundColor(barColor(for: sat))
+
+                                    ZStack(alignment: .bottom) {
+                                        RoundedRectangle(cornerRadius: 3)
+                                            .fill(Color.gray.opacity(0.15))
+                                            .frame(width: 19, height: 120)
+
+                                        RoundedRectangle(cornerRadius: 3)
+                                            .fill(barColor(for: sat))
+                                            .frame(width: 19, height: CGFloat(min(max(sat.cno, 0), 54)) * 2.2)
+                                    }
                                 }
 
                                 Text(sat.formattedLabel)
@@ -321,6 +436,14 @@ struct ThreatAnalysisView: View {
                                     .background(sat.constellation.color.opacity(0.22))
                                     .foregroundColor(sat.constellation.color)
                                     .cornerRadius(3)
+
+                                Text(sat.bandsLabel)
+                                    .font(.system(size: 6.5, weight: sat.isDualFrequency ? .heavy : .semibold, design: .monospaced))
+                                    .padding(.horizontal, 2.5)
+                                    .padding(.vertical, 1)
+                                    .background(sat.isDualFrequency ? Color.purple.opacity(0.35) : Color.gray.opacity(0.18))
+                                    .foregroundColor(sat.isDualFrequency ? .purple : .secondary)
+                                    .cornerRadius(2)
                             }
                         }
                     }
@@ -359,6 +482,23 @@ struct ThreatAnalysisView: View {
             if sat.cno >= 35 { return .green }
             if sat.cno >= 25 { return .yellow }
             return .red
+        }
+    }
+
+    private func secondaryBarColor(for sat: SatelliteInfo) -> Color {
+        switch viewModel.simulatedThreatMode {
+        case .jamming:
+            return sat.cnoSecondary < 24 ? .red : .purple
+        case .spoofing:
+            return .purple
+        case .meaconing:
+            return .indigo
+        case .osnmaFailure:
+            return sat.constellation == .galileo ? .pink : .purple
+        case .nominal:
+            if sat.cnoSecondary >= 35 { return .purple }
+            if sat.cnoSecondary >= 25 { return .indigo }
+            return .red.opacity(0.8)
         }
     }
 

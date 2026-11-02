@@ -138,7 +138,7 @@ struct BleDevicePickerSheet: View {
             }
         }
         .onAppear {
-            bluetoothManager.startScanning(trisatOnly: filterTrisatOnly)
+            bluetoothManager.startScanning(trisatOnly: false)
         }
     }
 }

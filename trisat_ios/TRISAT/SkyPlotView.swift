@@ -23,11 +23,71 @@ struct SatelliteInfo: Identifiable {
     let svid: Int                 // PRN / SVID number (1...36)
     let elevation: Double         // Elevation in degrees (0° at horizon, 90° at zenith)
     let azimuth: Double           // Azimuth in degrees (0° to 360°, clockwise from True North)
-    let cno: Int                  // Carrier-to-Noise Ratio C/N0 (in dB-Hz)
+    var cno: Int                  // Primary C/N0 (E1 / L1 / B1 / G1) in dB-Hz
+    var cnoSecondary: Int = 0     // Secondary C/N0 (E5b / L2C / B2 / G2) in dB-Hz
     let isGalileo: Bool           // Quick flag for Galileo
     let constellation: GnssConstellation // Associated constellation
     let usedInFix: Bool           // Whether satellite is used in PVT solution
     let hasInav: Bool             // Whether I/NAV frames are present for OSNMA
+    var trackedBands: [String] = [] // e.g. ["E1", "E5b"] or ["L1", "L2C"]
+
+    init(
+        id: String,
+        svid: Int,
+        elevation: Double,
+        azimuth: Double,
+        cno: Int,
+        cnoSecondary: Int = 0,
+        isGalileo: Bool,
+        constellation: GnssConstellation,
+        usedInFix: Bool,
+        hasInav: Bool,
+        trackedBands: [String] = []
+    ) {
+        self.id = id
+        self.svid = svid
+        self.elevation = elevation
+        self.azimuth = azimuth
+        self.cno = cno
+        self.cnoSecondary = cnoSecondary
+        self.isGalileo = isGalileo
+        self.constellation = constellation
+        self.usedInFix = usedInFix
+        self.hasInav = hasInav
+        self.trackedBands = trackedBands
+    }
+
+    var isDualFrequency: Bool {
+        (cnoSecondary > 0 && cno > 0) || trackedBands.count >= 2
+    }
+
+    var primaryBandName: String {
+        switch constellation {
+        case .galileo: return "E1"
+        case .gps: return "L1"
+        case .glonass: return "G1"
+        case .beidou: return "B1"
+        }
+    }
+
+    var secondaryBandName: String {
+        switch constellation {
+        case .galileo: return "E5b"
+        case .gps: return "L2"
+        case .glonass: return "G2"
+        case .beidou: return "B2"
+        }
+    }
+
+    var bandsLabel: String {
+        if isDualFrequency {
+            return "\(primaryBandName)•\(secondaryBandName)"
+        } else if cnoSecondary > 0 && cno == 0 {
+            return secondaryBandName
+        } else {
+            return primaryBandName
+        }
+    }
 
     var formattedLabel: String {
         switch constellation {
@@ -83,10 +143,23 @@ struct SkyPlotView: View {
                     let point = pointForSatellite(sat, center: center, radius: radius)
                     
                     ZStack {
+                        if sat.isDualFrequency {
+                            // Outer glowing ring indicating dual-frequency (E1+E5b / L1+L2) carrier lock
+                            Circle()
+                                .stroke(Color.white.opacity(0.85), lineWidth: 1.5)
+                                .frame(width: 27, height: 27)
+                        }
+
                         Circle()
                             .stroke(sat.constellation.color, lineWidth: 2)
                             .background(Circle().fill(sat.constellation.color.opacity(0.35)))
                             .frame(width: 20, height: 20)
+
+                        if sat.isDualFrequency {
+                            Text("2F")
+                                .font(.system(size: 6.5, weight: .black))
+                                .foregroundColor(.white)
+                        }
 
                         Text(sat.formattedLabel)
                             .font(.system(size: 8, weight: .bold, design: .monospaced))

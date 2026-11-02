@@ -3,11 +3,13 @@ import SwiftUI
 struct SignalProcessingView: View {
     @ObservedObject var viewModel: GnssViewModel
     @ObservedObject var telemetryBridge: GnssTelemetryBridge
+    @ObservedObject var bluetoothManager: BluetoothManager
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
-    init(viewModel: GnssViewModel, telemetryBridge: GnssTelemetryBridge = GnssTelemetryBridge()) {
+    init(viewModel: GnssViewModel, telemetryBridge: GnssTelemetryBridge = GnssTelemetryBridge(), bluetoothManager: BluetoothManager? = nil) {
         self.viewModel = viewModel
         self.telemetryBridge = telemetryBridge
+        self.bluetoothManager = bluetoothManager ?? viewModel.bluetoothManager
     }
 
     private var isWideLayout: Bool {
@@ -18,47 +20,124 @@ struct SignalProcessingView: View {
         #endif
     }
 
+    private var isTelemetryActive: Bool {
+        if viewModel.selectedMode == 0 { return false }
+        return viewModel.isTelemetryActive || telemetryBridge.isSdrEngineRunning
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                // MARK: - Clean Read-Only Telemetry Header & Metrics
-                topMetricsHeader
+        if !isTelemetryActive {
+            telemetryStandbyView
+        } else {
+            GeometryReader { geometry in
+            let availableHeight = geometry.size.height
+            // Header (~110) + Row 1 (~255) + Spacing & padding (~35) = ~400
+            let dynamicCardHeight = isWideLayout ? max(260, availableHeight - 400) : 260
 
-                if isWideLayout {
-                    // macOS & iPad: Clean 2x2 Grid Fitted to Desktop Screen
-                    VStack(spacing: 12) {
-                        // ROW 1: Compact Open Skyplot + C/N0 SNR Bar Chart
-                        HStack(alignment: .top, spacing: 14) {
+            ScrollView(isWideLayout ? [] : .vertical) {
+                VStack(alignment: .leading, spacing: 12) {
+                    // MARK: - Clean Read-Only Telemetry Header & Metrics
+                    topMetricsHeader
+
+                    if isWideLayout {
+                        // macOS & iPad: Clean 2x2 Grid Fitted to Desktop Screen
+                        VStack(spacing: 12) {
+                            // ROW 1: Compact Open Skyplot + C/N0 SNR Bar Chart
+                            HStack(alignment: .top, spacing: 14) {
+                                openSkyplotCard
+                                    .frame(width: 260)
+
+                                snrBarChartCard
+                                    .frame(maxWidth: .infinity)
+                            }
+
+                            // ROW 2: NMEA Live Terminal + Galileo I/NAV Subframe Cards (Fills all remaining height)
+                            HStack(alignment: .top, spacing: 14) {
+                                nmeaStreamCard(contentHeight: dynamicCardHeight)
+                                    .frame(maxWidth: .infinity)
+
+                                galileoInavCard(contentHeight: dynamicCardHeight)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                    } else {
+                        // Compact Vertical Flow
+                        VStack(spacing: 14) {
                             openSkyplotCard
-                                .frame(width: 260)
-
                             snrBarChartCard
-                                .frame(maxWidth: .infinity)
+                            nmeaStreamCard(contentHeight: 260)
+                            galileoInavCard(contentHeight: 260)
                         }
-
-                        // ROW 2: NMEA Live Terminal + Galileo I/NAV Subframe Cards
-                        HStack(alignment: .top, spacing: 14) {
-                            nmeaStreamCard
-                                .frame(maxWidth: .infinity)
-
-                            galileoInavCard
-                                .frame(maxWidth: .infinity)
-                        }
+                        .padding(.horizontal)
                     }
-                    .padding(.horizontal, 16)
-                } else {
-                    // Compact Vertical Flow
-                    VStack(spacing: 14) {
-                        openSkyplotCard
-                        snrBarChartCard
-                        nmeaStreamCard
-                        galileoInavCard
-                    }
-                    .padding(.horizontal)
                 }
+                .padding(.bottom, 12)
             }
-            .padding(.bottom, 16)
         }
+    }
+}
+
+    // MARK: - Standby Mode when no receiver/simulator is active
+
+    private var telemetryStandbyView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(Color.cyan.opacity(0.12))
+                    .frame(width: 96, height: 96)
+                Image(systemName: "waveform.path.ecg")
+                    .font(.system(size: 44))
+                    .foregroundColor(.cyan)
+            }
+
+            VStack(spacing: 8) {
+                Text("Signal Processing Standby")
+                    .font(.title3)
+                    .fontWeight(.bold)
+
+                Text("Awaiting raw GNSS telemetry stream.\nConnect a Bluetooth receiver, stream UDP data (:9090), or launch the Simulator.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 36)
+            }
+
+            Button(action: {
+                viewModel.selectedMode = 2
+                telemetryBridge.startTrisatSdrEngine()
+            }) {
+                Label("Start Simulator", systemImage: "play.fill")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.cyan)
+            .padding(.top, 4)
+
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(Color.orange)
+                    .frame(width: 8, height: 8)
+                Text("Receiver Status: No Active Telemetry")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(12)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        #if os(macOS)
+        .background(Color(NSColor.windowBackgroundColor))
+        #else
+        .background(Color(UIColor.systemBackground))
+        #endif
     }
 
     // MARK: - Header: Clean Telemetry Status & Differential Metrics (Config Moved to Settings)
@@ -100,19 +179,33 @@ struct SignalProcessingView: View {
 
     private var sourceStatusBlock: some View {
         HStack(spacing: 8) {
-            Image(systemName: viewModel.bluetoothManager.isConnected ? "checkmark.circle.fill" : "antenna.radiowaves.left.and.right")
+            Image(systemName: (bluetoothManager.isConnected || telemetryBridge.isSdrEngineRunning) ? "checkmark.circle.fill" : "antenna.radiowaves.left.and.right")
                 .font(.title3)
-                .foregroundColor(viewModel.bluetoothManager.isConnected ? .green : .cyan)
+                .foregroundColor((bluetoothManager.isConnected || telemetryBridge.isSdrEngineRunning) ? .green : .cyan)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(viewModel.bluetoothManager.isConnected ? "Active Source: \(viewModel.bluetoothManager.connectedPeripheralName)" : "Source: Internal Receiver / UDP Bridge (:9090)")
+                Text(telemetryBridge.isSdrEngineRunning ? "Active: Simulator" : (bluetoothManager.isConnected ? "Active: \(bluetoothManager.connectedPeripheralName)" : "Source: Internal Receiver / UDP (:9090)"))
                     .font(.subheadline)
                     .bold()
                     .lineLimit(1)
-                Text("Multi-Constellation Telemetry, C/N0 & I/NAV Monitor")
+                Text(telemetryBridge.isSdrEngineRunning ? "Streaming Live Galileo + GPS Telemetry & I/NAV" : "Multi-Constellation Telemetry, C/N0 & I/NAV Monitor")
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
+
+            Spacer()
+
+            Button(telemetryBridge.isSdrEngineRunning ? "Stop Sim" : "Start Sim") {
+                if telemetryBridge.isSdrEngineRunning {
+                    telemetryBridge.stopTrisatSdrEngine()
+                } else {
+                    viewModel.selectedMode = 2
+                    telemetryBridge.startTrisatSdrEngine()
+                }
+            }
+            .font(.caption2)
+            .buttonStyle(.borderedProminent)
+            .tint(telemetryBridge.isSdrEngineRunning ? .red : .cyan)
         }
     }
 
@@ -129,6 +222,7 @@ struct SignalProcessingView: View {
     private var metricsGrid: some View {
         metricCard(title: "Fix Mode", value: viewModel.fixTypeDesc, icon: "location.fill", color: .green)
         metricCard(title: "Sats in Fix / HDOP", value: "\(viewModel.numSatellitesInFix) Sats | HDOP \(viewModel.hdopValue)", icon: "satellite.fill", color: .cyan)
+        metricCard(title: "Carrier Bands", value: viewModel.isDualFrequencyActive ? "Dual E1+E5b (\(viewModel.numDualFrequencySatellites) SVs)" : "Single-Band E1/L1", icon: "waveform.path.badge.plus", color: .purple)
         metricCard(title: "Correction Source", value: "ID: \(viewModel.dgpsStationId) (\(viewModel.dgpsAge))", icon: "checkmark.shield.fill", color: .orange)
         metricCard(title: "Pseudorange Error", value: viewModel.gstRmsError, icon: "chart.xyaxis.line", color: .purple)
     }
@@ -192,10 +286,10 @@ struct SignalProcessingView: View {
                     .foregroundColor(.secondary)
                 Spacer()
                 HStack(spacing: 8) {
+                    legendDot(label: "E1/L1", color: .green)
+                    legendDot(label: "E5b/L2 (2F)", color: .purple)
                     legendDot(label: "Galileo", color: .cyan)
                     legendDot(label: "GPS", color: .orange)
-                    legendDot(label: "GLONASS", color: .red)
-                    legendDot(label: "BeiDou", color: .green)
                 }
             }
 
@@ -208,6 +302,17 @@ struct SignalProcessingView: View {
                     Text("Awaiting Satellite Telemetry...")
                         .font(.caption2)
                         .foregroundColor(.secondary)
+                    Button(telemetryBridge.isSdrEngineRunning ? "Stop Simulator" : "Start Simulator") {
+                        if telemetryBridge.isSdrEngineRunning {
+                            telemetryBridge.stopTrisatSdrEngine()
+                        } else {
+                            viewModel.selectedMode = 2
+                            telemetryBridge.startTrisatSdrEngine()
+                        }
+                    }
+                    .font(.caption)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.cyan)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, minHeight: 195)
@@ -216,18 +321,56 @@ struct SignalProcessingView: View {
                     HStack(alignment: .bottom, spacing: 10) {
                         ForEach(viewModel.displayedSatellites) { sat in
                             VStack(spacing: 4) {
-                                Text("\(sat.cno)")
-                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                                    .foregroundColor(snrColor(sat.cno))
+                                if sat.isDualFrequency {
+                                    HStack(spacing: 2) {
+                                        Text("\(sat.cno)")
+                                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                            .foregroundColor(snrColor(sat.cno))
+                                        Text("/")
+                                            .font(.system(size: 7, weight: .light))
+                                            .foregroundColor(.secondary)
+                                        Text("\(sat.cnoSecondary)")
+                                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                                            .foregroundColor(secondarySnrColor(sat.cnoSecondary))
+                                    }
 
-                                ZStack(alignment: .bottom) {
-                                    RoundedRectangle(cornerRadius: 3)
-                                        .fill(Color.gray.opacity(0.15))
-                                        .frame(width: 20, height: 140)
+                                    HStack(alignment: .bottom, spacing: 3) {
+                                        // Primary Carrier Bar (E1 / L1 / B1 / G1)
+                                        ZStack(alignment: .bottom) {
+                                            RoundedRectangle(cornerRadius: 2.5)
+                                                .fill(Color.gray.opacity(0.15))
+                                                .frame(width: 11, height: 140)
 
-                                    RoundedRectangle(cornerRadius: 3)
-                                        .fill(snrColor(sat.cno))
-                                        .frame(width: 20, height: CGFloat(min(max(sat.cno, 0), 54)) * 2.55)
+                                            RoundedRectangle(cornerRadius: 2.5)
+                                                .fill(snrColor(sat.cno))
+                                                .frame(width: 11, height: CGFloat(min(max(sat.cno, 0), 54)) * 2.55)
+                                        }
+
+                                        // Secondary Carrier Bar (E5b / L2 / B2 / G2)
+                                        ZStack(alignment: .bottom) {
+                                            RoundedRectangle(cornerRadius: 2.5)
+                                                .fill(Color.gray.opacity(0.15))
+                                                .frame(width: 11, height: 140)
+
+                                            RoundedRectangle(cornerRadius: 2.5)
+                                                .fill(secondarySnrColor(sat.cnoSecondary))
+                                                .frame(width: 11, height: CGFloat(min(max(sat.cnoSecondary, 0), 54)) * 2.55)
+                                        }
+                                    }
+                                } else {
+                                    Text("\(sat.cno)")
+                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                        .foregroundColor(snrColor(sat.cno))
+
+                                    ZStack(alignment: .bottom) {
+                                        RoundedRectangle(cornerRadius: 3)
+                                            .fill(Color.gray.opacity(0.15))
+                                            .frame(width: 20, height: 140)
+
+                                        RoundedRectangle(cornerRadius: 3)
+                                            .fill(snrColor(sat.cno))
+                                            .frame(width: 20, height: CGFloat(min(max(sat.cno, 0), 54)) * 2.55)
+                                    }
                                 }
 
                                 Text(sat.formattedLabel)
@@ -237,6 +380,14 @@ struct SignalProcessingView: View {
                                     .background(sat.constellation.color.opacity(0.22))
                                     .foregroundColor(sat.constellation.color)
                                     .cornerRadius(3)
+
+                                Text(sat.bandsLabel)
+                                    .font(.system(size: 7, weight: sat.isDualFrequency ? .heavy : .semibold, design: .monospaced))
+                                    .padding(.horizontal, 3)
+                                    .padding(.vertical, 1)
+                                    .background(sat.isDualFrequency ? Color.purple.opacity(0.35) : Color.gray.opacity(0.18))
+                                    .foregroundColor(sat.isDualFrequency ? .purple : .secondary)
+                                    .cornerRadius(2.5)
                             }
                         }
                     }
@@ -264,7 +415,7 @@ struct SignalProcessingView: View {
 
     // MARK: - Quadrant 3: ASCII NMEA Live Stream Terminal
 
-    private var nmeaStreamCard: some View {
+    private func nmeaStreamCard(contentHeight: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: "terminal.fill")
@@ -274,9 +425,9 @@ struct SignalProcessingView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.secondary)
                 Spacer()
-                if !viewModel.bluetoothManager.nmeaSentences.isEmpty {
+                if !bluetoothManager.nmeaSentences.isEmpty {
                     Button("Clear") {
-                        viewModel.bluetoothManager.nmeaSentences.removeAll()
+                        bluetoothManager.nmeaSentences.removeAll()
                     }
                     .font(.caption2)
                     .foregroundColor(.red)
@@ -284,7 +435,7 @@ struct SignalProcessingView: View {
                 }
             }
 
-            if viewModel.bluetoothManager.nmeaSentences.isEmpty {
+            if bluetoothManager.nmeaSentences.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "terminal")
                         .font(.system(size: 30))
@@ -295,14 +446,14 @@ struct SignalProcessingView: View {
                         .foregroundColor(.secondary)
                     Spacer()
                 }
-                .frame(maxWidth: .infinity, minHeight: 210)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.black)
                 .cornerRadius(10)
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 3) {
-                            ForEach(Array(viewModel.bluetoothManager.nmeaSentences.enumerated()), id: \.offset) { index, sentence in
+                            ForEach(Array(bluetoothManager.nmeaSentences.enumerated()), id: \.offset) { index, sentence in
                                 Text(sentence)
                                     .font(.system(size: 10.5, design: .monospaced))
                                     .foregroundColor(.green)
@@ -311,11 +462,11 @@ struct SignalProcessingView: View {
                         }
                         .padding(8)
                     }
-                    .frame(minHeight: 210, maxHeight: 240)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color.black)
                     .cornerRadius(10)
-                    .onChange(of: viewModel.bluetoothManager.nmeaSentences.count) { _ in
-                        if let lastIdx = viewModel.bluetoothManager.nmeaSentences.indices.last {
+                    .onChange(of: bluetoothManager.nmeaSentences.count) { _ in
+                        if let lastIdx = bluetoothManager.nmeaSentences.indices.last {
                             proxy.scrollTo(lastIdx, anchor: .bottom)
                         }
                     }
@@ -323,13 +474,14 @@ struct SignalProcessingView: View {
             }
         }
         .padding(12)
+        .frame(height: contentHeight)
         .background(Color.gray.opacity(0.08))
         .cornerRadius(14)
     }
 
     // MARK: - Quadrant 4: Galileo I/NAV Subframe Cards
 
-    private var galileoInavCard: some View {
+    private func galileoInavCard(contentHeight: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: "lock.shield.fill")
@@ -339,6 +491,14 @@ struct SignalProcessingView: View {
                     .fontWeight(.bold)
                     .foregroundColor(.secondary)
                 Spacer()
+                if !viewModel.messages.isEmpty {
+                    Button("Clear") {
+                        viewModel.clearMessages()
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.red)
+                    .buttonStyle(.plain)
+                }
             }
 
             if viewModel.messages.isEmpty {
@@ -352,7 +512,7 @@ struct SignalProcessingView: View {
                         .foregroundColor(.secondary)
                     Spacer()
                 }
-                .frame(maxWidth: .infinity, minHeight: 210)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.gray.opacity(0.05))
                 .cornerRadius(10)
             } else {
@@ -364,12 +524,13 @@ struct SignalProcessingView: View {
                     }
                     .padding(4)
                 }
-                .frame(minHeight: 210, maxHeight: 240)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color.gray.opacity(0.05))
                 .cornerRadius(10)
             }
         }
         .padding(12)
+        .frame(height: contentHeight)
         .background(Color.gray.opacity(0.08))
         .cornerRadius(14)
     }
@@ -381,5 +542,12 @@ struct SignalProcessingView: View {
         if cno >= 35 { return .green }
         if cno >= 25 { return .yellow }
         return .red
+    }
+
+    private func secondarySnrColor(_ cno: Int) -> Color {
+        if cno >= 49 && viewModel.simulatedThreatMode == .spoofing { return .pink }
+        if cno >= 35 { return .purple }
+        if cno >= 25 { return .indigo }
+        return .red.opacity(0.85)
     }
 }

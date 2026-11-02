@@ -319,27 +319,36 @@ struct DashboardView: View {
             }
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                let galSats = viewModel.displayedSatellites.filter { $0.constellation == .galileo }
+                let gpsSats = viewModel.displayedSatellites.filter { $0.constellation == .gps }
+                let gloSats = viewModel.displayedSatellites.filter { $0.constellation == .glonass }
+                let bdsSats = viewModel.displayedSatellites.filter { $0.constellation == .beidou }
+
                 ConstellationStatTile(
                     name: "Galileo",
-                    count: viewModel.displayedSatellites.filter { $0.constellation == .galileo }.count,
+                    count: galSats.count,
+                    dualCount: galSats.filter { $0.isDualFrequency }.count,
                     avgCno: viewModel.averageCno(for: .galileo),
                     color: .cyan
                 )
                 ConstellationStatTile(
                     name: "GPS",
-                    count: viewModel.displayedSatellites.filter { $0.constellation == .gps }.count,
+                    count: gpsSats.count,
+                    dualCount: gpsSats.filter { $0.isDualFrequency }.count,
                     avgCno: viewModel.averageCno(for: .gps),
                     color: .orange
                 )
                 ConstellationStatTile(
                     name: "GLONASS",
-                    count: viewModel.displayedSatellites.filter { $0.constellation == .glonass }.count,
+                    count: gloSats.count,
+                    dualCount: gloSats.filter { $0.isDualFrequency }.count,
                     avgCno: viewModel.averageCno(for: .glonass),
                     color: .red
                 )
                 ConstellationStatTile(
                     name: "BeiDou",
-                    count: viewModel.displayedSatellites.filter { $0.constellation == .beidou }.count,
+                    count: bdsSats.count,
+                    dualCount: bdsSats.filter { $0.isDualFrequency }.count,
                     avgCno: viewModel.averageCno(for: .beidou),
                     color: .green
                 )
@@ -411,6 +420,7 @@ struct FilterToggleChip: View {
 struct ConstellationStatTile: View {
     let name: String
     let count: Int
+    var dualCount: Int = 0
     let avgCno: String
     let color: Color
 
@@ -429,9 +439,21 @@ struct ConstellationStatTile: View {
                     .fontWeight(.bold)
                     .foregroundColor(color)
             }
-            Text("Avg C/N0: \(avgCno)")
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
+            HStack {
+                Text("Avg: \(avgCno)")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                Spacer()
+                if dualCount > 0 {
+                    Text("\(dualCount) 2F")
+                        .font(.system(size: 8.5, weight: .black))
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(color.opacity(0.25))
+                        .foregroundColor(color)
+                        .cornerRadius(4)
+                }
+            }
         }
         .padding(8)
         .background(color.opacity(0.12))

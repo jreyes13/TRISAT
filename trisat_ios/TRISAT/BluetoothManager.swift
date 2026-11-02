@@ -30,6 +30,11 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
     static let satStatusCharUUID = CBUUID(string: "00002A91-0000-1000-8000-00805F9B34FB")
     static let locationCharUUID = CBUUID(string: "00002A92-0000-1000-8000-00805F9B34FB")
 
+    // Nordic UART Service (NUS) utilized by TRISAT ESP32 Hybrid Bridge
+    static let nordicUartServiceUUID = CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
+    static let nordicUartRxCharUUID  = CBUUID(string: "6E400002-B5A3-F393-E0A9-E50E24DCCA9E")
+    static let nordicUartTxCharUUID  = CBUUID(string: "6E400003-B5A3-F393-E0A9-E50E24DCCA9E")
+
     private var centralManager: CBCentralManager!
     private var connectedPeripheral: CBPeripheral?
     private var writableCharacteristic: CBCharacteristic?
@@ -130,13 +135,8 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
 
         // 2. Scan BLE Advertisements via CBCentralManager
         if centralManager.state == .poweredOn {
-            if trisatOnly {
-                logDebug("CBCentralManager: Scanning for Service 1835...")
-                centralManager.scanForPeripherals(withServices: [BluetoothManager.trisatServiceUUID], options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
-            } else {
-                logDebug("CBCentralManager: Scanning ALL BLE peripherals...")
-                centralManager.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
-            }
+            logDebug("CBCentralManager: Scanning BLE peripherals...")
+            centralManager.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
         } else {
             logDebug("CBCentralManager not PoweredOn (State: \(centralManager.state.rawValue))")
         }
@@ -202,22 +202,6 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
                 }
             }
         }
-
-        // Always provide a direct System Paired Receiver option if user has SXBlue with solid blue LED
-        let fallbackAcc = DiscoveredPeripheral(
-            id: UUID(),
-            name: "🔵 SXBlue Platinum Receiver (Geneq Inc. S/N: 19097292) [SYSTEM PAIRED]",
-            rssi: -20,
-            isTrisatDevice: true,
-            isMfiAccessory: true,
-            peripheral: nil,
-            accessory: nil
-        )
-        DispatchQueue.main.async {
-            if !self.discoveredPeripherals.contains(where: { $0.name == fallbackAcc.name }) {
-                self.discoveredPeripherals.insert(fallbackAcc, at: 0)
-            }
-        }
     }
 
     func connect(to item: DiscoveredPeripheral) {
@@ -230,14 +214,10 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
             if let acc = accToConnect {
                 connectToMfiAccessory(acc)
             } else {
+                logDebug("Error: No physical MFi accessory found to connect.")
                 DispatchQueue.main.async {
-                    self.isConnected = true
                     self.isConnectingToId = nil
-                    self.connectedPeripheralName = "SXBlue Platinum (Geneq Inc. S/N: 19097292)"
-                    self.logDebug("Connected to SXBlue Platinum via System Bluetooth!")
                 }
-                // Kickstart stream wakeup command
-                self.sendSxBlueConfigCommands()
             }
         } else if let peripheral = item.peripheral {
             connectedPeripheral = peripheral
@@ -315,6 +295,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         isConnected = false
         connectedPeripheralName = "None"
         bytesReceivedCount = 0
+        nmeaAccumulatorBuffer = ""
     }
 
     /// Sends SXBlue Platinum configuration commands over Bluetooth ($JASC,GALINAV,1 and $JSAVE)
@@ -400,15 +381,26 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
             if parts.count >= 4 {
                 let svid = Int(parts[1]) ?? 1
                 let submsgId = Int(parts[2]) ?? 1
-                let hexPayload = parts[3]
+                let hexPayload = parts[3].components(separatedBy: "*")[0].trimmingCharacters(in: .whitespacesAndNewlines)
 
-                let dummyData = Data((0..<30).map { _ in UInt8.random(in: 0...255) })
+                var rawBytes = [UInt8]()
+                var sIndex = hexPayload.startIndex
+                while sIndex < hexPayload.endIndex {
+                    let eIndex = hexPayload.index(sIndex, offsetBy: 2, limitedBy: hexPayload.endIndex) ?? hexPayload.endIndex
+                    if let b = UInt8(hexPayload[sIndex..<eIndex], radix: 16) {
+                        rawBytes.append(b)
+                    }
+                    sIndex = eIndex
+                }
+
+                let inavData = rawBytes.isEmpty ? Data((0..<30).map { _ in UInt8.random(in: 0...255) }) : Data(rawBytes)
                 let msg = GalileoINavMessage(
                     svid: svid,
                     submessageId: submsgId,
-                    data: dummyData,
+                    data: inavData,
                     status: 0,
-                    timestamp: Date()
+                    timestamp: Date(),
+                    band: "E1-B"
                 )
                 DispatchQueue.main.async {
                     self.onInavFrameReceived?(msg)
@@ -444,7 +436,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         DispatchQueue.main.async {
             self.isBluetoothOn = (central.state == .poweredOn)
             if central.state == .poweredOn {
-                self.startScanning(trisatOnly: self.filterTrisatOnly)
+                self.startScanning(trisatOnly: false)
             }
         }
     }
@@ -452,12 +444,17 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         let rawName = peripheral.name ?? advertisementData[CBAdvertisementDataLocalNameKey] as? String ?? "Unknown Device"
         let serviceUuids = advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] ?? []
-        let hasTrisatUuid = serviceUuids.contains(BluetoothManager.trisatServiceUUID)
+        let hasTrisatUuid = serviceUuids.contains(BluetoothManager.trisatServiceUUID) || serviceUuids.contains(BluetoothManager.nordicUartServiceUUID)
 
-        let upperName = rawName.uppercased()
-        let isTrisat = hasTrisatUuid || upperName.contains("TRISAT") || upperName.contains("ANDROID") || upperName.contains("SENSOR") || upperName.contains("SXBLUE") || upperName.contains("SX_BLUE") || upperName.contains("PLATINUM") || upperName.contains("HEMISPHERE") || upperName.contains("GNSS") || upperName.contains("GPS")
+        var cleanName = rawName
+        if (cleanName == "Unknown Device" || cleanName.isEmpty) && hasTrisatUuid {
+            cleanName = "TRISAT-GNSS-BLE"
+        }
 
-        let displayName = isTrisat ? "🛰️ \(rawName) [TRISAT SENSOR POD]" : rawName
+        let upperName = cleanName.uppercased()
+        let isTrisat = hasTrisatUuid || upperName.contains("TRISAT") || upperName.contains("ESP32") || upperName.contains("ANDROID") || upperName.contains("SENSOR") || upperName.contains("SXBLUE") || upperName.contains("SX_BLUE") || upperName.contains("PLATINUM") || upperName.contains("HEMISPHERE") || upperName.contains("GNSS") || upperName.contains("GPS")
+
+        let displayName = isTrisat ? "🛰️ \(cleanName) [TRISAT SENSOR POD]" : cleanName
 
         let item = DiscoveredPeripheral(
             id: peripheral.identifier,
@@ -487,6 +484,7 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         logDebug("didConnect: Connected to '\(peripheral.name ?? "Device")'")
+        self.nmeaAccumulatorBuffer = ""
         DispatchQueue.main.async {
             self.isConnected = true
             self.isConnectingToId = nil
@@ -529,12 +527,25 @@ class BluetoothManager: NSObject, ObservableObject, CBCentralManagerDelegate, CB
         guard let characteristics = service.characteristics else { return }
         logDebug("Discovered \(characteristics.count) Characteristics for Service \(service.uuid)")
         for characteristic in characteristics {
-            if characteristic.properties.contains(.notify) || characteristic.properties.contains(.read) {
+            if characteristic.properties.contains(.notify) || characteristic.properties.contains(.indicate) {
                 peripheral.setNotifyValue(true, for: characteristic)
+                logDebug("Subscribed to NOTIFY/INDICATE on \(characteristic.uuid)")
+            } else if characteristic.properties.contains(.read) {
+                peripheral.readValue(for: characteristic)
+                logDebug("Triggered initial READ on \(characteristic.uuid)")
             }
             if characteristic.properties.contains(.write) || characteristic.properties.contains(.writeWithoutResponse) {
                 writableCharacteristic = characteristic
+                logDebug("Set writable characteristic \(characteristic.uuid)")
             }
+        }
+    }
+
+    func peripheral(_ peripheral: CBPeripheral, didUpdateNotificationStateFor characteristic: CBCharacteristic, error: Error?) {
+        if let error = error {
+            logDebug("Notification subscription error for \(characteristic.uuid): \(error.localizedDescription)")
+        } else {
+            logDebug("Notification active (isNotifying=\(characteristic.isNotifying)) for \(characteristic.uuid)")
         }
     }
     

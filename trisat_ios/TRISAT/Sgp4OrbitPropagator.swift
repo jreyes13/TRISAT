@@ -73,6 +73,25 @@ class Sgp4OrbitPropagator {
 
             // Natural realistic receiver C/N0 curve: 31 dB-Hz at horizon (10°), peaking up to 48 dB-Hz at zenith
             let cno = Int(31.0 + (elevDeg / 90.0) * 17.5)
+            let hasDual = elevDeg > 22.0
+            let cnoSec = hasDual ? max(22, cno - 2 + ((svidNum % 5) - 2)) : 0
+            let primaryBand: String = {
+                switch constKind {
+                case .galileo: return "E1"
+                case .gps: return "L1"
+                case .glonass: return "G1"
+                case .beidou: return "B1"
+                }
+            }()
+            let secondaryBand: String = {
+                switch constKind {
+                case .galileo: return "E5b"
+                case .gps: return "L2"
+                case .glonass: return "G2"
+                case .beidou: return "B2"
+                }
+            }()
+            let bands = hasDual ? [primaryBand, secondaryBand] : [primaryBand]
 
             let sat = SatelliteInfo(
                 id: canonicalId,
@@ -80,10 +99,12 @@ class Sgp4OrbitPropagator {
                 elevation: elevDeg,
                 azimuth: azimDeg,
                 cno: cno,
+                cnoSecondary: cnoSec,
                 isGalileo: isGal,
                 constellation: constKind,
                 usedInFix: isUsed,
-                hasInav: isGal
+                hasInav: isGal,
+                trackedBands: bands
             )
             satList.append(sat)
         }

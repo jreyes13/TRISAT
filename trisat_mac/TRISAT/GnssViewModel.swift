@@ -56,6 +56,13 @@ class GnssViewModel: ObservableObject {
         repository.stopLocationUpdates()
     }
 
+    func clearMessages() {
+        DispatchQueue.main.async {
+            self.messages.removeAll()
+            self.repository.clearMessages()
+        }
+    }
+
     func updateSatellites() {
         let coord = currentCoordinate
 

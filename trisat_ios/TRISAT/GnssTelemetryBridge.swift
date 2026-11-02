@@ -13,6 +13,7 @@ class GnssTelemetryBridge: ObservableObject {
     @Published var statusText: String = "SXblue / TRISAT-SDR Bridge Idle (Port 9090)"
     @Published var packetsReceivedCount: Int = 0
     @Published var isSdrEngineRunning: Bool = false
+    @Published var isF9pBridgeRunning: Bool = false
     @Published var selectedSdrBand2: String = "GAL_E6"
 
     private var listener: NWListener?
@@ -22,6 +23,7 @@ class GnssTelemetryBridge: ObservableObject {
     private var nativeEpoch: Int = 0
     #if os(macOS)
     private var sdrProcess: Process?
+    private var f9pProcess: Process?
     #endif
 
     init(viewModel: GnssViewModel? = nil, bluetoothManager: BluetoothManager? = nil) {
@@ -44,7 +46,12 @@ class GnssTelemetryBridge: ObservableObject {
         stopTrisatSdrEngine(quiet: true)
 
         isSdrEngineRunning = true
-        statusText = "TRISAT-SDR Active (E1 OSNMA + \(targetBand)) [UDP :9090 | Web :8085]"
+        statusText = "Simulator Active (Galileo E1/E6 + GPS L1/L5) [UDP :9090]"
+        viewModel?.selectedMode = 2
+        viewModel?.resetHardwareTelemetry()
+        bluetoothManager?.nmeaSentences.removeAll()
+        bluetoothManager?.isConnected = true
+        bluetoothManager?.connectedPeripheralName = "TRISAT Simulator (UDP / SDR)"
 
         // 1. Start Native In-Process Swift Galileo HAS-UA + OSNMA Telemetry Generator (1 Hz)
         emitNativeSdrEpoch()
@@ -92,8 +99,19 @@ class GnssTelemetryBridge: ObservableObject {
         #endif
 
         isSdrEngineRunning = false
+        if bluetoothManager?.connectedPeripheralName.contains("Simulator") == true {
+            bluetoothManager?.isConnected = false
+            bluetoothManager?.connectedPeripheralName = "None"
+            bluetoothManager?.nmeaSentences.removeAll()
+        }
+        viewModel?.hasExternalHardwareFix = false
+        viewModel?.liveBridgeSatellites.removeAll()
+        viewModel?.messages.removeAll()
+        viewModel?.selectedMode = 0
+        viewModel?.updateSatellites()
+
         if !quiet {
-            statusText = "TRISAT-SDR Engine Stopped (UDP Listener Ready :\(listenerPort))"
+            statusText = "Simulator Stopped (UDP Listener Ready :\(listenerPort))"
         }
     }
 
@@ -109,7 +127,7 @@ class GnssTelemetryBridge: ObservableObject {
             : "DUAL-SDR E1(OSNMA) + \(selectedSdrBand2) Iono-Free"
 
         bluetoothManager?.isConnected = true
-        bluetoothManager?.connectedPeripheralName = "TRISAT-SDR Dual HackRF (E1 OSNMA + \(selectedSdrBand2))"
+        bluetoothManager?.connectedPeripheralName = "TRISAT Simulator (UDP / SDR)"
 
         if let vm = viewModel {
             // Only update coordinate from SDR if the real device CoreLocation hasn't been acquired
@@ -119,7 +137,9 @@ class GnssTelemetryBridge: ObservableObject {
                 vm.currentCoordinate = CLLocationCoordinate2D(latitude: baseLat, longitude: baseLon)
                 vm.locationText = String(format: "%.6f° N, %.6f° W", abs(baseLat), abs(baseLon))
             }
-            if vm.simulatedThreatMode == .nominal && vm.selectedMode == 1 {
+            if vm.simulatedThreatMode == .nominal && (vm.selectedMode == 1 || vm.selectedMode == 2) {
+                vm.hasExternalHardwareFix = true
+                vm.numSatellitesInFix = 12
                 vm.accuracyText = String(format: "Acc: ±%.2f m | Alt: 667.0 m [%@]", accMeters, modeDesc)
                 vm.fixTypeDesc = modeDesc
                 vm.hdopValue = "0.68"
@@ -158,31 +178,61 @@ class GnssTelemetryBridge: ObservableObject {
         frameBytes[28] = UInt8((crc >> 8) & 0xFF)
         frameBytes[29] = UInt8(crc & 0xFF)
 
+        let simBand = (nativeEpoch % 2 == 0) ? "E1-B" : "E5b-I"
         let inavMsg = GalileoINavMessage(
             svid: svid,
             submessageId: wt,
             data: Data(frameBytes),
             status: isOsnmaFailSim ? 1 : 0,
-            timestamp: Date()
+            timestamp: Date(),
+            band: simBand
         )
         if viewModel?.messages.count ?? 0 >= 80 {
             viewModel?.messages.removeFirst()
         }
         viewModel?.messages.append(inavMsg)
 
-        // Append live NMEA & $GALINAV / $GALE6HAS sentences to NMEA terminal
+        // Dynamic azimuth & elevation drift to show real-time orbital movement
+        let azDrift = Double(nativeEpoch % 360)
+        let elDrift = 4.0 * sin(Double(nativeEpoch) * 0.1)
+
+        // Galileo Multi-Frequency GSV Sentences (E1=1, E5b=7)
+        let galCno1 = 44 + (nativeEpoch % 3)
+        let galCno2 = 47 - (nativeEpoch % 2)
+        let galCno3 = 39 + ((nativeEpoch + 1) % 3)
+        let galCno4 = 48 - (nativeEpoch % 3)
+        let gagsv1 = String(format: "$GAGSV,2,1,06,02,%02d,%03d,%d,07,%02d,%03d,%d,11,%02d,%03d,%d,19,%02d,%03d,%d,1*7B",
+                            max(10, min(88, Int(48 + elDrift))), Int((95 + azDrift).truncatingRemainder(dividingBy: 360)), galCno1,
+                            max(10, min(88, Int(62 - elDrift))), Int((185 + azDrift).truncatingRemainder(dividingBy: 360)), galCno2,
+                            max(10, min(88, Int(35 + elDrift))), Int((270 + azDrift).truncatingRemainder(dividingBy: 360)), galCno3,
+                            max(10, min(88, Int(72 - elDrift))), Int((45 + azDrift).truncatingRemainder(dividingBy: 360)), galCno4)
+        let gagsv2 = String(format: "$GAGSV,2,2,06,02,%02d,%03d,%d,07,%02d,%03d,%d,11,%02d,%03d,%d,19,%02d,%03d,%d,7*72",
+                            max(10, min(88, Int(48 + elDrift))), Int((95 + azDrift).truncatingRemainder(dividingBy: 360)), max(25, galCno1 - 3),
+                            max(10, min(88, Int(62 - elDrift))), Int((185 + azDrift).truncatingRemainder(dividingBy: 360)), max(25, galCno2 - 2),
+                            max(10, min(88, Int(35 + elDrift))), Int((270 + azDrift).truncatingRemainder(dividingBy: 360)), max(25, galCno3 - 2),
+                            max(10, min(88, Int(72 - elDrift))), Int((45 + azDrift).truncatingRemainder(dividingBy: 360)), max(25, galCno4 - 3))
+
+        // GPS Multi-Frequency GSV Sentences (L1=1, L2C=6)
+        let gpsCno1 = 43 + (nativeEpoch % 2)
+        let gpsCno2 = 38 + ((nativeEpoch + 2) % 3)
+        let gpgsv1 = String(format: "$GPGSV,2,1,04,03,55,120,%d,14,32,210,%d,17,68,070,45,22,24,300,37,1*7C", gpsCno1, gpsCno2)
+        let gpgsv2 = String(format: "$GPGSV,2,2,04,03,55,120,%d,14,32,210,%d,17,68,070,41,22,24,300,33,6*78", max(25, gpsCno1 - 4), max(25, gpsCno2 - 3))
+
+        // Append live NMEA & $GALINAV / $GALE6HAS sentences to NMEA terminal and parse pipelines
         let hexStr = frameBytes.map { String(format: "%02X", $0) }.joined()
         let ggaLine = String(format: "$GNGGA,1030%02d.00,4025.0065,N,00342.2274,W,4,18,0.68,667.0,M,48.0,M,1.0,E6HAS*4A", nativeEpoch % 60)
         let gstLine = String(format: "$GNGST,1030%02d.00,0.18,0.09,0.07,22.5,0.08,0.07,0.14*5C", nativeEpoch % 60)
         let inavLine = "$GALINAV,\(svid),\(wt),\(hexStr),827BB238C8*3F"
         let hasLine = String(format: "$GALE6HAS,%02d,%d,-11.4,B747%02X01A55BF8C9CBFCF70422081475FD445DF0FF*7E", svid, (nativeEpoch % 15) + 1, svid)
 
-        for sentence in [ggaLine, gstLine, inavLine, hasLine] {
+        for sentence in [ggaLine, gstLine, gagsv1, gagsv2, gpgsv1, gpgsv2, inavLine, hasLine] {
             if bluetoothManager?.nmeaSentences.count ?? 0 >= 100 {
                 bluetoothManager?.nmeaSentences.removeFirst()
             }
             bluetoothManager?.nmeaSentences.append(sentence)
+            bluetoothManager?.onNmeaLineReceived?(sentence)
         }
+        viewModel?.updateSatellites()
     }
 
     func switchSdrSecondaryBand(_ band: String) {
@@ -216,9 +266,55 @@ class GnssTelemetryBridge: ObservableObject {
         #endif
     }
 
+    func startF9pBridge() {
+        #if os(macOS)
+        stopF9pBridge()
+        let repoRootUrl = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let scriptPath = repoRootUrl.appendingPathComponent("trisat_hw/zed_f9p/f9p_bridge.py").path
+        if FileManager.default.fileExists(atPath: scriptPath) {
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
+            proc.arguments = [scriptPath]
+            proc.currentDirectoryURL = repoRootUrl
+            proc.standardOutput = FileHandle.nullDevice
+            proc.standardError = FileHandle.nullDevice
+            try? proc.run()
+            self.f9pProcess = proc
+            DispatchQueue.main.async {
+                self.isF9pBridgeRunning = true
+                self.statusText = "u-blox ZED-F9P USB Bridge Active (/dev/cu.usbmodem* -> UDP :9090)"
+            }
+        }
+        #endif
+    }
+
+    func stopF9pBridge() {
+        #if os(macOS)
+        if let proc = f9pProcess, proc.isRunning {
+            proc.terminate()
+        }
+        f9pProcess = nil
+
+        let killProc = Process()
+        killProc.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        killProc.arguments = ["-f", "f9p_bridge.py"]
+        try? killProc.run()
+        killProc.waitUntilExit()
+
+        DispatchQueue.main.async {
+            self.isF9pBridgeRunning = false
+            self.statusText = "u-blox ZED-F9P Bridge Stopped"
+        }
+        #endif
+    }
+
     func startUdpListener(port: UInt16 = 9090) {
         stopUdpListener()
         self.listenerPort = port
+        startPingEngine()
 
         do {
             let params = NWParameters.udp
@@ -260,11 +356,50 @@ class GnssTelemetryBridge: ObservableObject {
     }
 
     func stopUdpListener() {
+        stopPingEngine()
         listener?.cancel()
         listener = nil
         DispatchQueue.main.async {
             self.isListening = false
             self.statusText = "UDP Bridge Stopped"
+        }
+    }
+
+    // MARK: - UDP Local Network Probing & ESP32 Auto-Registration
+
+    private var pingTimer: Timer?
+
+    func startPingEngine() {
+        stopPingEngine()
+        sendUdpDiscoveryPing()
+        pingTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { [weak self] _ in
+            self?.sendUdpDiscoveryPing()
+        }
+    }
+
+    func stopPingEngine() {
+        pingTimer?.invalidate()
+        pingTimer = nil
+    }
+
+    private func sendUdpDiscoveryPing() {
+        // Broadcasts a small probe packet to trigger iOS Local Network permissions
+        // and register this device's unicast IP with the ESP32 hybrid bridge on 192.168.4.1:9090
+        let targets: [String] = ["192.168.4.1", "255.255.255.255"]
+        guard let nwPort = NWEndpoint.Port(rawValue: listenerPort) else { return }
+
+        for hostStr in targets {
+            let host = NWEndpoint.Host(hostStr)
+            let conn = NWConnection(host: host, port: nwPort, using: .udp)
+            conn.stateUpdateHandler = { state in
+                if case .ready = state {
+                    let pingData = "TRISAT_PING\r\n".data(using: .utf8)!
+                    conn.send(content: pingData, completion: .contentProcessed({ _ in
+                        conn.cancel()
+                    }))
+                }
+            }
+            conn.start(queue: .global(qos: .utility))
         }
     }
 
@@ -288,6 +423,9 @@ class GnssTelemetryBridge: ObservableObject {
     }
 
     private func processIncomingTelemetryData(_ data: Data) {
+        // If native in-process simulator is running, ignore incoming UDP packets to avoid duplicate stream collisions
+        guard !isSdrEngineRunning else { return }
+
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             if let payload = json["data"] as? String {
                 parseNmeaOrBinText(payload)
@@ -316,8 +454,9 @@ class GnssTelemetryBridge: ObservableObject {
     }
 
     private func handleTrisatSdrJsonPacket(packetType: String, json: [String: Any]) {
-        bluetoothManager?.isConnected = true
-        bluetoothManager?.connectedPeripheralName = "TRISAT-SDR Dual HackRF (UDP :\(listenerPort))"
+        if viewModel?.selectedMode == 0 {
+            viewModel?.selectedMode = 2
+        }
 
         if packetType == "inav_frame" || packetType == "gnss_frame" {
             let svid = json["svid"] as? Int ?? 1
@@ -370,127 +509,15 @@ class GnssTelemetryBridge: ObservableObject {
     }
 
     private func parseNmeaOrBinText(_ text: String) {
+        // Only ingest UDP telemetry if the user selected Mode 2 (UDP / Simulator)
+        guard let vm = viewModel, vm.selectedMode == 2 else { return }
+
         if bluetoothManager?.nmeaSentences.count ?? 0 >= 100 {
             bluetoothManager?.nmeaSentences.removeFirst()
         }
         bluetoothManager?.nmeaSentences.append(text)
-        bluetoothManager?.onNmeaLineReceived?(text)
-        bluetoothManager?.isConnected = true
-        bluetoothManager?.connectedPeripheralName = "SXBlue II GPS (USB UDP Bridge :9090)"
 
-        if text.contains("$GPGGA") || text.contains("$GNGGA") {
-            let parts = text.components(separatedBy: ",")
-            if parts.count >= 10 {
-                if let lat = parseNmeaCoord(parts[2], dir: parts[3]),
-                   let lon = parseNmeaCoord(parts[4], dir: parts[5]) {
-                    let fixQuality = parts[6]
-                    let numSats = parts[7]
-                    let hdop = parts[8]
-                    let alt = parts[9]
-
-                    let fixDesc: String = {
-                        switch fixQuality {
-                        case "1": return "GPS Fix"
-                        case "2": return "DGPS Fix (SXblue)"
-                        case "4": return "RTK Fixed"
-                        case "5": return "RTK Float"
-                        default: return "Fix Quality \(fixQuality)"
-                        }
-                    }()
-
-                    if let vm = viewModel, !vm.hasAcquiredRealLocation {
-                        vm.currentCoordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-                        let latDir = lat >= 0 ? "N" : "S"
-                        let lonDir = lon >= 0 ? "E" : "W"
-                        vm.locationText = String(format: "%.6f° %@, %.6f° %@", abs(lat), latDir, abs(lon), lonDir)
-                        vm.accuracyText = "Fix: \(fixDesc) | Sats: \(numSats) | HDOP: \(hdop) | Alt: \(alt)m"
-                    }
-                }
-            }
-        }
-
-        if text.contains("$GAGSV") || text.contains("$GPGSV") || text.contains("$GLGSV") || text.contains("$BDGSV") {
-            parseGsvSentence(text)
-        }
-
-        if text.contains("$GALINAV") || text.contains("$GALE6HAS") || text.contains("$GALE5") || text.contains("$BIN") || text.contains("$RAWNAV") {
-            parseInavOrBinarySentence(text)
-        }
-    }
-
-    private func parseGsvSentence(_ text: String) {
-        let parts = text.components(separatedBy: ",")
-        guard parts.count >= 8 else { return }
-
-        let constKind: GnssConstellation
-        if text.contains("$GAGSV") { constKind = .galileo }
-        else if text.contains("$GPGSV") { constKind = .gps }
-        else if text.contains("$GLGSV") { constKind = .glonass }
-        else { constKind = .beidou }
-
-        var parsedSats: [SatelliteInfo] = []
-        var idx = 4
-        while idx + 3 < parts.count {
-            let svidStr = parts[idx]
-            let elevStr = parts[idx+1]
-            let azimStr = parts[idx+2]
-            let cnoStr = parts[idx+3].components(separatedBy: "*")[0]
-
-            if let svid = Int(svidStr),
-               let elev = Double(elevStr),
-               let azim = Double(azimStr),
-               let cno = Int(cnoStr) {
-                let sat = SatelliteInfo(
-                    id: "\(constKind.rawValue)_\(svid)",
-                    svid: svid,
-                    elevation: elev,
-                    azimuth: azim,
-                    cno: cno,
-                    isGalileo: constKind == .galileo,
-                    constellation: constKind,
-                    usedInFix: true,
-                    hasInav: constKind == .galileo
-                )
-                parsedSats.append(sat)
-            }
-            idx += 4
-        }
-
-        if !parsedSats.isEmpty, let vm = viewModel {
-            var current = vm.liveBridgeSatellites
-            current.removeAll(where: { $0.constellation == constKind })
-            current.append(contentsOf: parsedSats)
-            vm.liveBridgeSatellites = current
-        }
-    }
-
-    private func parseInavOrBinarySentence(_ text: String) {
-        let cleanText = text.components(separatedBy: "*")[0]
-        let parts = cleanText.components(separatedBy: ",")
-        let svid = parts.count > 1 ? (Int(parts[1]) ?? 1) : 1
-        let submsgId = parts.count > 2 ? (Int(parts[2]) ?? 1) : 1
-
-        var frameData: Data? = nil
-        if parts.count > 3 {
-            frameData = hexStringToData(parts[3])
-        }
-        if frameData == nil && parts.count > 4 {
-            frameData = hexStringToData(parts[4])
-        }
-        let finalData = frameData ?? Data((0..<30).map { _ in UInt8.random(in: 0...255) })
-
-        let msg = GalileoINavMessage(
-            svid: svid,
-            submessageId: submsgId,
-            data: finalData,
-            status: 0,
-            timestamp: Date()
-        )
-
-        if viewModel?.messages.count ?? 0 >= 100 {
-            viewModel?.messages.removeFirst()
-        }
-        viewModel?.messages.append(msg)
+        vm.processIncomingNmea(text)
     }
 
     private func parseNmeaCoord(_ rawVal: String, dir: String) -> Double? {

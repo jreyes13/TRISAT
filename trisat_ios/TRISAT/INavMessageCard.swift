@@ -35,6 +35,16 @@ struct INavMessageCard: View {
                     .font(.subheadline)
                     .fontWeight(.bold)
                 Spacer()
+
+                // Carrier Frequency Band Pill (E1-B OSNMA vs E5b-I / E6-B)
+                Text(message.band)
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(message.band.contains("E5") ? Color.purple.opacity(0.25) : Color.cyan.opacity(0.25))
+                    .foregroundColor(message.band.contains("E5") ? .purple : .cyan)
+                    .cornerRadius(5)
+
                 Text(wordTypeDescription)
                     .font(.caption2)
                     .fontWeight(.semibold)
