@@ -143,9 +143,9 @@ struct DashboardView: View {
 
     private var modeBadgeTitle: String {
         switch viewModel.selectedMode {
-        case 0: return "MODE: INTERNAL + TLE"
-        case 1: return "MODE: LIVE SDR / BRIDGE"
-        case 2: return "MODE: TLE ORBIT SIM"
+        case 0: return "DEVICE + PREDICTED SKY"
+        case 1: return "EXTERNAL TELEMETRY"
+        case 2: return "UDP / SIMULATOR"
         default: return "MODE: ACTIVE"
         }
     }
@@ -161,7 +161,7 @@ struct DashboardView: View {
                     .font(.subheadline)
                     .fontWeight(.bold)
                 Spacer()
-                Text("\(viewModel.displayedSatellites.count) SATS VISIBLE")
+                Text(viewModel.skySourceLabel)
                     .font(.caption2)
                     .fontWeight(.bold)
                     .padding(.horizontal, 6)
