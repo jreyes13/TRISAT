@@ -35,9 +35,11 @@ python3 trisat_sdr/main.py --headless
 
 ---
 
+The current SDR pipeline produces simulated navigation frames and positioning results. The dashboard, CLI and JSON telemetry identify them as simulated, and the OSNMA Annex A self-test is reported separately from any received-message verification. IQ-file input does not make downstream navigation results measured.
+
 ## 📡 Telemetry Bridge to TRISAT (`trisat_ios` / macOS / `trisat_android`)
 
-`TRISAT-SDR` streams telemetry over UDP and TCP:
+`TRISAT-SDR` sends simulated frames and telemetry as JSON with `"source": "simulated"`. For a dedicated legacy test client, pass `--emit-legacy-simulation` to also send NMEA and custom navigation sentences. Legacy sentences have no provenance field, and GGA reports no real fix. Supported transports:
 1. **UDP Server (`127.0.0.1:5005`)** and **TCP Server (`0.0.0.0:5006`)**
 2. **POSIX virtual serial device (`PTY`) on macOS/Linux** can be allocated. Serial output is currently unavailable.
 3. **Broadcast Frame Formats:**
