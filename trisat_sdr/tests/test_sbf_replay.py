@@ -51,4 +51,3 @@ class TestSbfReplay(unittest.TestCase):
     def test_skips_missing_timestamps_and_unsupported_signals(self):
         self.assertEqual(self.replay(inav(tow=0xFFFFFFFF) + inav(signal=20)), [])
         self.assertEqual(self.replay(b""), [])
-

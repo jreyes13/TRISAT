@@ -172,4 +172,3 @@ def serve_replay(pages, port):
     with ThreadingHTTPServer(("127.0.0.1", port), Handler) as server:
         print(f"SBF replay: http://127.0.0.1:{server.server_port}/", flush=True)
         server.serve_forever()
-
