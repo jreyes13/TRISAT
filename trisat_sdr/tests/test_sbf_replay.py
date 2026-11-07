@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from trisat_sdr.osnma_replay import VerificationTimeline
 from trisat_sdr.replay_sbf import read_pages
 
 
@@ -51,3 +52,31 @@ class TestSbfReplay(unittest.TestCase):
     def test_skips_missing_timestamps_and_unsupported_signals(self):
         self.assertEqual(self.replay(inav(tow=0xFFFFFFFF) + inav(signal=20)), [])
         self.assertEqual(self.replay(b""), [])
+
+    def test_verified_tags_appear_at_their_processing_point_and_count_for_the_target(self):
+        statuses = [
+            {
+                "metadata": {"GST_subframe": [1419, 30]},
+                "verified_OSNMA_material": {"tags": [
+                    {"prn_a": 7, "prn_d": 2, "adkd": 0, "verification": True},
+                    {"prn_a": 7, "prn_d": 2, "adkd": 4, "verification": False},
+                ]},
+            },
+            {
+                "metadata": {"GST_subframe": [1419, 60]},
+                "verified_OSNMA_material": {"tags": [
+                    {"prn_a": 7, "prn_d": 2, "adkd": 12, "verification": True},
+                    {"prn_a": 2, "prn_d": 7, "adkd": 0, "verification": True},
+                    {"prn_a": 2, "prn_d": 255, "adkd": 0, "verification": True},
+                ]},
+            },
+        ]
+        timeline = VerificationTimeline(statuses, [6, 12])
+        self.assertEqual(timeline.at(5, 2)["verified_tags"], 0)
+        self.assertEqual(timeline.at(6, 2)["by_adkd"], {0: 1})
+        self.assertEqual(timeline.at(11, 7)["verified_tags"], 0)
+        self.assertEqual(timeline.at(12, 2)["by_adkd"], {0: 1, 12: 1})
+        self.assertEqual(timeline.at(12, 2)["processed_subframe"], {
+            "galileo_week": 1419, "tow_s": 60,
+        })
+        self.assertEqual(timeline.totals(), {2: 2, 7: 1})

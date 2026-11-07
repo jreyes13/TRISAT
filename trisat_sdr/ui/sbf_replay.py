@@ -29,6 +29,7 @@ PAGE = """<!doctype html>
     <button id="previous" disabled>Previous</button>
     <button id="play" disabled>Play</button>
     <button id="next" disabled>Next</button>
+    <button id="last" disabled>Last</button>
   </div>
   <p id="progress" role="status">Loading recording…</p>
   <section aria-label="Recorded navigation page">
@@ -36,15 +37,25 @@ PAGE = """<!doctype html>
       <dt>Satellite and signal</dt><dd id="signal">—</dd>
       <dt>Receiver timestamp</dt><dd id="timestamp">—</dd>
       <dt>Navigation CRC reported by receiver</dt><dd id="crc">—</dd>
-      <dt>OSNMA</dt><dd id="osnma">—</dd>
+      <dt>OSNMA on this page</dt><dd id="osnma">—</dd>
       <dt>Recorded page (234 bits)</dt><dd><code id="payload">—</code></dd>
     </dl>
+  </section>
+  <section id="verification" hidden aria-labelledby="verification-title">
+    <h2 id="verification-title">OSNMA tag verification · Offline</h2>
+    <p>OSNMAlib results for this satellite through the displayed point in the recording.</p>
+    <dl>
+      <dt>Verified tags</dt><dd id="verified-tags"></dd>
+      <dt>Tags by data type</dt><dd id="verified-types"></dd>
+      <dt>Subframe of latest verification</dt><dd id="verification-time"></dd>
+    </dl>
+    <p>Verification uses the timestamps in the capture. These results describe navigation tags. The page CRC is shown separately.</p>
   </section>
 </main>
 <script>
   const element = id => document.getElementById(id);
   const satellite = element('satellite');
-  const previous = element('previous'), play = element('play'), next = element('next');
+  const previous = element('previous'), play = element('play'), next = element('next'), last = element('last');
   let index = 0, total = 0, timer, sequence = 0, playing = false;
 
   async function request(path) {
@@ -57,6 +68,18 @@ PAGE = """<!doctype html>
     playing = false;
     clearTimeout(timer);
     play.textContent = 'Play';
+  }
+
+  function showVerification(verification) {
+    element('verification').hidden = !verification;
+    if (!verification) return;
+    element('verified-tags').textContent = verification.verified_tags ?
+      String(verification.verified_tags) : 'None yet';
+    element('verified-types').textContent = Object.entries(verification.by_adkd)
+      .map(([adkd, count]) => 'ADKD ' + adkd + ': ' + count).join(' · ') || '—';
+    const time = verification.processed_subframe;
+    element('verification-time').textContent = time ?
+      'Galileo week ' + time.galileo_week + ' · GST TOW ' + time.tow_s + ' s' : '—';
   }
 
   async function show(target) {
@@ -77,8 +100,10 @@ PAGE = """<!doctype html>
       element('osnma').textContent = frame.osnma_status === 'unverified' ?
         'Received I/NAV · Unverified' : 'Unavailable on this signal';
       element('payload').textContent = frame.payload_hex;
+      showVerification(result.osnma_verification);
       previous.disabled = index === 0;
       next.disabled = index + 1 === total;
+      last.disabled = next.disabled;
       play.disabled = total < 2;
       if (playing && !next.disabled) {
         timer = setTimeout(() => show(index + 1), Math.min(result.delay_ms, 2147483647));
@@ -95,6 +120,7 @@ PAGE = """<!doctype html>
   satellite.onchange = () => { pause(); show(0); };
   previous.onclick = () => { pause(); show(index - 1); };
   next.onclick = () => { pause(); show(index + 1); };
+  last.onclick = () => { pause(); show(total - 1); };
   play.onclick = () => {
     if (playing) {
       pause();
@@ -119,12 +145,13 @@ PAGE = """<!doctype html>
 """
 
 
-def serve_replay(pages, port):
+def serve_replay(pages, port, verification=None):
     """Serve one selected capture over loopback."""
     by_satellite = {}
-    for page in pages:
-        by_satellite.setdefault(str(page["svid"]), []).append(page)
+    for index, page in enumerate(pages):
+        by_satellite.setdefault(str(page["svid"]), []).append(index)
     satellites = sorted(int(svid) for svid in by_satellite)
+    all_indices = range(len(pages))
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, _format, *args):
@@ -146,11 +173,14 @@ def serve_replay(pages, port):
             if url.path == "/":
                 self.respond(200, "text/html; charset=utf-8", PAGE.encode("utf-8"))
             elif url.path == "/api/satellites":
-                self.respond_json({"satellites": satellites})
+                result = {"satellites": satellites}
+                if verification is not None:
+                    result["full_recording_verified_tags"] = verification.totals()
+                self.respond_json(result)
             elif url.path == "/api/pages":
                 params = parse_qs(url.query)
                 svid = params.get("svid", [""])[0]
-                selected = by_satellite.get(svid, []) if svid else pages
+                selected = by_satellite.get(svid, []) if svid else all_indices
                 try:
                     index = int(params.get("index", ["0"])[0])
                     if not 0 <= index < len(selected):
@@ -159,13 +189,17 @@ def serve_replay(pages, port):
                     self.respond_json({"error": "Page or satellite not found"}, 400)
                     return
 
-                page = selected[index]
+                capture_index = selected[index]
+                page = pages[capture_index]
                 delay_ms = 0
                 if index + 1 < len(selected):
-                    following = selected[index + 1]
+                    following = pages[selected[index + 1]]
                     delay_ms = max(0, (following["gps_week"] - page["gps_week"]) * 604_800_000
                                    + following["tow_ms"] - page["tow_ms"])
-                self.respond_json({"count": len(selected), "page": page, "delay_ms": delay_ms})
+                result = {"count": len(selected), "page": page, "delay_ms": delay_ms}
+                if verification is not None:
+                    result["osnma_verification"] = verification.at(capture_index, page["svid"])
+                self.respond_json(result)
             else:
                 self.respond_json({"error": "Not found"}, 404)
 
