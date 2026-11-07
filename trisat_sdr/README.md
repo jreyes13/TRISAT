@@ -45,3 +45,13 @@ python3 trisat_sdr/main.py --headless
    * `$GALE6HAS,<svid>,<pageId>,<orbitCorrCm>,<hexPayload>*CS`
    * `$GALE5,<band>,<svid>,<pageType>,<hexPayload>*CS`
    * `$GNGGA`, `$GAGSV`, `$GPGSV`, and JSON objects compatible with the TRISAT BLE bridge.
+
+## Replay a Septentrio SBF capture
+
+Open a local recording containing `GALRawINAV` blocks from the repository root:
+
+```bash
+python -m trisat_sdr.replay_sbf path/to/recording.sbf
+```
+
+Open the printed loopback URL, select a Galileo satellite, then play or step through its pages. Use `--port` to choose another port or `--jsonl` to export the same sequence as JSON lines. The viewer checks the SBF block CRC and displays the receiver-reported navigation CRC separately. It displays the recorded 234-bit pages and the GPS week/time of week. Only I/NAV is read into the viewer. The original recording remains local and playback does not authenticate received OSNMA data.
