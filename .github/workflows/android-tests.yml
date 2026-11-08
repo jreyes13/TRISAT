@@ -1,0 +1,36 @@
+name: Android tests
+
+on:
+  push:
+    paths:
+      - .github/workflows/android-tests.yml
+      - trisat_android/**
+      - gradle/**
+      - '*.gradle.kts'
+      - gradle.properties
+      - gradlew
+  pull_request:
+    paths:
+      - .github/workflows/android-tests.yml
+      - trisat_android/**
+      - gradle/**
+      - '*.gradle.kts'
+      - gradle.properties
+      - gradlew
+
+permissions:
+  contents: read
+
+jobs:
+  android-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Compile Android and run unit tests
+        run: |
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          ./gradlew --no-daemon :trisat_android:testDebugUnitTest :trisat_android:assembleDebug

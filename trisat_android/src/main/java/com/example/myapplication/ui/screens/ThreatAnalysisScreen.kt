@@ -496,6 +496,13 @@ fun DopGeometryBreakdownCard(
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "Geometry estimate assumes equal measurement weights and one receiver clock across constellations.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
