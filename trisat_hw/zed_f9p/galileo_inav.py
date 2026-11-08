@@ -1,5 +1,7 @@
 """Decode nominal Galileo I/NAV page pairs from UBX-RXM-SFRBX v2."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import reduce
 from operator import xor

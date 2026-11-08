@@ -23,3 +23,5 @@ jobs:
           python-version: '3.12'
       - name: Run SDR tests
         run: python -m unittest discover -s trisat_sdr/tests -v
+      - name: Run ZED-F9P bridge tests
+        run: python -m unittest discover -s trisat_hw/zed_f9p/tests -v
