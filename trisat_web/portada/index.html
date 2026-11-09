@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRISAT — Tri-band Real-time Integrity & Satellite Authentication Terminal</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            galileo: '#00d2ff',
+            space: '#090d16',
+            card: '#0e1726'
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #070a12; color: #e2e8f0; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    .glow-cyan { text-shadow: 0 0 20px rgba(0, 210, 255, 0.45); }
+    .border-glow:hover { border-color: rgba(0, 210, 255, 0.4); box-shadow: 0 0 25px rgba(0, 210, 255, 0.15); }
+  </style>
+</head>
+<body class="selection:bg-cyan-500 selection:text-black min-h-screen flex flex-col justify-between">
+  <!-- Top Navigation -->
+  <header class="border-b border-white/10 bg-[#070a12]/80 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="assets/app_icon.png" alt="TRISAT App Icon" class="w-10 h-10 rounded-xl border border-cyan-500/40 group-hover:border-cyan-400 transition-colors shadow-md shadow-cyan-950/40 object-cover">
+        <span class="text-xl font-extrabold tracking-wider text-white font-mono">TRI<span class="text-cyan-400">SAT</span></span>
+      </a>
+      <nav class="flex items-center gap-4 sm:gap-6 text-sm font-medium">
+        <a href="#triads" class="hidden sm:inline text-slate-300 hover:text-cyan-400 transition-colors">Architecture</a>
+        <a href="#modes" class="hidden sm:inline text-slate-300 hover:text-cyan-400 transition-colors">Modes</a>
+        <a href="#hardware" class="hidden sm:inline text-slate-300 hover:text-cyan-400 transition-colors">Hardware</a>
+        <a href="/app/" class="px-3 py-1.5 rounded-lg bg-cyan-500/15 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/25 transition-all text-xs font-semibold flex items-center gap-1.5 shadow-sm">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+          Web Terminal
+        </a>
+        <a href="/downloads/TRISAT-v2.4-debug.apk" download="TRISAT-v2.4-debug.apk" class="px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25 transition-all text-xs font-semibold flex items-center gap-1.5">
+          <span>Get APK</span>
+        </a>
+        <a href="https://github.com/jreyes13/TRISAT" target="_blank" rel="noopener noreferrer" class="hidden md:flex px-3.5 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/20 transition-all font-mono text-xs items-center gap-2">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          GitHub
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="max-w-6xl mx-auto px-6 py-16 flex-1 w-full">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono mb-6">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        Multiplatform GNSS Intelligence Application
+      </div>
+      <h1 class="text-4xl sm:text-6xl font-black tracking-tight text-white mb-6">
+        TRISAT
+      </h1>
+      <p class="text-xl text-cyan-400 font-mono mb-4 glow-cyan">
+        Tri-band Real-time Integrity & Satellite Authentication Terminal
+      </p>
+      <p class="text-slate-400 leading-relaxed text-base sm:text-lg mb-8">
+        Advanced multiplatform GNSS laboratory engineered for real-time Galileo OSNMA cryptographic authentication, Galileo High Accuracy Service (HAS PPP), multi-constellation RF telemetry, and dynamic anti-spoofing diagnostics.
+      </p>
+      <div class="flex flex-wrap items-center justify-center gap-4">
+        <a href="/app/" class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold shadow-xl shadow-cyan-500/25 hover:brightness-110 transition-all font-mono text-sm flex items-center gap-2">
+          <span>🚀 Lanzar Web Terminal</span>
+        </a>
+        <a href="/downloads/TRISAT-v2.4-debug.apk" download="TRISAT-v2.4-debug.apk" class="px-6 py-3.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-bold transition-all text-sm font-mono flex items-center gap-2">
+          <span>📱 Descargar APK (Android v2.4)</span>
+        </a>
+        <a href="https://github.com/jreyes13/TRISAT" target="_blank" rel="noopener noreferrer" class="px-5 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all font-mono text-sm">
+          GitHub Repo
+        </a>
+        <a href="https://jreyes13.net" class="px-5 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/10 transition-all text-sm font-medium">
+          ← jreyes13.net
+        </a>
+      </div>
+    </div>
+
+    <!-- The Triad Architecture -->
+    <section id="triads" class="mb-20">
+      <div class="text-center mb-10">
+        <h2 class="text-2xl font-bold text-white tracking-wide">The Triad Architecture</h2>
+        <p class="text-slate-400 text-sm mt-1">Multiples of 3 engineered from the ground up</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- 3 Bands -->
+        <div class="bg-[#0e1726]/70 border border-white/10 rounded-2xl p-6 border-glow transition-all">
+          <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-mono font-bold mb-4">
+            3B
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Tri-Band Galileo</h3>
+          <p class="text-slate-400 text-sm leading-relaxed mb-4">
+            Simultaneous reception and baseband processing across three core European GNSS carrier frequencies.
+          </p>
+          <ul class="text-xs font-mono text-slate-300 space-y-2">
+            <li class="flex items-center gap-2"><span class="text-cyan-400">●</span> <strong>E1</strong> (1575.42 MHz) — I/NAV & OSNMA</li>
+            <li class="flex items-center gap-2"><span class="text-cyan-400">●</span> <strong>E5</strong> (1191.795 MHz) — AltBOC Broadband</li>
+            <li class="flex items-center gap-2"><span class="text-cyan-400">●</span> <strong>E6</strong> (1278.75 MHz) — High Accuracy HAS</li>
+          </ul>
+        </div>
+
+        <!-- 3 Services -->
+        <div class="bg-[#0e1726]/70 border border-white/10 rounded-2xl p-6 border-glow transition-all">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-mono font-bold mb-4">
+            3S
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Tri-Service Verification</h3>
+          <p class="text-slate-400 text-sm leading-relaxed mb-4">
+            Full cryptographic validation and centimeter-level accuracy services evaluated in real-time.
+          </p>
+          <ul class="text-xs font-mono text-slate-300 space-y-2">
+            <li class="flex items-center gap-2"><span class="text-amber-400">●</span> <strong>OSNMA</strong> — Cryptographic ECDSA & TESLA</li>
+            <li class="flex items-center gap-2"><span class="text-amber-400">●</span> <strong>HAS</strong> — PPP corrections (E6B / C)</li>
+            <li class="flex items-center gap-2"><span class="text-amber-400">●</span> <strong>EWSS/TSM</strong> — Emergency & Threat scoring</li>
+          </ul>
+        </div>
+
+        <!-- 3 Platforms -->
+        <div class="bg-[#0e1726]/70 border border-white/10 rounded-2xl p-6 border-glow transition-all">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-mono font-bold mb-4">
+            3P
+          </div>
+          <h3 class="text-lg font-bold text-white mb-2">Tri-Platform Execution</h3>
+          <p class="text-slate-400 text-sm leading-relaxed mb-4">
+            Native implementations tailored to each operating system ecosystem and embedded sensor pod.
+          </p>
+          <ul class="text-xs font-mono text-slate-300 space-y-2">
+            <li class="flex items-center gap-2"><span class="text-emerald-400">●</span> <strong>Apple (iOS / macOS)</strong> — Swift & SwiftUI</li>
+            <li class="flex items-center gap-2"><span class="text-emerald-400">●</span> <strong>Android</strong> — Kotlin & GNSS HAL API</li>
+            <li class="flex items-center gap-2"><span class="text-emerald-400">●</span> <strong>SDR Engine</strong> — Python 3, HackRF, Web UI</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 Operating Modes -->
+    <section id="modes" class="mb-20">
+      <div class="text-center mb-10">
+        <h2 class="text-2xl font-bold text-white tracking-wide">Three Operating Modes</h2>
+        <p class="text-slate-400 text-sm mt-1">From standalone orbit modeling to physical RTK receiver streaming</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
+          <span class="text-xs font-mono uppercase tracking-wider text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-md border border-cyan-800/40">Mode 0</span>
+          <h4 class="text-base font-bold text-white mt-4 mb-2">🛰️ Internal + TLE</h4>
+          <p class="text-slate-400 text-xs leading-relaxed">
+            Operates with zero external hardware using native device CoreLocation and live CelesTrak SGP4 24-hour Keplerian orbit propagators with a $\pm 12\text{h}$ time slider.
+          </p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
+          <span class="text-xs font-mono uppercase tracking-wider text-amber-400 bg-amber-950/60 px-2.5 py-1 rounded-md border border-amber-800/40">Mode 1</span>
+          <h4 class="text-base font-bold text-white mt-4 mb-2">📡 Bluetooth Low Energy</h4>
+          <p class="text-slate-400 text-xs leading-relaxed">
+            Direct wireless connection via Nordic UART Service (NUS) to the physical ESP32 bridge. Streams live NMEA sentences and paced Galileo I/NAV frames without Apple MFi locks.
+          </p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
+          <span class="text-xs font-mono uppercase tracking-wider text-purple-400 bg-purple-950/60 px-2.5 py-1 rounded-md border border-purple-800/40">Mode 2</span>
+          <h4 class="text-base font-bold text-white mt-4 mb-2">🌐 UDP Telemetry / SDR</h4>
+          <p class="text-slate-400 text-xs leading-relaxed">
+            High-performance UDP listener on port 9090 receiving live IQ synthesized telemetry from HackRF One, gnss-sdr, or the internal in-process Swift generator.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Hardware Bridges -->
+    <section id="hardware" class="mb-12">
+      <div class="bg-gradient-to-br from-[#0e1726] to-[#070a12] border border-white/10 rounded-2xl p-8">
+        <h3 class="text-xl font-bold text-white mb-4">Supported Hardware & Sensor Pods</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+          <div>
+            <h4 class="font-semibold text-cyan-300 font-mono text-xs uppercase mb-1">u-blox ZED-F9P + ESP32</h4>
+            <p class="text-slate-400 text-xs leading-relaxed">SparkFun multi-band RTK board connected via serial UART to ESP32 DevKit, streaming BLE NUS and broadcast WiFi UDP.</p>
+          </div>
+          <div>
+            <h4 class="font-semibold text-cyan-300 font-mono text-xs uppercase mb-1">Geneq SXblue</h4>
+            <p class="text-slate-400 text-xs leading-relaxed">Sub-meter surveying receiver interfaced through POSIX direct USB-Serial daemon on macOS and Android OTG.</p>
+          </div>
+          <div>
+            <h4 class="font-semibold text-cyan-300 font-mono text-xs uppercase mb-1">Dual HackRF One SDR</h4>
+            <p class="text-slate-400 text-xs leading-relaxed">Synchronized 10 MHz CLKOUT/CLKIN baseband engine for E1B/C, E5 AltBOC, and E6B/C HAS simulated IQ synthesis.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/10 py-8 bg-[#05070d] text-center text-xs text-slate-500 font-mono">
+    <div class="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-2">
+        <span>TRISAT</span>
+        <span>•</span>
+        <a href="https://jreyes13.net" class="text-slate-400 hover:text-cyan-400 transition-colors">jreyes13.net</a>
+      </div>
+      <div>
+        <span>Authenticated Earth Intelligence • Galileo OSNMA & HAS</span>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

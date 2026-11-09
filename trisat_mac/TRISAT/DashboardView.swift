@@ -35,7 +35,7 @@ struct DashboardView: View {
                         VStack(spacing: 16) {
                             positionTelemetrySection
                             dopGeometrySection
-                            MiniMapView(coordinate: viewModel.currentCoordinate)
+                            MiniMapView(coordinate: viewModel.effectiveCoordinate)
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -47,7 +47,7 @@ struct DashboardView: View {
                         positionTelemetrySection
                         constellationSummaryGridSection
                         dopGeometrySection
-                        MiniMapView(coordinate: viewModel.currentCoordinate)
+                        MiniMapView(coordinate: viewModel.effectiveCoordinate)
                     }
                     .padding(.horizontal)
                 }
@@ -110,8 +110,51 @@ struct DashboardView: View {
                 .cornerRadius(8)
             }
 
-            SkyPlotView(satellites: viewModel.displayedSatellites, height: height)
-                .padding(.vertical, 4)
+            SkyPlotView(
+                satellites: viewModel.displayedSatellites,
+                height: height,
+                isAwaitingLocation: viewModel.isAwaitingLocation,
+                isAwaitingTle: viewModel.isAwaitingTle
+            )
+            .padding(.vertical, 4)
+
+            // Warning Banner if TLE or Location is missing
+            if viewModel.isAwaitingTle {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.yellow)
+                    Text("No TLE orbits loaded · Download in Settings")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button("Download") {
+                        Task {
+                            await viewModel.tleDownloader.fetchAllTleOrbits()
+                            viewModel.updateSatellites()
+                        }
+                    }
+                    .font(.caption2)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                }
+                .padding(8)
+                .background(Color.yellow.opacity(0.12))
+                .cornerRadius(8)
+            } else if viewModel.isAwaitingLocation {
+                HStack(spacing: 8) {
+                    Image(systemName: "location.slash")
+                        .foregroundColor(.orange)
+                    Text("Waiting for location fix to project orbits...")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .padding(8)
+                .background(Color.orange.opacity(0.12))
+                .cornerRadius(8)
+            }
         }
         .padding()
         .background(Color.gray.opacity(0.08))
@@ -147,8 +190,9 @@ struct DashboardView: View {
 
             HStack(spacing: 10) {
                 Button(action: {
-                    let lat = viewModel.currentCoordinate.latitude
-                    let lon = viewModel.currentCoordinate.longitude
+                    guard let coord = viewModel.effectiveCoordinate else { return }
+                    let lat = coord.latitude
+                    let lon = coord.longitude
                     let coordStr = String(format: "%.6f, %.6f", lat, lon)
                     #if os(iOS)
                     UIPasteboard.general.string = coordStr
@@ -173,10 +217,13 @@ struct DashboardView: View {
                     .foregroundColor(.white)
                     .cornerRadius(8)
                 }
+                .disabled(viewModel.effectiveCoordinate == nil)
+                .opacity(viewModel.effectiveCoordinate == nil ? 0.4 : 1.0)
                 
                 Button(action: {
-                    let lat = viewModel.currentCoordinate.latitude
-                    let lon = viewModel.currentCoordinate.longitude
+                    guard let coord = viewModel.effectiveCoordinate else { return }
+                    let lat = coord.latitude
+                    let lon = coord.longitude
                     if let url = URL(string: "https://maps.apple.com/?q=\(lat),\(lon)&ll=\(lat),\(lon)") {
                         #if os(iOS)
                         UIApplication.shared.open(url)
@@ -197,6 +244,8 @@ struct DashboardView: View {
                     .foregroundColor(.primary)
                     .cornerRadius(8)
                 }
+                .disabled(viewModel.effectiveCoordinate == nil)
+                .opacity(viewModel.effectiveCoordinate == nil ? 0.4 : 1.0)
             }
         }
         .padding()

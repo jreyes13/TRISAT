@@ -74,7 +74,12 @@ struct SettingsView: View {
                                     .cornerRadius(6)
                             }
 
-                            SkyPlotView(satellites: viewModel.displayedSatellites, height: 320)
+                            SkyPlotView(
+                                satellites: viewModel.displayedSatellites,
+                                height: 320,
+                                isAwaitingLocation: viewModel.isAwaitingLocation,
+                                isAwaitingTle: viewModel.isAwaitingTle
+                            )
                                 .padding(.vertical, 8)
 
                             VStack(alignment: .leading, spacing: 6) {

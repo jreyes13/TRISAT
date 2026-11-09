@@ -28,7 +28,7 @@ class TleDownloader: ObservableObject {
     @Published var gpsCount: Int = 0
     @Published var glonassCount: Int = 0
     @Published var beidouCount: Int = 0
-    @Published var downloadStatusText: String = "No TLE orbits downloaded yet."
+    @Published var downloadStatusText: String = "No TLE orbits loaded · Download below"
     @Published var parsedTles: [TleData] = []
 
     var formattedLastDownloadDate: String {
@@ -79,7 +79,7 @@ class TleDownloader: ObservableObject {
             downloadStatusText = "TLE Orbits Loaded (\(totalTleCount) Satellites)"
             saveCachedTles(allFetched)
         } else {
-            downloadStatusText = "Download failed. Using fallback orbital model."
+            downloadStatusText = "Download failed. Check internet connection."
         }
 
         isDownloading = false

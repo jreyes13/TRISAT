@@ -19,7 +19,7 @@ enum GnssConstellation: String, CaseIterable, Codable {
 
 /// Represents a satellite in the celestial sphere with a guaranteed unique ID
 struct SatelliteInfo: Identifiable {
-    let id: String                // Unique Identifier (e.g., "Galileo_01", "GPS_12")
+    let id: String                // Unique Identifier (e.g., "Galileo_PRN_01_0", "GPS_PRN_12_1")
     let svid: Int                 // PRN / SVID number (1...36)
     let elevation: Double         // Elevation in degrees (0° at horizon, 90° at zenith)
     let azimuth: Double           // Azimuth in degrees (0° to 360°, clockwise from True North)
@@ -43,6 +43,8 @@ struct SatelliteInfo: Identifiable {
 struct SkyPlotView: View {
     let satellites: [SatelliteInfo]
     var height: CGFloat = 220
+    var isAwaitingLocation: Bool = false
+    var isAwaitingTle: Bool = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -94,6 +96,47 @@ struct SkyPlotView: View {
                             .offset(y: 16)
                     }
                     .position(point)
+                }
+
+                // 4. Empty State Informative HUD Overlay
+                if satellites.isEmpty {
+                    VStack(spacing: 6) {
+                        if isAwaitingLocation {
+                            Image(systemName: "location.slash")
+                                .font(.system(size: 24))
+                                .foregroundColor(.orange)
+                            Text("Awaiting Location Fix")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary)
+                            Text("Coordinates required for orbital projection")
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                        } else if isAwaitingTle {
+                            Image(systemName: "tray.and.arrow.down")
+                                .font(.system(size: 24))
+                                .foregroundColor(.cyan)
+                            Text("No TLE Orbits Loaded")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary)
+                            Text("Download ephemeris in Settings")
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                        } else {
+                            Image(systemName: "circle.dashed")
+                                .font(.system(size: 22))
+                                .foregroundColor(.secondary)
+                            Text("No Satellites Above 10° Mask")
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(12)
+                    .background(Color.black.opacity(0.65))
+                    .cornerRadius(10)
+                    .position(center)
                 }
             }
         }

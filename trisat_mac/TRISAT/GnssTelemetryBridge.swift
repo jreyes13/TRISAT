@@ -144,6 +144,7 @@ class GnssTelemetryBridge: ObservableObject {
                     }()
 
                     viewModel?.currentCoordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                    viewModel?.hasLocationFix = true
                     let latDir = lat >= 0 ? "N" : "S"
                     let lonDir = lon >= 0 ? "E" : "W"
                     viewModel?.locationText = String(format: "%.6f° %@, %.6f° %@", abs(lat), latDir, abs(lon), lonDir)

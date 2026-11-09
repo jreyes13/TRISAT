@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -48,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,13 +73,22 @@ import kotlin.math.sqrt
 @Suppress("DEPRECATION")
 @Composable
 fun ThreatAnalysisScreen(
-    gnssViewModel: GnssViewModel = viewModel()
+    gnssViewModel: GnssViewModel = viewModel(),
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val trustReport by gnssViewModel.trustReportState.collectAsState()
     val activeScenario by gnssViewModel.activeScenarioState.collectAsState()
     val gnssStatus by gnssViewModel.gnssStatusState.collectAsState()
     val locationData by gnssViewModel.locationState.collectAsState()
     val gnssMeasurements by gnssViewModel.gnssMeasurementsState.collectAsState()
+    val isMockMode by gnssViewModel.isMockMode.collectAsState()
+    val receiverMode by gnssViewModel.receiverMode.collectAsState()
+
+    val isStandby = gnssStatus.satellites.isEmpty() && !isMockMode && receiverMode != com.example.myapplication.data.gnss.model.GnssReceiverMode.SIMULATION_TLE
+    if (isStandby) {
+        ThreatStandbyView(onNavigateToSettings = onNavigateToSettings)
+        return
+    }
 
     val trustLevel = trustReport.trustLevel
     val subScores = trustReport.subScores
@@ -716,6 +727,84 @@ fun IntelligenceLogCard(entry: IntelligenceLogEntry) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+fun ThreatStandbyView(
+    onNavigateToSettings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(0.92f),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f),
+                    modifier = Modifier.size(80.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.Shield,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(42.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = "Threat Analysis Standby",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Electronic warfare, jamming, spoofing, and Galileo OSNMA verification metrics require an active RF satellite stream.\n\nStandby until satellite signals are locked, or activate CelesTrak TLE Simulation in Settings.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onNavigateToSettings,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Shield,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Go to Settings / TLE")
+                }
+            }
         }
     }
 }

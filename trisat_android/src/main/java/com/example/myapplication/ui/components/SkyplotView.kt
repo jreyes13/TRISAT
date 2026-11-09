@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -142,8 +143,8 @@ fun SkyplotCard(
                 }
 
                 StatusBadge(
-                    text = "${visibleSatellites.size} SATS VISIBLE",
-                    level = StatusLevel.SECURE
+                    text = if (visibleSatellites.isEmpty()) "STANDBY / NO SATS" else "${visibleSatellites.size} SATS VISIBLE",
+                    level = if (visibleSatellites.isEmpty()) StatusLevel.WARNING else StatusLevel.SECURE
                 )
             }
 
@@ -203,14 +204,45 @@ fun SkyplotCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Polar Skyplot Canvas
-            SkyplotCanvas(
-                satellites = visibleSatellites,
-                inavSvidSet = inavSvidSet,
+            // Polar Skyplot Canvas with Standby Overlay
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(260.dp)
-            )
+                    .height(260.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                SkyplotCanvas(
+                    satellites = visibleSatellites,
+                    inavSvidSet = inavSvidSet,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                if (visibleSatellites.isEmpty()) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Awaiting GNSS satellite signals...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Standby until signals lock, or activate TLE Simulation in Settings",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

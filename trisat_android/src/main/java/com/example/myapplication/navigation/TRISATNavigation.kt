@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material3.Icon
@@ -33,11 +35,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.window.core.layout.WindowWidthSizeClass
+import com.example.myapplication.R
 import com.example.myapplication.ui.components.TRISATTopBar
 import com.example.myapplication.ui.screens.DashboardScreen
 import com.example.myapplication.ui.screens.SettingsScreen
@@ -64,11 +69,12 @@ fun TRISATMainApp() {
                         color = Color.Transparent
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Rounded.Public,
+                            Image(
+                                painter = painterResource(id = R.drawable.trisat_app_icon),
                                 contentDescription = "TRISAT",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(8.dp))
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
@@ -173,8 +179,8 @@ fun ScreenContent(
                 onNavigateToSignal = { onNavigate(Screen.SignalMonitor.route) },
                 onNavigateToThreats = { onNavigate(Screen.ThreatAnalysis.route) }
             )
-            Screen.SignalMonitor -> SignalMonitorScreen()
-            Screen.ThreatAnalysis -> ThreatAnalysisScreen()
+            Screen.SignalMonitor -> SignalMonitorScreen(onNavigateToSettings = { onNavigate(Screen.Settings.route) })
+            Screen.ThreatAnalysis -> ThreatAnalysisScreen(onNavigateToSettings = { onNavigate(Screen.Settings.route) })
             Screen.Settings -> SettingsScreen()
         }
     }

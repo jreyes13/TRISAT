@@ -186,9 +186,10 @@ class MockGnssGenerator {
     }
 
     fun createLocationFlow(periodMillis: Long = 1000L): Flow<LocationData> = flow {
-        var baseLat = 37.774929
-        var baseLng = -122.419416
-        val baseAlt = 125.4
+        // Default mock coordinates centered at Fuentecén (Ribera del Duero / Burgos, ES)
+        var baseLat = 41.6378
+        var baseLng = -3.8689
+        val baseAlt = 837.0
 
         while (true) {
             val now = System.currentTimeMillis()

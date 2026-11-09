@@ -97,7 +97,6 @@ class LocationGnssManager(private val context: Context) {
     val permissionGranted: StateFlow<Boolean> = _permissionGranted.asStateFlow()
 
     private var mockJob: Job? = null
-    private var hardwareCheckJob: Job? = null
 
     val bleServer = com.example.myapplication.data.gnss.ble.TrisatBleServer(context)
 
@@ -317,12 +316,7 @@ class LocationGnssManager(private val context: Context) {
                 if (hasLocationPermission()) {
                     try {
                         registerHardwareCallbacks()
-                        scheduleHardwareCheckTimer()
-                    } catch (_: Exception) {
-                        propagateTleFallback()
-                    }
-                } else {
-                    propagateTleFallback()
+                    } catch (_: Exception) {}
                 }
             }
             GnssReceiverMode.EXTERNAL_HARDWARE -> {
@@ -348,8 +342,9 @@ class LocationGnssManager(private val context: Context) {
     }
 
     fun updateTleSimulation() {
-        val lat = if (_locationData.value.hasFix && _locationData.value.latitude != 0.0) _locationData.value.latitude else 40.4168
-        val lon = if (_locationData.value.hasFix && _locationData.value.longitude != 0.0) _locationData.value.longitude else -3.7038
+        // Default to Fuentecén (Ribera del Duero / Burgos, ES) if no live GNSS fix is active
+        val lat = if (_locationData.value.hasFix && _locationData.value.latitude != 0.0) _locationData.value.latitude else 41.6378
+        val lon = if (_locationData.value.hasFix && _locationData.value.longitude != 0.0) _locationData.value.longitude else -3.8689
         var sats = Sgp4OrbitPropagator.propagateToSkyplot(
             tles = tleDownloader.parsedTles.value,
             timeOffsetHours = _timeOffsetHours.value.toDouble(),
@@ -376,24 +371,6 @@ class LocationGnssManager(private val context: Context) {
         _gnssStatusData.value = status
         reevaluateTrust(newStatus = status)
 
-    }
-
-    private fun propagateTleFallback() {
-        val lat = if (_locationData.value.hasFix && _locationData.value.latitude != 0.0) _locationData.value.latitude else 40.4168
-        val lon = if (_locationData.value.hasFix && _locationData.value.longitude != 0.0) _locationData.value.longitude else -3.7038
-        val sats = Sgp4OrbitPropagator.propagateToSkyplot(
-            tles = tleDownloader.parsedTles.value,
-            timeOffsetHours = 0.0,
-            observerLat = lat,
-            observerLon = lon
-        )
-        val status = GnssStatusData(
-            satellites = sats,
-            isMock = true,
-            timestampMillis = System.currentTimeMillis()
-        )
-        _gnssStatusData.value = status
-        reevaluateTrust(newStatus = status)
     }
 
     fun reevaluateTrust(
@@ -489,19 +466,17 @@ class LocationGnssManager(private val context: Context) {
 
         val permissionOk = hasLocationPermission()
 
-        if (!permissionOk || _receiverMode.value == GnssReceiverMode.SIMULATION_TLE) {
+        if (_receiverMode.value == GnssReceiverMode.SIMULATION_TLE) {
             updateTleSimulation()
             return
         }
 
-        try {
-            registerHardwareCallbacks()
-            scheduleHardwareCheckTimer()
-        } catch (_: SecurityException) {
-            _permissionGranted.value = false
-            propagateTleFallback()
-        } catch (_: Exception) {
-            propagateTleFallback()
+        if (permissionOk && _receiverMode.value == GnssReceiverMode.INTERNAL_TLE) {
+            try {
+                registerHardwareCallbacks()
+            } catch (_: SecurityException) {
+                _permissionGranted.value = false
+            } catch (_: Exception) {}
         }
     }
 
@@ -509,7 +484,6 @@ class LocationGnssManager(private val context: Context) {
         _isMonitoringActive.value = false
         unregisterHardwareCallbacks()
         stopMockStream()
-        hardwareCheckJob?.cancel()
     }
 
     fun setForceMockMode(enabled: Boolean) {
@@ -587,16 +561,6 @@ class LocationGnssManager(private val context: Context) {
             locationManager.unregisterGnssNavigationMessageCallback(gnssNavigationCallback)
             locationManager.removeUpdates(locationListener)
         } catch (_: Exception) {}
-    }
-
-    private fun scheduleHardwareCheckTimer() {
-        hardwareCheckJob?.cancel()
-        hardwareCheckJob = scope.launch {
-            delay(3500L)
-            if (_receiverMode.value == GnssReceiverMode.INTERNAL_TLE && _gnssStatusData.value.satellites.isEmpty()) {
-                propagateTleFallback()
-            }
-        }
     }
 
     private fun startMockStream() {

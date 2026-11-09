@@ -9,9 +9,10 @@ class GnssViewModel: ObservableObject {
     let tleDownloader = TleDownloader()
     private var cancellables = Set<AnyCancellable>()
     
-    @Published var locationText: String = "Searching coordinates..."
+    @Published var locationText: String = "Waiting for GNSS coordinates..."
     @Published var accuracyText: String = "Acc: ±-- m"
-    @Published var currentCoordinate: CLLocationCoordinate2D = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
+    @Published var currentCoordinate: CLLocationCoordinate2D? = nil
+    @Published var hasLocationFix: Bool = false
     @Published var messages: [GalileoINavMessage] = []
 
     // Mode: 0 = Internal + TLE, 1 = External BLE / USB Bridge, 2 = TLE Simulation
@@ -21,6 +22,26 @@ class GnssViewModel: ObservableObject {
         selectedMode == 1 && !externalSatellites.isEmpty ? "EXTERNAL TELEMETRY" : "PREDICTED SKY"
     }
     @Published var timeOffsetHours: Double = 0.0
+
+    // Default reference coordinate for orbital simulation: Fuentecén (Ribera del Duero / Burgos, ES)
+    static let fuentecenCoordinate = CLLocationCoordinate2D(latitude: 41.6378, longitude: -3.8689)
+
+    var effectiveCoordinate: CLLocationCoordinate2D? {
+        currentCoordinate ?? (selectedMode == 2 ? Self.fuentecenCoordinate : nil)
+    }
+
+    var hasTleData: Bool {
+        !tleDownloader.parsedTles.isEmpty
+    }
+
+    var isAwaitingLocation: Bool {
+        if selectedMode == 2 { return false }
+        return currentCoordinate == nil && (selectedMode != 1 || externalSatellites.isEmpty)
+    }
+
+    var isAwaitingTle: Bool {
+        (selectedMode != 1 || externalSatellites.isEmpty) && tleDownloader.parsedTles.isEmpty
+    }
 
     // Constellation Filters
     @Published var isGalileoEnabled: Bool = true
@@ -68,15 +89,20 @@ class GnssViewModel: ObservableObject {
     }
 
     func updateSatellites() {
-        let coord = currentCoordinate
-
         let allSats: [SatelliteInfo]
         if selectedMode == 1 && !externalSatellites.isEmpty {
             allSats = externalSatellites
-        } else if selectedMode == 2 {
-            allSats = Sgp4OrbitPropagator.propagateToSkyplot(tles: tleDownloader.parsedTles, timeOffsetHours: timeOffsetHours, observerLocation: coord)
+        } else if tleDownloader.parsedTles.isEmpty {
+            allSats = []
+        } else if let coord = effectiveCoordinate {
+            let offset = (selectedMode == 2) ? timeOffsetHours : 0.0
+            allSats = Sgp4OrbitPropagator.propagateToSkyplot(
+                tles: tleDownloader.parsedTles,
+                timeOffsetHours: offset,
+                observerLocation: coord
+            )
         } else {
-            allSats = Sgp4OrbitPropagator.propagateToSkyplot(tles: tleDownloader.parsedTles, timeOffsetHours: 0.0, observerLocation: coord)
+            allSats = []
         }
 
         displayedSatellites = allSats.filter { sat in
@@ -86,6 +112,11 @@ class GnssViewModel: ObservableObject {
             case .glonass: return isGlonassEnabled
             case .beidou: return isBeidouEnabled
             }
+        }
+
+        if selectedMode == 2 && currentCoordinate == nil {
+            locationText = "41.637800° N, 3.868900° W (Fuentecén, ES)"
+            accuracyText = "Simulation Reference Base (Ribera del Duero · 837 m MSL)"
         }
     }
     
@@ -100,8 +131,9 @@ class GnssViewModel: ObservableObject {
                 let latDir = lat >= 0 ? "N" : "S"
                 let lonDir = lon >= 0 ? "E" : "W"
 
-                if self?.selectedMode == 0 {
+                if self?.selectedMode == 0 || self?.currentCoordinate == nil {
                     self?.currentCoordinate = loc.coordinate
+                    self?.hasLocationFix = true
                     self?.locationText = String(format: "%.6f° %@, %.6f° %@", abs(lat), latDir, abs(lon), lonDir)
                     self?.accuracyText = String(format: "Acc: ±%.1f m | Alt: %.1f m", loc.horizontalAccuracy, loc.altitude)
                     self?.updateSatellites()
@@ -185,6 +217,7 @@ class GnssViewModel: ObservableObject {
                 }
 
                 self.currentCoordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                self.hasLocationFix = true
                 let latDir = lat >= 0 ? "N" : "S"
                 let lonDir = lon >= 0 ? "E" : "W"
                 self.locationText = String(format: "%.6f° %@, %.6f° %@", abs(lat), latDir, abs(lon), lonDir)

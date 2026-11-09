@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.SatelliteAlt
 import androidx.compose.material.icons.rounded.SignalCellular4Bar
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Timer
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -53,6 +54,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -87,7 +89,8 @@ data class FrequencyBandSummary(
 @Suppress("DEPRECATION")
 @Composable
 fun SignalMonitorScreen(
-    gnssViewModel: GnssViewModel = viewModel()
+    gnssViewModel: GnssViewModel = viewModel(),
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val gnssStatus by gnssViewModel.gnssStatusState.collectAsState()
     val gnssMeasurements by gnssViewModel.gnssMeasurementsState.collectAsState()
@@ -96,11 +99,19 @@ fun SignalMonitorScreen(
     val isMockMode by gnssViewModel.isMockMode.collectAsState()
     val inavMessages by gnssViewModel.inavMessagesState.collectAsState()
     val hasInavSupport by gnssViewModel.hasInavSupportState.collectAsState()
+    val receiverMode by gnssViewModel.receiverMode.collectAsState()
+
+    val satellites = gnssStatus.satellites
+
+    // Standby view if awaiting live satellite hardware data
+    val isStandby = satellites.isEmpty() && !isMockMode && receiverMode != com.example.myapplication.data.gnss.model.GnssReceiverMode.SIMULATION_TLE
+    if (isStandby) {
+        SignalStandbyView(onNavigateToSettings = onNavigateToSettings)
+        return
+    }
 
     var selectedConstellation by remember { mutableStateOf("ALL") }
     val constellationFilters = listOf("ALL", "GPS", "GALILEO", "BEIDOU", "GLONASS", "QZSS", "SBAS")
-
-    val satellites = gnssStatus.satellites
     val filteredSatellites = remember(satellites, selectedConstellation) {
         if (selectedConstellation == "ALL") satellites
         else satellites.filter { it.constellation.name.equals(selectedConstellation, ignoreCase = true) }
@@ -1384,6 +1395,84 @@ private fun calculateBandSummaries(satellites: List<SatelliteDetail>): List<Freq
             peakCn0DbHz = b1Sats.maxOfOrNull { it.cn0DbHz } ?: 44.0f
         )
     )
+}
+
+@Composable
+fun SignalStandbyView(
+    onNavigateToSettings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(0.92f),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    modifier = Modifier.size(80.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.GraphicEq,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(42.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = "Signal Processing Standby",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Awaiting raw GNSS measurements from device antenna or external receiver.\n\nStandby until satellite signals are locked, or activate CelesTrak TLE Simulation in Settings.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onNavigateToSettings,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.SatelliteAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Go to Settings / TLE")
+                }
+            }
+        }
+    }
 }
 
 @Preview(showBackground = true)
