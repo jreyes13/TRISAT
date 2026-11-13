@@ -20,7 +20,9 @@ import {
   Terminal,
   Clock,
   Wifi,
-  Sliders
+  Sliders,
+  ExternalLink,
+  ArrowLeft
 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -132,7 +134,6 @@ export const App: React.FC = () => {
       <Navbar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
-        osnmaVerified={osnmaVerified}
       />
 
       {/* Main Content Area */}
@@ -491,18 +492,28 @@ export const App: React.FC = () => {
         {activeTab === 'architecture' && (
           <div className="space-y-6">
             <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-800/80 p-6 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
-                  <Cpu className="w-5 h-5 text-cyan-400" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center">
+                    <Cpu className="w-5 h-5 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white uppercase tracking-wider">
+                      TRISAT Technical Architecture & Multiplatform Stack
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                      Tri-Band reception · Tri-Service verification · Tri-Platform native execution
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-white uppercase tracking-wider">
-                    TRISAT Technical Architecture & Multiplatform Stack
-                  </h2>
-                  <p className="text-xs text-slate-400">
-                    Tri-Band reception · Tri-Service verification · Tri-Platform native execution
-                  </p>
-                </div>
+
+                <button
+                  onClick={() => setActiveTab('cockpit')}
+                  className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 hover:text-white transition cursor-pointer"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Back to Cockpit</span>
+                </button>
               </div>
 
               {/* Tri-Service Grid */}
@@ -569,9 +580,64 @@ export const App: React.FC = () => {
 
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950 px-4 py-4 text-center text-xs text-slate-500 font-mono">
-        TRISAT Multiplatform Intelligence Terminal · Developed by Joaquín Reyes González · 2026
+      {/* Sleek Minimalist Footer with Internal Architecture, GitHub, & jreyes13.net */}
+      <footer className="border-t border-slate-800/80 bg-slate-950/90 backdrop-blur-md px-4 lg:px-8 py-5">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono">
+          {/* Left: Brand info & OSNMA verification */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+              <span className="font-bold text-slate-200">TRISAT v2.4</span>
+            </div>
+            <span className="text-slate-600 hidden sm:inline">·</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[11px]">
+              <span className={`w-1.5 h-1.5 rounded-full ${osnmaVerified ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+              <span className={osnmaVerified ? 'text-emerald-300 font-semibold' : 'text-amber-300'}>
+                {osnmaVerified ? 'Galileo OSNMA Authenticated' : 'Provisional Fix'}
+              </span>
+            </div>
+          </div>
+
+          {/* Center: Internal navigation & external resources */}
+          <div className="flex flex-wrap items-center gap-4 text-slate-400">
+            <button
+              onClick={() => setActiveTab('architecture')}
+              className={`hover:text-cyan-400 transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'architecture' ? 'text-cyan-400 font-bold' : ''
+              }`}
+            >
+              <Cpu className="w-3.5 h-3.5" />
+              <span>Architecture & Stack</span>
+            </button>
+
+            <span>·</span>
+
+            <a
+              href="https://github.com/jreyes13/TRISAT"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition flex items-center gap-1"
+            >
+              <span>GitHub</span>
+              <ExternalLink className="w-3 h-3 text-slate-500" />
+            </a>
+
+            <span>·</span>
+
+            <a
+              href="https://jreyes13.net"
+              className="hover:text-cyan-400 text-slate-300 transition flex items-center gap-1"
+            >
+              <span>jreyes13.net</span>
+              <ExternalLink className="w-3 h-3 text-cyan-400" />
+            </a>
+          </div>
+
+          {/* Right: Author & Year */}
+          <div className="text-slate-500 text-[11px]">
+            Joaquín Reyes González · 2026
+          </div>
+        </div>
       </footer>
     </div>
   );

@@ -1,15 +1,14 @@
 import React from 'react';
-import { Compass, Radio, ShieldAlert, Cpu, ExternalLink, Download } from 'lucide-react';
+import { Compass, Radio, ShieldAlert, Download, ArrowLeft } from 'lucide-react';
 
 export type ActiveTab = 'planner' | 'cockpit' | 'threats' | 'architecture' | 'downloads';
 
 interface NavbarProps {
   activeTab: ActiveTab;
   onSelectTab: (tab: ActiveTab) => void;
-  osnmaVerified: boolean;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, onSelectTab, osnmaVerified }) => {
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, onSelectTab }) => {
   return (
     <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 px-4 lg:px-8 py-3">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
@@ -32,7 +31,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onSelectTab, osnmaVer
           </div>
         </div>
 
-        {/* Navigation Tabs */}
+        {/* Clean Core Navigation Tabs */}
         <nav className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800/80">
           <button
             onClick={() => onSelectTab('planner')}
@@ -71,18 +70,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onSelectTab, osnmaVer
           </button>
 
           <button
-            onClick={() => onSelectTab('architecture')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-              activeTab === 'architecture'
-                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            }`}
-          >
-            <Cpu className="w-3.5 h-3.5" />
-            <span>Architecture</span>
-          </button>
-
-          <button
             onClick={() => onSelectTab('downloads')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
               activeTab === 'downloads'
@@ -98,33 +85,15 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onSelectTab, osnmaVer
           </button>
         </nav>
 
-        {/* Status Pill & Actions */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] font-mono">
-            <span className={`w-2 h-2 rounded-full ${osnmaVerified ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            <span className={osnmaVerified ? 'text-emerald-300 font-semibold' : 'text-amber-300'}>
-              {osnmaVerified ? 'OSNMA AUTHENTICATED' : 'PROVISIONAL FIX'}
-            </span>
-          </div>
-
+        {/* Back Link to jreyes13.net */}
+        <div className="flex items-center gap-2">
           <a
-            href="/downloads/TRISAT-v2.4-debug.apk"
-            download="TRISAT-v2.4-debug.apk"
-            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition"
-            title="Download Android APK (27.5 MB)"
+            href="https://jreyes13.net"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-medium transition cursor-pointer"
+            title="Volver a jreyes13.net"
           >
-            <Download className="w-3 h-3" />
-            <span>Get APK</span>
-          </a>
-
-          <a
-            href="https://github.com/jreyes13/TRISAT"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 text-xs transition"
-          >
-            <span>GitHub</span>
-            <ExternalLink className="w-3 h-3" />
+            <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+            <span>jreyes13.net</span>
           </a>
         </div>
       </div>
