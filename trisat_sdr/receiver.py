@@ -14,6 +14,7 @@ from .bridge.telemetry_streamer import TelemetryStreamer
 from .config import GNSS_BANDS, ReceiverConfig
 from .drivers.sdr_driver import SIMULATED_SATELLITES, SdrStreamSource, discover_sdr_devices
 from .dsp.acquisition import AcquisitionResult, PcpsAcquisitionEngine
+from .dsp.codes import GALILEO_E1_SVIDS
 from .dsp.tracking import GnssTrackingChannel, TrackingTelemetry
 from .nav.frame_decoder import DecodedGnssFrame, GnssFrameDecoder
 from .nav.galileo_advanced_services import GalileoAdvancedServicesEngine, GalileoAdvancedServicesReport
@@ -92,70 +93,51 @@ class TrisatSdrReceiver:
         """
         results: List[AcquisitionResult] = []
         channels: List[GnssTrackingChannel] = []
-        ch_id = 0
-
-        # 1. Primary SDR (#0): Galileo E1B/C + optional GPS L1 C/A
-        iq_primary = self.primary_stream.read_iq_samples(1024)
-        self.primary_spectrum_db = self.primary_stream.compute_power_spectrum_db(iq_primary)
-
-        p_band = self.config.primary_sdr.band_id
-        p_spec = GNSS_BANDS[p_band]
-        candidate_sats = list(SIMULATED_SATELLITES.get(p_band, []))
-        if p_band == "GAL_E1" and self.config.also_acquire_gps_l1_on_primary:
-            candidate_sats.extend(SIMULATED_SATELLITES["GPS_L1"])
-
-        for const, svid, sim_fd, sim_delay, sim_cn0 in candidate_sats:
-            b_id = "GPS_L1" if const == "GPS" else p_band
-            b_spec = GNSS_BANDS[b_id]
-            acq = self.acq_primary.acquire_satellite(
-                iq_samples=iq_primary,
-                band_id=b_id,
-                constellation=const,
-                svid=svid,
-                code_length_chips=b_spec.code_length_chips,
-            )
-            # Ensure high-fidelity lock initialization on active PRNs
-            acq.acquired = True
-            acq.doppler_hz = sim_fd
-            acq.cn0_dbhz = max(acq.cn0_dbhz, sim_cn0)
-            results.append(acq)
-            channels.append(
-                GnssTrackingChannel(
-                    channel_id=ch_id,
-                    acq=acq,
-                    code_rate_cps=b_spec.code_rate_cps,
-                    code_length_chips=b_spec.code_length_chips,
-                )
-            )
-            ch_id += 1
-
-        # 2. Secondary SDR (#1): Galileo E6 (HAS) or E5a / E5b / E5 AltBOC
+        inputs = [(self.primary_stream, self.acq_primary)]
         if self.config.dual_sdr_enabled:
-            iq_sec = self.secondary_stream.read_iq_samples(1024)
-            self.secondary_spectrum_db = self.secondary_stream.compute_power_spectrum_db(iq_sec)
-            s_band = self.config.secondary_sdr.band_id
-            s_spec = GNSS_BANDS[s_band]
-            for const, svid, sim_fd, sim_delay, sim_cn0 in SIMULATED_SATELLITES.get(s_band, []):
-                acq = self.acq_secondary.acquire_satellite(
-                    iq_samples=iq_sec,
-                    band_id=s_band,
+            inputs.append((self.secondary_stream, self.acq_secondary))
+
+        for index, (stream, engine) in enumerate(inputs):
+            band = stream.config.band_id
+            e1b = band == "GAL_E1"
+            e1b_capture = e1b and stream.config.driver == "file"
+            iq = stream.read_iq_samples(engine.e1b_window_samples if e1b else 1024)
+            spectrum = stream.compute_power_spectrum_db(iq)
+            if index == 0:
+                self.primary_spectrum_db = spectrum
+            else:
+                self.secondary_spectrum_db = spectrum
+
+            if e1b_capture:
+                candidates = [("GALILEO", svid, 0.0, 0, 0.0) for svid in GALILEO_E1_SVIDS]
+            else:
+                candidates = list(SIMULATED_SATELLITES.get(band, []))
+                if index == 0 and e1b and self.config.also_acquire_gps_l1_on_primary:
+                    candidates.extend(SIMULATED_SATELLITES["GPS_L1"])
+
+            for const, svid, sim_fd, _, sim_cn0 in candidates:
+                band_id = "GPS_L1" if const == "GPS" else band
+                spec = GNSS_BANDS[band_id]
+                acq = engine.acquire_satellite(
+                    iq_samples=iq,
+                    band_id=band_id,
                     constellation=const,
                     svid=svid,
-                    code_length_chips=s_spec.code_length_chips,
+                    code_length_chips=spec.code_length_chips,
                 )
-                acq.acquired = True
-                acq.doppler_hz = sim_fd
-                acq.cn0_dbhz = max(acq.cn0_dbhz, sim_cn0)
+                if band_id != "GAL_E1":
+                    # Preserve simulated locks for bands outside the E1-B search.
+                    acq.acquired = True
+                    acq.doppler_hz = sim_fd
+                    acq.cn0_dbhz = max(acq.cn0_dbhz, sim_cn0)
                 results.append(acq)
-                channels.append(
-                    GnssTrackingChannel(
-                        channel_id=ch_id,
+                if acq.acquired:
+                    channels.append(GnssTrackingChannel(
+                        channel_id=len(channels),
                         acq=acq,
-                        code_rate_cps=s_spec.code_rate_cps,
-                        code_length_chips=s_spec.code_length_chips,
-                    )
-                )
-                ch_id += 1
+                        code_rate_cps=spec.code_rate_cps,
+                        code_length_chips=spec.code_length_chips,
+                    ))
 
         with self._lock:
             self.latest_acquisitions = results

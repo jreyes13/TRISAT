@@ -220,47 +220,45 @@ class SdrStreamSource:
         self._block_count += 1
 
         # 1. If reading from an IQ binary file
-        if self.config.driver == "file" and self.config.iq_file_path and os.path.isfile(self.config.iq_file_path):
+        if self.config.driver == "file":
             return self._read_from_iq_file(num_samples)
 
         # 2. Synthesize realistic composite GNSS baseband signal for the selected band
         return self._synthesize_composite_iq(num_samples)
 
     def _read_from_iq_file(self, num_samples: int) -> List[complex]:
+        path = self.config.iq_file_path
+        if not path:
+            raise ValueError("An IQ capture path is required for the file driver.")
         fmt = self.config.iq_format.lower()
-        bytes_per_iq = {"int8": 2, "uint8": 2, "int16": 4, "float32": 8}.get(fmt, 2)
-        byte_offset = (self._block_count * num_samples * bytes_per_iq)
-        try:
-            file_size = os.path.getsize(self.config.iq_file_path)  # type: ignore
-            if file_size > 0:
-                byte_offset %= max(1, file_size - num_samples * bytes_per_iq)
-            with open(self.config.iq_file_path, "rb") as f:  # type: ignore
-                f.seek(byte_offset)
-                raw = f.read(num_samples * bytes_per_iq)
-            samples: List[complex] = []
-            if fmt == "int8":
-                for i in range(0, len(raw) - 1, 2):
-                    iv = struct.unpack("b", raw[i:i+1])[0] / 128.0
-                    qv = struct.unpack("b", raw[i+1:i+2])[0] / 128.0
-                    samples.append(complex(iv, qv))
-            elif fmt == "uint8":
-                for i in range(0, len(raw) - 1, 2):
-                    iv = (raw[i] - 127.5) / 127.5
-                    qv = (raw[i+1] - 127.5) / 127.5
-                    samples.append(complex(iv, qv))
-            elif fmt == "int16":
-                for i in range(0, len(raw) - 3, 4):
-                    iv, qv = struct.unpack("<hh", raw[i:i+4])
-                    samples.append(complex(iv / 32768.0, qv / 32768.0))
-            else:
-                for i in range(0, len(raw) - 7, 8):
-                    iv, qv = struct.unpack("<ff", raw[i:i+8])
-                    samples.append(complex(iv, qv))
-            if len(samples) < num_samples:
-                samples.extend([0j] * (num_samples - len(samples)))
-            return samples
-        except Exception:
-            return self._synthesize_composite_iq(num_samples)
+        bytes_per_iq = {"int8": 2, "uint8": 2, "int16": 4, "float32": 8}.get(fmt)
+        if bytes_per_iq is None:
+            raise ValueError(f"Unsupported IQ capture format: {fmt}")
+        file_samples = os.path.getsize(path) // bytes_per_iq
+        sample_offset = ((self._block_count - 1) * num_samples) % max(1, file_samples - num_samples)
+        with open(path, "rb") as f:
+            f.seek(sample_offset * bytes_per_iq)
+            raw = f.read(num_samples * bytes_per_iq)
+        samples: List[complex] = []
+        if fmt == "int8":
+            for i in range(0, len(raw) - 1, 2):
+                iv = struct.unpack("b", raw[i:i+1])[0] / 128.0
+                qv = struct.unpack("b", raw[i+1:i+2])[0] / 128.0
+                samples.append(complex(iv, qv))
+        elif fmt == "uint8":
+            for i in range(0, len(raw) - 1, 2):
+                iv = (raw[i] - 127.5) / 127.5
+                qv = (raw[i+1] - 127.5) / 127.5
+                samples.append(complex(iv, qv))
+        elif fmt == "int16":
+            for i in range(0, len(raw) - 3, 4):
+                iv, qv = struct.unpack("<hh", raw[i:i+4])
+                samples.append(complex(iv / 32768.0, qv / 32768.0))
+        else:
+            for i in range(0, len(raw) - 7, 8):
+                iv, qv = struct.unpack("<ff", raw[i:i+8])
+                samples.append(complex(iv, qv))
+        return samples
 
     def _get_cached_code(self, band_id: str, svid: int, num_samples: int) -> List[float]:
         key = (band_id, svid, num_samples)
