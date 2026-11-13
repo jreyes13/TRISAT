@@ -7,14 +7,17 @@ Auto-detects USB ports (/dev/cu.usbmodem*) and broadcasts NMEA + UBX frames
 via UDP (:9090) across localhost and local LAN (for iPhone/iPad on Wi-Fi).
 """
 
+import argparse
 import sys
 import glob
 import socket
 
 if __package__:
     from .f9p_stream import F9pStream, build_ubx_msg
+    from .galileo_inav import decode_sfrbx
 else:
     from f9p_stream import F9pStream, build_ubx_msg
+    from galileo_inav import decode_sfrbx
 
 UDP_PORT = 9090
 MAX_UDP_PAYLOAD = 65_507
@@ -25,7 +28,7 @@ def find_f9p_port():
         return candidates[0]
     return None
 
-def main():
+def main(*, emit_galinav=False):
     port = find_f9p_port()
     if not port:
         print("[-] Error: No u-blox ZED-F9P detected on USB (/dev/cu.usbmodem*).")
@@ -83,6 +86,12 @@ def main():
                     print(f"[UBX-RAW] {hex_str}...")
                 sock.sendto(payload, ("127.0.0.1", UDP_PORT))
                 sock.sendto(payload, ("255.255.255.255", UDP_PORT))
+                if emit_galinav and frame.startswith(b"\xb5\x62\x02\x13"):
+                    page = decode_sfrbx(frame[6:-2])
+                    if page is not None:
+                        sentence = page.sentence()
+                        sock.sendto(sentence, ("127.0.0.1", UDP_PORT))
+                        sock.sendto(sentence, ("255.255.255.255", UDP_PORT))
 
     except KeyboardInterrupt:
         print("\n[+] Bridge stopped by user.")
@@ -91,4 +100,6 @@ def main():
         sock.close()
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Forward ZED-F9P USB telemetry over UDP.")
+    parser.add_argument("--emit-galinav", action="store_true", help="Also send CRC-checked Galileo I/NAV pages.")
+    main(emit_galinav=parser.parse_args().emit_galinav)

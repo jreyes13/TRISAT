@@ -76,10 +76,21 @@ Used for direct USB-C connection between the SparkFun ZED-F9P board and a Mac or
   ```
   Requests NMEA GSV, GGA, RMC, GSA, GST, and `UBX-RXM-SFRBX` output on the connected USB port. The bridge forwards complete NMEA sentences and checksum-validated UBX packets to UDP port `9090` on localhost and the local network. Each UBX datagram starts with `RAW:`.
 
+* **Decoded Galileo I/NAV output:** Add `--emit-galinav` for consumers that support the following layout. The bridge keeps sending the original `RAW:` packets and sends a second datagram for each nominal E1-B or E5b-I `RXM-SFRBX` v2 page pair that passes the Galileo CRC-24Q check.
+
+  ```text
+  $GALINAV,<svid>,<word_type>,<60 hex digits>,<E1-B or E5b-I>*<checksum>
+  ```
+
+  The hex contains the two 120-bit page parts in transmission order, including their tail bits. The sentence checksum covers the ASCII body. CRC verification checks the I/NAV bits and leaves OSNMA authentication separate. The option is off by default because the current Apple I/NAV display assumes the legacy payload layout.
+
 * **Test without a receiver:**
   ```bash
   python3 -m unittest discover -s trisat_hw/zed_f9p/tests -v
   ```
+  Tests include nominal E1-B page pairs from Annex A.6.3 and a published E5b-I example, wrapped in UBX for transport testing. [Galileo OSNMA Receiver Guidelines](https://www.gsc-europa.eu/sites/default/files/sites/all/files/Galileo-OSNMA-RX-Guidelines_in_force.pdf) · [NovAtel E5b-I example](https://docs.novatel.com/OEM7/Content/Logs/GALINAVRAWDATA.htm)
+
+* **Receiver follow-up:** With the receiver in open sky, run the bridge with `--emit-galinav`. Save the binary `RXM-SFRBX` stream and UDP datagrams from the same interval. Record the module variant and firmware, then compare SVID, signal ID and word type between the binary capture and the decoded output.
 
 * **Factory Restore:**
   ```bash
