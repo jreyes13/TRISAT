@@ -6,8 +6,8 @@ data class TrustReport(
     val subScores: TrustSubScores = TrustSubScores(),
     val threatsDetected: List<ThreatType> = emptyList(),
     val activeThreatWarnings: List<String> = emptyList(),
-    val estimatedHdop: Float = 1.2f,
-    val estimatedVdop: Float = 1.6f,
+    val estimatedHdop: Float? = null,
+    val estimatedVdop: Float? = null,
     val osnmaStatus: OsnmaStatus = OsnmaStatus.NOT_AVAILABLE,
     val intelligenceLogs: List<IntelligenceLogEntry> = emptyList(),
     val timestampMillis: Long = System.currentTimeMillis()

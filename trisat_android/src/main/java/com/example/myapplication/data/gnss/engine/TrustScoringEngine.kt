@@ -13,13 +13,14 @@ import com.example.myapplication.data.gnss.model.TrustSubScores
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.sin
 import kotlin.math.sqrt
 
 data class DopEvaluationResult(
     val score: Float,
-    val hdop: Float,
-    val vdop: Float,
+    val hdop: Float?,
+    val vdop: Float?,
     val logs: List<IntelligenceLogEntry>
 )
 
@@ -321,54 +322,94 @@ class TrustScoringEngine {
         threats: MutableList<ThreatType>,
         warnings: MutableList<String>
     ): DopEvaluationResult {
-        val logs = mutableListOf<IntelligenceLogEntry>()
-        val sats = status.satellites.filter { it.usedInFix || it.elevationDegrees > 10f }
+        // Count each space vehicle once, even if the receiver reports several signals.
+        val satellites = status.satellites.filter {
+            it.usedInFix && it.elevationDegrees in 0f..90f && it.azimuthDegrees in 0f..360f
+        }.distinctBy { it.constellation to it.svid }
 
-        if (sats.size < 4) {
-            logs.add(IntelligenceLogEntry(tag = "DOP_EVAL", severity = "WARNING", message = "Insufficient satellite count (< 4) for geometric DOP calculation."))
-            return DopEvaluationResult(40f, 5.5f, 6.0f, logs)
-        }
-
-        var sumXX = 0.0
-        var sumYY = 0.0
-        var sumZZ = 0.0
-
-        for (sat in sats) {
-            val elRad = Math.toRadians(sat.elevationDegrees.toDouble())
-            val azRad = Math.toRadians(sat.azimuthDegrees.toDouble())
-
-            val x = cos(elRad) * sin(azRad)
-            val y = cos(elRad) * cos(azRad)
-            val z = sin(elRad)
-
-            sumXX += x * x
-            sumYY += y * y
-            sumZZ += z * z
-        }
-
-        val hdop = (sqrt(1.0 / (sumXX + 1e-5) + 1.0 / (sumYY + 1e-5))).toFloat().coerceIn(0.8f, 15.0f)
-        val vdop = (sqrt(1.0 / (sumZZ + 1e-5))).toFloat().coerceIn(1.0f, 20.0f)
-
-        var score = 100f
-        if (hdop > 5.0f) {
-            score = 35f
-            threats.add(ThreatType.POOR_GEOMETRY_WARNING)
-            warnings.add("Poor satellite geometric dispersion (HDOP: ${String.format(Locale.US, "%.1f", hdop)}). High positioning uncertainty.")
-        } else if (hdop > 3.0f) {
-            score = 70f
-        } else if (hdop > 2.0f) {
-            score = 88f
-        }
-
-        logs.add(
-            IntelligenceLogEntry(
-                severity = "INFO",
+        if (satellites.size < 4) {
+            val log = IntelligenceLogEntry(
                 tag = "DOP_EVAL",
-                message = "Geometric Dispersion: Estimated HDOP = ${String.format(Locale.US, "%.2f", hdop)}, VDOP = ${String.format(Locale.US, "%.2f", vdop)}."
+                severity = "WARNING",
+                message = "DOP unavailable: fewer than four satellites used in the fix have valid angles."
             )
-        )
+            return DopEvaluationResult(40f, null, null, listOf(log))
+        }
 
-        return DopEvaluationResult(score, hdop, vdop, logs)
+        val geometry = satellites.map { sat ->
+            val elevation = Math.toRadians(sat.elevationDegrees.toDouble())
+            val azimuth = Math.toRadians(sat.azimuthDegrees.toDouble())
+            val horizontal = cos(elevation)
+            doubleArrayOf(horizontal * sin(azimuth), horizontal * cos(azimuth), sin(elevation), 1.0)
+        }
+        val variances = positionVariances(geometry)
+        if (variances == null) {
+            val message = "DOP unavailable: satellite geometry cannot reliably resolve position and receiver clock."
+            threats.add(ThreatType.POOR_GEOMETRY_WARNING)
+            warnings.add(message)
+            val log = IntelligenceLogEntry(tag = "DOP_EVAL", severity = "WARNING", message = message)
+            return DopEvaluationResult(35f, null, null, listOf(log))
+        }
+
+        val hdop = sqrt(variances[0] + variances[1]).toFloat()
+        val vdop = sqrt(variances[2]).toFloat()
+        val worstDop = maxOf(hdop, vdop)
+        val poorGeometry = worstDop > 5f
+        val dopSummary = String.format(Locale.US, "Estimated HDOP = %.2f, VDOP = %.2f", hdop, vdop)
+        val score = when {
+            poorGeometry -> 35f
+            worstDop > 3f -> 70f
+            worstDop > 2f -> 88f
+            else -> 100f
+        }
+
+        if (poorGeometry) {
+            threats.add(ThreatType.POOR_GEOMETRY_WARNING)
+            warnings.add("Poor satellite geometry. $dopSummary. High positioning uncertainty.")
+        }
+        val log = IntelligenceLogEntry(
+            severity = if (poorGeometry) "WARNING" else "INFO",
+            tag = "DOP_EVAL",
+            message = "$dopSummary."
+        )
+        return DopEvaluationResult(score, hdop, vdop, listOf(log))
+    }
+
+    private fun positionVariances(geometry: List<DoubleArray>): DoubleArray? {
+        // QR of the equal-weight ENU geometry with a common receiver clock.
+        // Givens rotations avoid squaring the condition number in G^T G.
+        val r = Array(4) { DoubleArray(4) }
+        for (row in geometry) {
+            for (column in 0 until 4) {
+                if (row[column] == 0.0) continue
+                val norm = hypot(r[column][column], row[column])
+                val cosine = r[column][column] / norm
+                val sine = row[column] / norm
+                r[column][column] = norm
+                for (j in column + 1 until 4) {
+                    val upper = r[column][j]
+                    r[column][j] = cosine * upper + sine * row[j]
+                    row[j] = cosine * row[j] - sine * upper
+                }
+            }
+        }
+
+        // Scale the rank tolerance by the norm of the clock column.
+        val tolerance = 1e-8 * sqrt(geometry.size.toDouble())
+        if ((0 until 4).any { abs(r[it][it]) <= tolerance }) return null
+
+        // diag((G^T G)^-1) is given by the squared row norms of R^-1.
+        return DoubleArray(3) { axis ->
+            val inverseRow = DoubleArray(4)
+            for (column in axis until 4) {
+                var value = if (column == axis) 1.0 else 0.0
+                for (j in axis until column) {
+                    value -= inverseRow[j] * r[j][column]
+                }
+                inverseRow[column] = value / r[column][column]
+            }
+            inverseRow.sumOf { it * it }
+        }
     }
 
     private fun evaluateClockStability(

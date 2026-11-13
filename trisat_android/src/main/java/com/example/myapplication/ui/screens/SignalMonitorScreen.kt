@@ -265,7 +265,7 @@ fun SignalMonitorScreen(
 fun HeaderStatsCard(
     gnssStatus: GnssStatusData,
     filteredSatCount: Int,
-    estimatedHdop: Float,
+    estimatedHdop: Float?,
     isMockMode: Boolean,
     onToggleMockMode: (Boolean) -> Unit
 ) {
@@ -299,7 +299,7 @@ fun HeaderStatsCard(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Avg C/N0: ${String.format(Locale.US, "%.1f", gnssStatus.averageCn0DbHz)} dB-Hz • HDOP: ${String.format(Locale.US, "%.2f", estimatedHdop)}",
+                        text = "Avg C/N0: ${String.format(Locale.US, "%.1f", gnssStatus.averageCn0DbHz)} dB-Hz • HDOP: ${estimatedHdop?.let { String.format(Locale.US, "%.2f", it) } ?: "—"}",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.tertiary,
                         fontWeight = FontWeight.SemiBold

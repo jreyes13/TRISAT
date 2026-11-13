@@ -17,6 +17,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -136,20 +137,110 @@ class TrustScoringEngineTest {
     }
 
     @Test
-    fun testDopEstimation() {
-        val wellDispersedSats = listOf(
-            SatelliteDetail(svid = 1, constellation = ConstellationType.GPS, cn0DbHz = 40f, elevationDegrees = 75f, azimuthDegrees = 45f, usedInFix = true),
-            SatelliteDetail(svid = 2, constellation = ConstellationType.GPS, cn0DbHz = 38f, elevationDegrees = 30f, azimuthDegrees = 135f, usedInFix = true),
-            SatelliteDetail(svid = 3, constellation = ConstellationType.GALILEO, cn0DbHz = 42f, elevationDegrees = 40f, azimuthDegrees = 225f, usedInFix = true),
-            SatelliteDetail(svid = 4, constellation = ConstellationType.BEIDOU, cn0DbHz = 35f, elevationDegrees = 50f, azimuthDegrees = 315f, usedInFix = true)
+    fun testWellDispersedDopMatchesAnalyticReference() {
+        val horizon = cardinalRing(0f)
+        val zenith = horizon.first().copy(
+            constellation = ConstellationType.GALILEO, elevationDegrees = 90f
         )
+        // Four cardinal horizon rays and one at zenith give HDOP = 1, VDOP = sqrt(5/4).
+        val report = evaluateGeometry(horizon + zenith)
 
-        val status = GnssStatusData(satellites = wellDispersedSats)
-        val report = engine.evaluateTrust(status, GnssMeasurementsData(), LocationData())
-
-        assertTrue("Estimated HDOP should be reasonable (< 3.0)", report.estimatedHdop < 3.0f)
-        assertTrue("Geometry subscore should be high", report.subScores.geometryDopScore >= 80f)
+        assertEquals(1.0f, requireNotNull(report.estimatedHdop), 1e-6f)
+        assertEquals(1.118034f, requireNotNull(report.estimatedVdop), 1e-6f)
+        assertEquals(100f, report.subScores.geometryDopScore, 0f)
+        assertFalse(report.threatsDetected.contains(ThreatType.POOR_GEOMETRY_WARNING))
     }
+
+    @Test
+    fun testAsymmetricDopMatchesFullMatrixReferenceRegardlessOfOrder() {
+        val angles = listOf(75f to 45f, 30f to 135f, 40f to 225f, 50f to 315f)
+        val satellites = cardinalRing(0f).zip(angles) { satellite, (elevation, azimuth) ->
+            satellite.copy(elevationDegrees = elevation, azimuthDegrees = azimuth)
+        }
+
+        // Reference values from independently inverting the full normal matrix.
+        for (order in listOf(satellites, satellites.reversed())) {
+            val report = evaluateGeometry(order)
+            assertEquals(2.091518f, requireNotNull(report.estimatedHdop), 1e-5f)
+            assertEquals(4.596476f, requireNotNull(report.estimatedVdop), 1e-5f)
+        }
+    }
+
+    @Test
+    fun testPoorVerticalDopIsReportedEvenWithGoodHorizontalGeometry() {
+        val report = evaluateGeometry(cardinalRing(30f) + cardinalRing(31f, firstSvid = 5))
+
+        // Two cardinal rings cancel the horizontal cross terms. Their small separation
+        // in elevation makes vertical position and receiver clock hard to separate.
+        assertEquals(0.820683f, requireNotNull(report.estimatedHdop), 1e-5f)
+        assertEquals(47.0211f, requireNotNull(report.estimatedVdop), 1e-3f)
+        assertEquals(35f, report.subScores.geometryDopScore, 0f)
+        assertTrue(report.threatsDetected.contains(ThreatType.POOR_GEOMETRY_WARNING))
+    }
+
+    @Test
+    fun testPoorHorizontalDopIsNotClamped() {
+        val report = evaluateGeometry(cardinalRing(80f) + cardinalRing(85f, firstSvid = 5))
+
+        assertEquals(5.146863f, requireNotNull(report.estimatedHdop), 1e-5f)
+        assertEquals(62.0980f, requireNotNull(report.estimatedVdop), 1e-3f)
+        assertEquals(35f, report.subScores.geometryDopScore, 0f)
+        assertTrue(report.threatsDetected.contains(ThreatType.POOR_GEOMETRY_WARNING))
+    }
+
+    @Test
+    fun testEqualElevationIsSingularEvenWithAnUnusedSatelliteAtZenith() {
+        val ring = cardinalRing(30f)
+        val unused = ring.first().copy(svid = 5, elevationDegrees = 90f, usedInFix = false)
+        val report = evaluateGeometry(ring + unused)
+
+        assertNull(report.estimatedHdop)
+        assertNull(report.estimatedVdop)
+        assertEquals(35f, report.subScores.geometryDopScore, 0f)
+        assertTrue(report.threatsDetected.contains(ThreatType.POOR_GEOMETRY_WARNING))
+        assertTrue(report.activeThreatWarnings.any { it.contains("receiver clock") })
+    }
+
+    @Test
+    fun testNearlyCollinearAzimuthsDoNotYieldAUsableDop() {
+        val clustered = cardinalRing(30f).mapIndexed { index, sat ->
+            sat.copy(azimuthDegrees = index * 1e-8f, elevationDegrees = 20f + 10f * index)
+        }
+        val report = evaluateGeometry(clustered)
+
+        assertNull(report.estimatedHdop)
+        assertNull(report.estimatedVdop)
+        assertTrue(report.threatsDetected.contains(ThreatType.POOR_GEOMETRY_WARNING))
+    }
+
+    @Test
+    fun testDuplicateSignalsAndInvalidAnglesDoNotMakeFourUsableSatellites() {
+        val three = cardinalRing(30f).take(3)
+        val extraSignal = three.first().copy(carrierFrequencyHz = 1176.45e6)
+        val invalid = three.first().copy(svid = 4, azimuthDegrees = Float.NaN)
+        val report = evaluateGeometry(three + extraSignal + invalid)
+
+        assertNull(report.estimatedHdop)
+        assertNull(report.estimatedVdop)
+        assertEquals(40f, report.subScores.geometryDopScore, 0f)
+        assertFalse(report.threatsDetected.contains(ThreatType.POOR_GEOMETRY_WARNING))
+        assertTrue(report.intelligenceLogs.any { it.tag == "DOP_EVAL" && it.severity == "WARNING" })
+    }
+
+    private fun cardinalRing(elevation: Float, firstSvid: Int = 1): List<SatelliteDetail> =
+        listOf(0f, 90f, 180f, 270f).mapIndexed { index, azimuth ->
+            SatelliteDetail(
+                svid = firstSvid + index,
+                constellation = ConstellationType.GPS,
+                cn0DbHz = 36f + index,
+                elevationDegrees = elevation,
+                azimuthDegrees = azimuth,
+                usedInFix = true
+            )
+        }
+
+    private fun evaluateGeometry(satellites: List<SatelliteDetail>) =
+        engine.evaluateTrust(GnssStatusData(satellites = satellites), GnssMeasurementsData(), LocationData())
 
     @Test
     fun testEvaluationLogReportsMediumTrustWithoutClaimingAnomaly() {

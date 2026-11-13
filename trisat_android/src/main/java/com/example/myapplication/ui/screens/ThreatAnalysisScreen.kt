@@ -422,20 +422,23 @@ fun AntiSpoofingOverviewCard(
 
 @Composable
 fun DopGeometryBreakdownCard(
-    hdop: Float,
-    vdop: Float
+    hdop: Float?,
+    vdop: Float?
 ) {
-    val pdop = sqrt(hdop * hdop + vdop * vdop)
+    val pdop = if (hdop != null && vdop != null) sqrt(hdop * hdop + vdop * vdop) else null
+    val worstDop = if (hdop != null && vdop != null) maxOf(hdop, vdop) else null
     val geometryRating = when {
-        hdop <= 2.0f -> "EXCELLENT"
-        hdop <= 3.5f -> "GOOD"
-        hdop <= 5.0f -> "MODERATE"
+        worstDop == null -> "DOP UNAVAILABLE"
+        worstDop <= 2.0f -> "EXCELLENT"
+        worstDop <= 3.5f -> "GOOD"
+        worstDop <= 5.0f -> "MODERATE"
         else -> "POOR GEOMETRY"
     }
 
     val ratingLevel = when {
-        hdop <= 2.0f -> StatusLevel.SECURE
-        hdop <= 5.0f -> StatusLevel.WARNING
+        worstDop == null -> StatusLevel.INFO
+        worstDop <= 2.0f -> StatusLevel.SECURE
+        worstDop <= 5.0f -> StatusLevel.WARNING
         else -> StatusLevel.ALERT
     }
 
@@ -481,8 +484,8 @@ fun DopGeometryBreakdownCard(
             ) {
                 DopMetricBox(
                     label = "HDOP (Horizontal)",
-                    value = String.format(Locale.US, "%.2f", hdop),
-                    status = if (hdop < 2.5) "Optimal Spread" else "Cluster Warning",
+                    value = hdop?.let { String.format(Locale.US, "%.2f", it) } ?: "—",
+                    status = hdop?.let { if (it < 2.5f) "Favorable Geometry" else "High Horizontal DOP" } ?: "Unavailable",
                     modifier = Modifier.weight(1f)
                 )
 
@@ -490,8 +493,8 @@ fun DopGeometryBreakdownCard(
 
                 DopMetricBox(
                     label = "VDOP (Vertical)",
-                    value = String.format(Locale.US, "%.2f", vdop),
-                    status = if (vdop < 3.0) "Vertical Fix Clear" else "High Uncertainty",
+                    value = vdop?.let { String.format(Locale.US, "%.2f", it) } ?: "—",
+                    status = vdop?.let { if (it < 3f) "Favorable Geometry" else "High Vertical DOP" } ?: "Unavailable",
                     modifier = Modifier.weight(1f)
                 )
 
@@ -499,11 +502,18 @@ fun DopGeometryBreakdownCard(
 
                 DopMetricBox(
                     label = "PDOP (Position)",
-                    value = String.format(Locale.US, "%.2f", pdop),
-                    status = "Combined Geometry",
+                    value = pdop?.let { String.format(Locale.US, "%.2f", it) } ?: "—",
+                    status = if (pdop == null) "Unavailable" else "Combined Geometry",
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = "Geometry estimate assumes equal measurement weights and one receiver clock across constellations.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
