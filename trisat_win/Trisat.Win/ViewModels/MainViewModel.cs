@@ -19,6 +19,11 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private readonly Dispatcher _dispatcher;
     private readonly TleService _tleService = new();
     private readonly OsnmaEngine _osnmaEngine = new();
+    private readonly GstClockService _gstClock = new();
+    private readonly OsnmaLiveVerifier _liveOsnma;
+    private readonly TrisatAssistStore _assistStore = new(retentionSeconds: 60);
+    private readonly TrisatAssistServer _assistServer;
+    private readonly TrisatAssistClient _assistClient = new();
     private readonly ThreatAnalyzer _threatAnalyzer = new();
     private readonly SatelliteStore _satelliteStore = new(TimeSpan.FromSeconds(30));
     private readonly UdpTelemetryService _udpService = new();
@@ -34,10 +39,17 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private IReadOnlyList<SatelliteInfo> _externalSatellites = Array.Empty<SatelliteInfo>();
     private GnssPosition? _livePosition;
     private DopMetrics? _gsaDop;
+    private int _bitwiseTotalChecked;
+    private int _bitwiseMatched;
+    private int _bitwiseMismatched;
+    private int _bitwiseNoRef;
+    private BitwiseCheckResult? _lastBitwiseResult;
 
     public MainViewModel(Dispatcher dispatcher)
     {
         _dispatcher = dispatcher;
+        _liveOsnma = new OsnmaLiveVerifier(_gstClock);
+        _assistServer = new TrisatAssistServer(_assistStore, _gstClock, _liveOsnma);
         RepoRootPath = ProcessBridgeService.DiscoverRepositoryRoot() ?? Directory.GetCurrentDirectory();
 
         // Initialize commands
@@ -46,9 +58,13 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         DownloadTleCommand = new AsyncRelayCommand(DownloadTlesAsync);
         ClearNmeaCommand = new RelayCommand(() => NmeaLines.Clear());
         ExportNmeaCommand = new RelayCommand(ExportNmeaLog, () => NmeaLines.Count > 0);
-        ClearInavCommand = new RelayCommand(() => { InavMessages.Clear(); RefreshThreats(); });
+        ClearInavCommand = new RelayCommand(() => { InavMessages.Clear(); _liveOsnma.Reset(); ResetBitwiseStats(); RefreshThreats(); });
         RunAnnexASelfTestCommand = new RelayCommand(RunAnnexASelfTest);
         ResetThreatSimulationCommand = new RelayCommand(ResetThreatSimulation);
+        SyncGstClockCommand = new AsyncRelayCommand(SyncGstClockAsync);
+        LoadEuspaXmlKeysCommand = new RelayCommand(LoadEuspaXmlKeys);
+        ToggleAssistServerCommand = new RelayCommand(ToggleAssistServer);
+        ToggleAssistClientCommand = new AsyncRelayCommand(ToggleAssistClientAsync);
 
         RefreshSerialPortsCommand = new RelayCommand(RefreshSerialPorts);
         ToggleSerialConnectionCommand = new RelayCommand(ToggleSerialConnection);
@@ -105,6 +121,10 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public RelayCommand ClearInavCommand { get; }
     public RelayCommand RunAnnexASelfTestCommand { get; }
     public RelayCommand ResetThreatSimulationCommand { get; }
+    public AsyncRelayCommand SyncGstClockCommand { get; }
+    public RelayCommand LoadEuspaXmlKeysCommand { get; }
+    public RelayCommand ToggleAssistServerCommand { get; }
+    public AsyncRelayCommand ToggleAssistClientCommand { get; }
     public RelayCommand RefreshSerialPortsCommand { get; }
     public RelayCommand ToggleSerialConnectionCommand { get; }
     public AsyncRelayCommand ConfigureZedF9pCommand { get; }
@@ -335,6 +355,55 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     public string AnnexASelfTestBanner => AnnexASelfTestResult is null
         ? "Not executed yet · Click 'Run Annex A Self-Test' to verify ECDSA P-256, TESLA K14→K0 & HMAC tags"
         : AnnexASelfTestResult.Summary;
+
+    // =========================================================================
+    // Live OSNMA, Independent GST Clock & Open-Source TRISAT-Assist
+    // =========================================================================
+
+    private string _gstClockBanner = "GST Clock: Unsynced (click Sync SNTP/GST)";
+    public string GstClockBanner { get => _gstClockBanner; private set => SetProperty(ref _gstClockBanner, value); }
+
+    private string _liveOsnmaBanner = "Live OSNMA: Awaiting EUSPA XML keys or Assisted OSNMA bootstrap";
+    public string LiveOsnmaBanner { get => _liveOsnmaBanner; private set => SetProperty(ref _liveOsnmaBanner, value); }
+
+    private string _bitwiseStatsBanner = "Bitwise Cross-Check: Standby (connect Assisted OSNMA client)";
+    public string BitwiseStatsBanner { get => _bitwiseStatsBanner; private set => SetProperty(ref _bitwiseStatsBanner, value); }
+
+    private int _assistServerPort = 8095;
+    public int AssistServerPort { get => _assistServerPort; set => SetProperty(ref _assistServerPort, value); }
+
+    private bool _isAssistServerRunning;
+    public bool IsAssistServerRunning
+    {
+        get => _isAssistServerRunning;
+        private set
+        {
+            if (SetProperty(ref _isAssistServerRunning, value))
+                OnPropertyChanged(nameof(AssistServerButtonText));
+        }
+    }
+    public string AssistServerButtonText => IsAssistServerRunning ? "Stop Assist Server" : "Start Assist Server";
+
+    private string _assistServerStatusText = "Stopped";
+    public string AssistServerStatusText { get => _assistServerStatusText; private set => SetProperty(ref _assistServerStatusText, value); }
+
+    private string _assistClientUrl = "http://127.0.0.1:8095";
+    public string AssistClientUrl { get => _assistClientUrl; set => SetProperty(ref _assistClientUrl, value); }
+
+    private bool _isAssistClientConnected;
+    public bool IsAssistClientConnected
+    {
+        get => _isAssistClientConnected;
+        private set
+        {
+            if (SetProperty(ref _isAssistClientConnected, value))
+                OnPropertyChanged(nameof(AssistClientButtonText));
+        }
+    }
+    public string AssistClientButtonText => IsAssistClientConnected ? "Disconnect Assist" : "Connect Assist & Bitwise";
+
+    private string _assistClientStatusText = "Disconnected";
+    public string AssistClientStatusText { get => _assistClientStatusText; private set => SetProperty(ref _assistClientStatusText, value); }
 
     // =========================================================================
     // Hardware Controls: Windows COM, BLE, UDP, TCP, Test Stream
@@ -637,6 +706,13 @@ public sealed class MainViewModel : ObservableObject, IDisposable
             IsSbfReplayRunning = running;
             SbfStatusText = status;
         });
+
+        _assistServer.StatusChanged += status => RunOnUi(() =>
+        {
+            IsAssistServerRunning = _assistServer.IsRunning;
+            AssistServerStatusText = status;
+        });
+        _assistServer.LogMessage += msg => RunOnUi(() => AppendSystemLog(msg));
     }
 
     private void LoadInitialState()
@@ -803,13 +879,33 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     private void RefreshThreats()
     {
         var flags = new ThreatSimulationFlags(SimJamming, SimSpoofing, SimMeaconing, SimMacTamper);
+        var gstStatus = _gstClock.GetStatus();
+        var liveSummary = _liveOsnma.GetSummary(InavMessages.Any(m => m.Data.Length > 0));
+        var bwStats = new BitwiseSessionStats(
+            _bitwiseTotalChecked,
+            _bitwiseMatched,
+            _bitwiseMismatched,
+            _bitwiseNoRef,
+            _lastBitwiseResult);
+
+        GstClockBanner = gstStatus.Summary;
+        LiveOsnmaBanner = liveSummary.DetailText;
+        BitwiseStatsBanner = bwStats.TotalChecked == 0
+            ? (IsAssistClientConnected
+                ? $"Bitwise Cross-Check armed ({AssistClientUrl}) · awaiting 40-bit OSNMA frames"
+                : "Bitwise Cross-Check: Standby (connect TRISAT-Assist client)")
+            : $"Bitwise 40-bit OSNMA: {bwStats.MatchedCount} matched · {bwStats.MismatchCount} mismatch · {bwStats.NoReferenceCount} no-ref";
+
         ThreatAssessment = _threatAnalyzer.Evaluate(
             DisplayedSatellites,
             InavMessages,
             GstRmsError,
             DgpsStationId,
             DgpsAge,
-            flags);
+            flags,
+            liveSummary,
+            gstStatus,
+            bwStats);
     }
 
     private void UpdateActiveSourceHeader()
@@ -885,6 +981,123 @@ public sealed class MainViewModel : ObservableObject, IDisposable
     {
         AnnexASelfTestResult = _osnmaEngine.RunAnnexASelfTest();
         AppendSystemLog($"[OSNMA] {AnnexASelfTestResult.Summary}");
+    }
+
+    private async Task SyncGstClockAsync()
+    {
+        GstClockBanner = "Synchronizing independent GST via SNTP / HTTPS...";
+        var status = await _gstClock.SyncWithNetworkAsync();
+        RunOnUi(() =>
+        {
+            GstClockBanner = status.Summary;
+            AppendSystemLog($"[GST] {status.Summary}");
+            RefreshThreats();
+        });
+    }
+
+    private void LoadEuspaXmlKeys()
+    {
+        if (string.IsNullOrWhiteSpace(MerkleTreeXmlPath) && string.IsNullOrWhiteSpace(PublicKeyXmlPath))
+        {
+            var pk = PickFile("EUSPA OSNMA Public Key XML (*.xml)|*.xml|All files (*.*)|*.*");
+            if (pk is not null) PublicKeyXmlPath = pk;
+        }
+
+        if (string.IsNullOrWhiteSpace(MerkleTreeXmlPath) && string.IsNullOrWhiteSpace(PublicKeyXmlPath))
+        {
+            AppendSystemLog("[OSNMA] Select an EUSPA MerkleTree.xml and/or PublicKey.xml file first.");
+            return;
+        }
+
+        try
+        {
+            var mat = _liveOsnma.LoadEuspaXmlKeys(
+                string.IsNullOrWhiteSpace(MerkleTreeXmlPath) ? null : MerkleTreeXmlPath,
+                string.IsNullOrWhiteSpace(PublicKeyXmlPath) ? null : PublicKeyXmlPath);
+            _assistStore.UpdateAssistMaterial(mat);
+            AppendSystemLog($"[OSNMA] Loaded EUSPA XML keys (PKID={mat.PublicKeyId?.ToString() ?? "--"}, MerkleRoot={(mat.MerkleRootHex is not null ? mat.MerkleRootHex[..12] + "..." : "--")}).");
+            RefreshThreats();
+        }
+        catch (Exception ex)
+        {
+            AppendSystemLog($"[OSNMA] Failed to load EUSPA XML: {ex.Message}");
+        }
+    }
+
+    private void ToggleAssistServer()
+    {
+        if (_assistServer.IsRunning)
+        {
+            _assistServer.Stop();
+            return;
+        }
+
+        try
+        {
+            _assistServer.Start(AssistServerPort);
+        }
+        catch (Exception ex)
+        {
+            AppendSystemLog($"[TRISAT-Assist] Could not start server on :{AssistServerPort}: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleAssistClientAsync()
+    {
+        if (IsAssistClientConnected)
+        {
+            IsAssistClientConnected = false;
+            AssistClientStatusText = "Disconnected";
+            AppendSystemLog("[TRISAT-Assist] Client disconnected.");
+            RefreshThreats();
+            return;
+        }
+
+        var url = AssistClientUrl.Trim();
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            AppendSystemLog("[TRISAT-Assist] Enter a valid server URL (e.g. http://127.0.0.1:8095).");
+            return;
+        }
+
+        AssistClientStatusText = $"Connecting to {url}...";
+        try
+        {
+            var remoteGst = await _assistClient.FetchGstAsync(url);
+            if (remoteGst is not null && DateTimeOffset.TryParse(remoteGst.UtcIso, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var netUtc))
+                _gstClock.ApplyExternalNetworkUtc(netUtc, $"Assisted OSNMA ({url})");
+
+            var assistMat = await _assistClient.FetchAssistMaterialAsync(url);
+            if (assistMat is not null)
+                _liveOsnma.ApplyAssistMaterial(assistMat, isAssistedSource: true);
+
+            RunOnUi(() =>
+            {
+                IsAssistClientConnected = true;
+                AssistClientStatusText = $"Connected ({url})";
+                AppendSystemLog($"[Assisted OSNMA] Connected to {url} (GST synced, Assisted OSNMA & 2s Bitwise cross-check enabled).");
+                RefreshThreats();
+            });
+        }
+        catch (Exception ex)
+        {
+            RunOnUi(() =>
+            {
+                IsAssistClientConnected = false;
+                AssistClientStatusText = "Connection failed";
+                AppendSystemLog($"[Assisted OSNMA] Client connect failed: {ex.Message}");
+                RefreshThreats();
+            });
+        }
+    }
+
+    private void ResetBitwiseStats()
+    {
+        _bitwiseTotalChecked = 0;
+        _bitwiseMatched = 0;
+        _bitwiseMismatched = 0;
+        _bitwiseNoRef = 0;
+        _lastBitwiseResult = null;
     }
 
     private void ResetThreatSimulation()
@@ -1080,6 +1293,67 @@ public sealed class MainViewModel : ObservableObject, IDisposable
         InavMessages.Insert(0, msg);
         while (InavMessages.Count > 150)
             InavMessages.RemoveAt(InavMessages.Count - 1);
+
+        if (msg.IsSimulated)
+            return;
+
+        // Feed live Galileo I/NAV frame into Phase 1/2/3 pipeline
+        ParsedGalileoINavPage? parsed = null;
+        if (msg.Data.Length >= 32)
+            parsed = GalileoINavParser.TryParseUbxSfrbxPayload(msg.Svid, msg.Data);
+        else if (msg.Data.Length == 30)
+            parsed = GalileoINavParser.TryParseFull240BitPage(msg.Svid, msg.Data);
+
+        GstTime epochGst = parsed?.DecodedGst
+            ?? (msg.GstWeek.HasValue && msg.GstTow.HasValue
+                ? new GstTime(msg.GstWeek.Value, msg.GstTow.Value)
+                : _gstClock.GetCurrentNetworkGst());
+
+        if (parsed is not null)
+            _liveOsnma.IngestPage(parsed, epochGst);
+
+        string? osnma40Hex = parsed is { CrcValid: true, HasNonZeroOsnma: true }
+            ? parsed.Osnma40Hex
+            : (msg.HasOsnmaField ? msg.OsnmaHkrootHex + msg.OsnmaMackHex : null);
+
+        if (!string.IsNullOrEmpty(osnma40Hex) && osnma40Hex.Length == 10)
+        {
+            if (_assistServer.IsRunning)
+                _assistStore.RecordReferencePage(msg.Svid, epochGst, osnma40Hex);
+
+            if (IsAssistClientConnected)
+            {
+                var targetUrl = AssistClientUrl;
+                var svid = msg.Svid;
+                var gstSec = epochGst.TotalSeconds;
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var bw = await _assistClient.CheckBitwiseAsync(targetUrl, svid, gstSec, osnma40Hex).ConfigureAwait(false);
+                        if (bw is null) return;
+                        _liveOsnma.RecordBitwiseResult(bw);
+                        RunOnUi(() =>
+                        {
+                            _bitwiseTotalChecked++;
+                            if (!bw.HasReference) _bitwiseNoRef++;
+                            else if (bw.Matched) _bitwiseMatched++;
+                            else
+                            {
+                                _bitwiseMismatched++;
+                                AppendSystemLog($"[OSNMA BITWISE ALERT] {bw.Reason}");
+                            }
+                            _lastBitwiseResult = bw;
+                            RefreshThreats();
+                        });
+                    }
+                    catch
+                    {
+                        // Non-fatal network poll miss
+                    }
+                });
+            }
+        }
     }
 
     private void AppendSystemLog(string line)
@@ -1107,6 +1381,8 @@ public sealed class MainViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _assistServer.Dispose();
+        _assistClient.Dispose();
         _testGenerator.Dispose();
         _udpService.Dispose();
         _tcpService.Dispose();

@@ -259,25 +259,61 @@ public sealed class UbxF9pStream
 
         var frameBytes = payload.Slice(8, dataBytes).ToArray();
 
-        uint w0 = frameBytes[0]
-                  | ((uint)frameBytes[1] << 8)
-                  | ((uint)frameBytes[2] << 16)
-                  | ((uint)frameBytes[3] << 24);
-        int wordType = (int)((w0 >> 2) & 0x3F);
-        if (wordType == 0) wordType = 1;
+        // Attempt bit-exact Galileo OS SIS ICD v2.1 decoding (228-bit UBX-RXM-SFRBX layout + CRC-24Q + 40-bit OSNMA + GST)
+        var parsed = dataBytes >= 32
+            ? GalileoINavParser.TryParseUbxSfrbxPayload(svId, frameBytes)
+            : null;
+
+        int wordType;
+        string? hkrootHex = null;
+        string? mackHex = null;
+        bool crcValid = false;
+        int? gstWeek = null;
+        int? gstTow = null;
+
+        if (parsed is { CrcValid: true })
+        {
+            wordType = parsed.WordType;
+            crcValid = true;
+            if (parsed.HasNonZeroOsnma)
+            {
+                hkrootHex = parsed.HkrootHex;
+                mackHex = parsed.MackHex;
+            }
+            gstWeek = parsed.DecodedGst?.WeekNumber;
+            gstTow = parsed.DecodedGst?.TowSeconds ?? parsed.DecodedTowOnly;
+        }
+        else
+        {
+            // Fallback for legacy/unaligned/synthetic frames without valid CRC-24Q
+            uint w0 = frameBytes[0]
+                      | ((uint)frameBytes[1] << 8)
+                      | ((uint)frameBytes[2] << 16)
+                      | ((uint)frameBytes[3] << 24);
+            wordType = (int)((w0 >> 2) & 0x3F);
+            if (wordType == 0) wordType = 1;
+        }
 
         var hex = Convert.ToHexString(frameBytes);
-        var sentence = NmeaParser.FormatSentence($"GALINAV,{svId},{wordType},{hex}");
+        var sentenceBody = hkrootHex is not null && mackHex is not null
+            ? $"GALINAV,{svId},{wordType},{hex},{hkrootHex}{mackHex}"
+            : $"GALINAV,{svId},{wordType},{hex}";
+        var sentence = NmeaParser.FormatSentence(sentenceBody);
 
         var msg = new GalileoINavMessage(
             Id: Guid.NewGuid(),
             Svid: svId,
             SubmessageId: wordType,
             Data: frameBytes,
-            Status: 0,
+            Status: crcValid ? 1 : 0,
             Timestamp: DateTimeOffset.UtcNow,
             Band: "GAL_E1",
-            IsSimulated: false);
+            OsnmaHkrootHex: hkrootHex,
+            OsnmaMackHex: mackHex,
+            IsSimulated: false,
+            CrcValid: crcValid,
+            GstWeek: gstWeek,
+            GstTow: gstTow);
 
         return (msg, sentence);
     }

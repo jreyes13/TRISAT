@@ -10,6 +10,10 @@ struct GalileoINavMessage: Identifiable, Hashable {
     let timestamp: Date       // Arrival timestamp
     var isSimulated: Bool
     var band: String = "E1-B" // "E1-B" (OSNMA), "E5b-I" (Dual-Band I/NAV), "E6-B" (HAS)
+    var osnma40Hex: String? = nil
+    var crcValid: Bool = false
+    var gstWeek: Int? = nil
+    var gstTow: Int? = nil
 
     init(
         svid: Int,
@@ -18,7 +22,11 @@ struct GalileoINavMessage: Identifiable, Hashable {
         status: Int,
         timestamp: Date,
         band: String = "E1-B",
-        isSimulated: Bool = false
+        isSimulated: Bool = false,
+        osnma40Hex: String? = nil,
+        crcValid: Bool = false,
+        gstWeek: Int? = nil,
+        gstTow: Int? = nil
     ) {
         self.svid = svid
         self.submessageId = submessageId
@@ -27,6 +35,10 @@ struct GalileoINavMessage: Identifiable, Hashable {
         self.timestamp = timestamp
         self.band = band
         self.isSimulated = isSimulated
+        self.osnma40Hex = osnma40Hex
+        self.crcValid = crcValid
+        self.gstWeek = gstWeek
+        self.gstTow = gstTow
     }
 
     static func decodeHexPayload(_ hex: String) -> Data? {

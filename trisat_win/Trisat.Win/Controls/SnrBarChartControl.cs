@@ -43,6 +43,8 @@ public sealed class SnrBarChartControl : Border
 
         Child = _scrollViewer;
         Background = Brushes.Transparent;
+        Loaded += (_, _) => Redraw();
+        SizeChanged += (_, _) => Redraw();
     }
 
     private static void OnSatellitesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -65,19 +67,22 @@ public sealed class SnrBarChartControl : Border
 
         if (sats is null || sats.Count == 0)
         {
+            _barsPanel.VerticalAlignment = VerticalAlignment.Center;
             _barsPanel.Children.Add(new TextBlock
             {
                 Text = "Awaiting Satellite C/N0 Telemetry...",
                 Foreground = new SolidColorBrush(Color.FromRgb(0x64, 0x74, 0x8B)),
                 FontFamily = new FontFamily("Consolas"),
                 FontSize = 12,
-                Margin = new Thickness(16, 70, 16, 70),
+                Margin = new Thickness(16, 12, 16, 12),
                 VerticalAlignment = VerticalAlignment.Center
             });
             return;
         }
 
-        const double maxBarHeight = 140.0;
+        _barsPanel.VerticalAlignment = VerticalAlignment.Bottom;
+        double availableHeight = ActualHeight > 40 ? ActualHeight : 200.0;
+        double maxBarHeight = Math.Max(60.0, availableHeight - 66.0);
 
         foreach (var sat in sats)
         {

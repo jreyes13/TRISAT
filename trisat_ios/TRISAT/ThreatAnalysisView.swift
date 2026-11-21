@@ -80,6 +80,10 @@ struct ThreatAnalysisView: View {
                         .padding(.horizontal)
                     }
 
+                    // MARK: - Assisted OSNMA Control Card (Independent GST + 2s Bitwise Cross-Check)
+                    assistedOsnmaCard
+                        .padding(.horizontal, isWideLayout ? 16 : 16)
+
                     // MARK: - 6 Real-Time Threat Diagnostic Cards (2 Columns on Mac/iPad)
                     if isWideLayout {
                         HStack(alignment: .top, spacing: 14) {
@@ -501,6 +505,47 @@ struct ThreatAnalysisView: View {
         }
     }
 
+    // MARK: - Assisted OSNMA Control Card
+
+    private var assistedOsnmaCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Assisted OSNMA (GST Sync & 2s Bitwise Check)", systemImage: "antenna.radiowaves.left.and.right")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(.cyan)
+                Spacer()
+                Text(viewModel.assistedOsnmaStatusText)
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundColor(viewModel.isAssistedOsnmaConnected ? .green : .secondary)
+            }
+
+            HStack(spacing: 8) {
+                TextField("http://192.168.1.10:8095", text: $viewModel.assistedOsnmaUrl)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12, design: .monospaced))
+                Button(viewModel.isAssistedOsnmaConnected ? "Disconnect" : "Connect") {
+                    if viewModel.isAssistedOsnmaConnected {
+                        viewModel.disconnectAssistedOsnma()
+                    } else {
+                        viewModel.connectAssistedOsnma()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(viewModel.isAssistedOsnmaConnected ? .red : .cyan)
+            }
+
+            Text(viewModel.assistedGstBanner)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(viewModel.isTimeSpoofingSuspected ? .red : .cyan)
+            Text(viewModel.assistedBitwiseBanner)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundColor(viewModel.bitwiseMismatchCount > 0 ? .red : .secondary)
+        }
+        .padding(12)
+        .background(Color.gray.opacity(0.08))
+        .cornerRadius(12)
+    }
+
     // MARK: - Threat Card 1: Dynamic OS-NMA Cryptographic Authentication (Galileo v1.1 Annex A)
 
     private var osnmaThreatCard: some View {
@@ -510,6 +555,15 @@ struct ThreatAnalysisView: View {
         let (statusText, color, sessionDetails): (String, Color, String) = {
             if telemetryBridge.isSdrEngineRunning && viewModel.simulatedThreatMode == .osnmaFailure {
                 return ("SIMULATED AUTH FAILURE", .orange, "The selected scenario injects an OSNMA failure.")
+            }
+            if viewModel.assistedOsnmaAuthStatus == .tamperDetected || viewModel.bitwiseMismatchCount > 0 {
+                return ("BITWISE MISMATCH ALERT", .red, viewModel.lastBitwiseReason ?? "40-bit OSNMA mismatch detected against Assisted OSNMA reference.")
+            }
+            if viewModel.assistedOsnmaAuthStatus == .authenticated {
+                return ("AUTHENTICATED (ASSISTED)", .green, "Galileo OSNMA verified using Assisted OSNMA cryptographic material.")
+            }
+            if viewModel.assistedOsnmaAuthStatus == .bitwiseVerified {
+                return ("BITWISE VERIFIED (2s)", .green, "40-bit OSNMA frames matched Assisted OSNMA reference (\(viewModel.bitwiseMatchedCount) frames).")
             }
             if OsnmaEngine().receptionStatus(inavMessages: received) == .unverified {
                 return ("I/NAV RECEIVED - UNVERIFIED", .orange, "Received Galileo E1-B pages have not been cryptographically verified.")
@@ -554,14 +608,24 @@ struct ThreatAnalysisView: View {
     // MARK: - Threat Card 3: Spoofing Detection
 
     private var spoofingThreatCard: some View {
-        let isSpoofing = viewModel.simulatedThreatMode == .spoofing
-        let details = isSpoofing
-            ? "CRITICAL: Coherent false-signal emitter detected! C/N0 variance collapsed (< 0.8 dB across SVs at 51 dB-Hz), azimuths clustered toward 45° NE, and $GPGST residuals spiked to \(viewModel.gstRmsError)."
-            : "Pseudorange Residuals ($GPGST): \(viewModel.gstRmsError). C/N0 elevation variance and Doppler rates match CelesTrak SGP4 orbital geometry."
+        let realSpoofing = viewModel.bitwiseMismatchCount > 0 || viewModel.isTimeSpoofingSuspected
+        let isSpoofing = viewModel.simulatedThreatMode == .spoofing || realSpoofing
+        let details: String = {
+            if viewModel.bitwiseMismatchCount > 0 {
+                return "ALERT: Assisted OSNMA 40-bit mismatch detected (\(viewModel.bitwiseMismatchCount) frame(s)). \(viewModel.lastBitwiseReason ?? "")"
+            }
+            if viewModel.isTimeSpoofingSuspected {
+                return "ALERT: Receiver GST deviates >5s from independent Assisted OSNMA time reference (\(viewModel.assistedGstBanner))."
+            }
+            if viewModel.simulatedThreatMode == .spoofing {
+                return "CRITICAL: Coherent false-signal emitter detected! C/N0 variance collapsed (< 0.8 dB across SVs at 51 dB-Hz), azimuths clustered toward 45° NE, and $GPGST residuals spiked to \(viewModel.gstRmsError)."
+            }
+            return "Pseudorange Residuals ($GPGST): \(viewModel.gstRmsError). C/N0 elevation variance and Doppler rates match CelesTrak SGP4 orbital geometry."
+        }()
 
         return ThreatMetricCard(
             title: "Spoofing / Coherent Emitter Detection",
-            status: isSpoofing ? "SPOOFING ALERT" : "LOW RISK",
+            status: realSpoofing ? "SPOOFING DETECTED (OSNMA)" : (isSpoofing ? "SPOOFING ALERT" : "LOW RISK"),
             statusColor: isSpoofing ? .red : .green,
             icon: "exclamationmark.triangle.fill",
             details: details

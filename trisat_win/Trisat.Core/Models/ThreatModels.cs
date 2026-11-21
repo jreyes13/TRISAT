@@ -1,13 +1,16 @@
 namespace Trisat.Core.Models;
 
 /// <summary>
-/// Reception status for live Galileo I/NAV OSNMA telemetry.
-/// Preserves strict data provenance: received pages are never marked verified without cryptographic validation.
+/// Reception and verification status for live Galileo I/NAV OSNMA telemetry.
+/// Preserves strict data provenance: received pages are never marked verified without cryptographic or bitwise validation.
 /// </summary>
 public enum OsnmaReceptionStatus
 {
     NotAvailable,
-    Unverified
+    Unverified,
+    BitwiseVerified,
+    Authenticated,
+    TamperDetected
 }
 
 /// <summary>

@@ -437,7 +437,8 @@ class TrustScoringEngine {
         }
 
         val score = when (computedStatus) {
-            OsnmaStatus.VERIFIED -> 100f
+            OsnmaStatus.VERIFIED, OsnmaStatus.ASSISTED_AUTHENTICATED -> 100f
+            OsnmaStatus.BITWISE_VERIFIED -> 95f
             OsnmaStatus.UNAUTHENTICATED -> 75f
             OsnmaStatus.FAILED -> {
                 warnings.add("Galileo OSNMA cryptographic verification FAILED - potential signal tampering!")

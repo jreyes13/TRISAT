@@ -13,11 +13,21 @@ public sealed record GalileoINavMessage(
     string Band = "GAL_E1",
     string? OsnmaHkrootHex = null,
     string? OsnmaMackHex = null,
-    bool IsSimulated = false)
+    bool IsSimulated = false,
+    bool CrcValid = false,
+    int? GstWeek = null,
+    int? GstTow = null,
+    string? AuthBadge = null)
 {
     public string HexPayload => Convert.ToHexString(Data);
 
     public string FormattedSvid => $"Galileo E{Svid:D2}";
+
+    public bool HasOsnmaField => !string.IsNullOrEmpty(OsnmaHkrootHex) && !string.IsNullOrEmpty(OsnmaMackHex);
+
+    public string OsnmaFieldSummary => HasOsnmaField
+        ? $"OSNMA HK:{OsnmaHkrootHex} MACK:{OsnmaMackHex}" + (GstTow.HasValue ? $" · TOW {GstTow.Value}s" : string.Empty) + (CrcValid ? " · CRC OK" : string.Empty)
+        : (CrcValid ? "I/NAV CRC-24Q OK" : string.Empty);
 
     public string WordTypeDescription => SubmessageId switch
     {
@@ -42,7 +52,9 @@ public sealed record GalileoINavMessage(
         _ => $"WT {SubmessageId} · Galileo I/NAV"
     };
 
-    public string ProvenanceBadge => IsSimulated ? "SIMULATED" : "UNVERIFIED RX";
+    public string ProvenanceBadge => !string.IsNullOrWhiteSpace(AuthBadge)
+        ? AuthBadge
+        : (IsSimulated ? "SIMULATED" : (CrcValid ? "CRC OK · UNVERIFIED" : "UNVERIFIED RX"));
 
     public static byte[]? DecodeHexPayload(string? hex)
     {

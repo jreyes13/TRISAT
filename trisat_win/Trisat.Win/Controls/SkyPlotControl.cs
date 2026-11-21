@@ -128,6 +128,10 @@ public sealed class SkyPlotControl : Border
         var sats = Satellites;
         if (sats is { Count: > 0 })
         {
+            double dotSize = Math.Clamp(radius * 0.13, 16.0, 24.0);
+            double dotHalf = dotSize / 2.0;
+            double labelSize = Math.Clamp(radius * 0.06, 8.5, 11.0);
+
             foreach (var sat in sats)
             {
                 double clampedEl = Math.Clamp(sat.Elevation, 0.0, 90.0);
@@ -141,8 +145,8 @@ public sealed class SkyPlotControl : Border
 
                 var dot = new Ellipse
                 {
-                    Width = 20,
-                    Height = 20,
+                    Width = dotSize,
+                    Height = dotSize,
                     Stroke = new SolidColorBrush(color),
                     StrokeThickness = sat.UsedInFix ? 2.2 : 1.3,
                     Fill = new SolidColorBrush(fillColor),
@@ -153,22 +157,22 @@ public sealed class SkyPlotControl : Border
                               (sat.HasInav ? "\nGalileo I/NAV Capable" : "")
                 };
 
-                Canvas.SetLeft(dot, x - 10);
-                Canvas.SetTop(dot, y - 10);
+                Canvas.SetLeft(dot, x - dotHalf);
+                Canvas.SetTop(dot, y - dotHalf);
                 _canvas.Children.Add(dot);
 
                 var label = new TextBlock
                 {
                     Text = sat.FormattedLabel,
                     FontFamily = new FontFamily("Consolas"),
-                    FontSize = 9,
+                    FontSize = labelSize,
                     FontWeight = FontWeights.Bold,
                     Foreground = Brushes.White,
                     IsHitTestVisible = false
                 };
                 label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
                 Canvas.SetLeft(label, x - label.DesiredSize.Width / 2.0);
-                Canvas.SetTop(label, y + 10);
+                Canvas.SetTop(label, y + dotHalf);
                 _canvas.Children.Add(label);
             }
         }

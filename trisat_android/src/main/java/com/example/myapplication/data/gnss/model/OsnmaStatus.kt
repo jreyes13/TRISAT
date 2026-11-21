@@ -8,6 +8,14 @@ enum class OsnmaStatus(
         label = "VERIFIED",
         description = "Galileo E1B cryptographic navigation message signature authenticated via Root Key."
     ),
+    ASSISTED_AUTHENTICATED(
+        label = "AUTHENTICATED (ASSISTED)",
+        description = "Galileo E1B navigation data authenticated via Assisted OSNMA cryptographic material."
+    ),
+    BITWISE_VERIFIED(
+        label = "BITWISE VERIFIED (2s)",
+        description = "Live 40-bit Galileo OSNMA fields matched Assisted OSNMA reference station."
+    ),
     UNAUTHENTICATED(
         label = "I/NAV RECEIVED - UNVERIFIED",
         description = "Galileo navigation data was received. Cryptographic verification is pending or unavailable."

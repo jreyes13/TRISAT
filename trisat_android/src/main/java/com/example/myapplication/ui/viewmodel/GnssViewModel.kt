@@ -3,6 +3,7 @@ package com.example.myapplication.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.myapplication.data.gnss.engine.AssistedOsnmaUiState
 import com.example.myapplication.data.gnss.model.GalileoInavMessage
 import com.example.myapplication.data.gnss.model.GnssMeasurementsData
 import com.example.myapplication.data.gnss.model.GnssReceiverMode
@@ -36,6 +37,7 @@ class GnssViewModel(application: Application) : AndroidViewModel(application) {
     val isMonitoringActive: StateFlow<Boolean> = gnssManager.isMonitoringActive
     val permissionGranted: StateFlow<Boolean> = gnssManager.permissionGranted
     val isBleServerActive: StateFlow<Boolean> = gnssManager.isBleServerActive
+    val assistedOsnmaState: StateFlow<AssistedOsnmaUiState> = gnssManager.assistedOsnmaState
 
     init {
         gnssManager.startMonitoring()
@@ -76,6 +78,18 @@ class GnssViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectThreatScenario(scenario: ThreatScenario) {
         gnssManager.setThreatScenario(scenario)
+    }
+
+    fun updateAssistedOsnmaUrl(url: String) {
+        gnssManager.updateAssistedOsnmaUrl(url)
+    }
+
+    fun toggleAssistedOsnma() {
+        if (assistedOsnmaState.value.isConnected) {
+            gnssManager.disconnectAssistedOsnma()
+        } else {
+            gnssManager.connectAssistedOsnma()
+        }
     }
 
     fun recalibrate() {

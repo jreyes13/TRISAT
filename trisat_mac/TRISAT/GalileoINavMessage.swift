@@ -8,6 +8,32 @@ struct GalileoINavMessage: Identifiable, Hashable {
     let data: Data            // Raw byte payload
     let status: Int           // Frame status flag
     let timestamp: Date       // Arrival timestamp
+    var osnma40Hex: String? = nil
+    var crcValid: Bool = false
+    var gstWeek: Int? = nil
+    var gstTow: Int? = nil
+
+    init(
+        svid: Int,
+        submessageId: Int,
+        data: Data,
+        status: Int,
+        timestamp: Date,
+        osnma40Hex: String? = nil,
+        crcValid: Bool = false,
+        gstWeek: Int? = nil,
+        gstTow: Int? = nil
+    ) {
+        self.svid = svid
+        self.submessageId = submessageId
+        self.data = data
+        self.status = status
+        self.timestamp = timestamp
+        self.osnma40Hex = osnma40Hex
+        self.crcValid = crcValid
+        self.gstWeek = gstWeek
+        self.gstTow = gstTow
+    }
     
     static func decodeHexPayload(_ hex: String) -> Data? {
         let clean = hex.trimmingCharacters(in: .whitespacesAndNewlines)

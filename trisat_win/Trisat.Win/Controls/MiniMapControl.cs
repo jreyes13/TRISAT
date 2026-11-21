@@ -161,11 +161,13 @@ public sealed class MiniMapControl : Border
         double offsetPxX = (xTileF - centerTileX) * 256.0;
         double offsetPxY = (yTileF - centerTileY) * 256.0;
 
+        int halfTilesX = Math.Clamp((int)Math.Ceiling(w / 512.0) + 1, 1, 4);
+        int halfTilesY = Math.Clamp((int)Math.Ceiling(h / 512.0) + 1, 1, 4);
         int maxTile = (int)n;
         var tileTasks = new List<(int dx, int dy, Task<BitmapImage?> task)>();
-        for (int dx = -1; dx <= 1; dx++)
+        for (int dx = -halfTilesX; dx <= halfTilesX; dx++)
         {
-            for (int dy = -1; dy <= 1; dy++)
+            for (int dy = -halfTilesY; dy <= halfTilesY; dy++)
             {
                 int tx = ((centerTileX + dx) % maxTile + maxTile) % maxTile;
                 int ty = centerTileY + dy;
@@ -179,6 +181,10 @@ public sealed class MiniMapControl : Border
         // Guard against stale async callback
         if (Latitude != lat || Longitude != lon)
             return;
+
+        double curW = _mapCanvas.ActualWidth;
+        double curH = _mapCanvas.ActualHeight;
+        if (curW < 40 || curH < 40) return;
 
         _mapCanvas.Children.Clear();
         bool anyTileLoaded = false;
@@ -196,15 +202,15 @@ public sealed class MiniMapControl : Border
                 Height = 256,
                 Opacity = 0.85
             };
-            Canvas.SetLeft(img, (w / 2.0) - offsetPxX + (dx * 256.0));
-            Canvas.SetTop(img, (h / 2.0) - offsetPxY + (dy * 256.0));
+            Canvas.SetLeft(img, (curW / 2.0) - offsetPxX + (dx * 256.0));
+            Canvas.SetTop(img, (curH / 2.0) - offsetPxY + (dy * 256.0));
             _mapCanvas.Children.Add(img);
         }
 
         if (!anyTileLoaded)
-            DrawFallbackGraticule(w, h);
+            DrawFallbackGraticule(curW, curH);
 
-        DrawGnssMarker(w / 2.0, h / 2.0);
+        DrawGnssMarker(curW / 2.0, curH / 2.0);
     }
 
     private void DrawFallbackGraticule(double w, double h)

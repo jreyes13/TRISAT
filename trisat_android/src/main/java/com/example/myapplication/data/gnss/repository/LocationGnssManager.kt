@@ -14,6 +14,10 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat
+import com.example.myapplication.data.gnss.engine.AssistedOsnmaClient
+import com.example.myapplication.data.gnss.engine.AssistedOsnmaUiState
+import com.example.myapplication.data.gnss.engine.GalileoINavBitParser
+import com.example.myapplication.data.gnss.engine.GstTime
 import com.example.myapplication.data.gnss.engine.OsnmaVerificationEngine
 import com.example.myapplication.data.gnss.engine.TrustScoringEngine
 import com.example.myapplication.data.gnss.mock.MockGnssGenerator
@@ -49,8 +53,13 @@ class LocationGnssManager(private val context: Context) {
     private val mockGnssGenerator = MockGnssGenerator()
     private val trustScoringEngine = TrustScoringEngine()
     private val osnmaEngine = OsnmaVerificationEngine()
+    private val assistedOsnmaClient = AssistedOsnmaClient()
+    private var networkClockOffsetMillis: Long = 0L
     val tleDownloader = TleDownloader()
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    private val _assistedOsnmaState = MutableStateFlow(AssistedOsnmaUiState())
+    val assistedOsnmaState: StateFlow<AssistedOsnmaUiState> = _assistedOsnmaState.asStateFlow()
 
     // 3 Operating Modes: 0: INTERNAL_TLE, 1: EXTERNAL_HARDWARE, 2: SIMULATION_TLE
     private val _receiverMode = MutableStateFlow(GnssReceiverMode.INTERNAL_TLE)
@@ -378,8 +387,8 @@ class LocationGnssManager(private val context: Context) {
         newMeasurements: GnssMeasurementsData = _gnssMeasurementsData.value,
         newLocation: LocationData = _locationData.value
     ) {
-        val realOsnmaStatus = if (_hasInavSupport.value) {
-            osnmaEngine.verifyOsnma(_inavMessages.value)
+        val realOsnmaStatus = if (_hasInavSupport.value || _assistedOsnmaState.value.isConnected) {
+            osnmaEngine.verifyOsnma(_inavMessages.value, _assistedOsnmaState.value)
         } else null
 
         val osnmaOverride = if (_receiverMode.value == GnssReceiverMode.SIMULATION_TLE &&
@@ -490,6 +499,44 @@ class LocationGnssManager(private val context: Context) {
         setReceiverMode(if (enabled) GnssReceiverMode.SIMULATION_TLE else GnssReceiverMode.INTERNAL_TLE)
     }
 
+    fun updateAssistedOsnmaUrl(url: String) {
+        _assistedOsnmaState.value = _assistedOsnmaState.value.copy(serverUrl = url)
+    }
+
+    fun connectAssistedOsnma() {
+        val targetUrl = _assistedOsnmaState.value.serverUrl.trim()
+        if (targetUrl.isEmpty()) return
+        _assistedOsnmaState.value = _assistedOsnmaState.value.copy(statusText = "Connecting...")
+        scope.launch(Dispatchers.IO) {
+            try {
+                val gst = assistedOsnmaClient.fetchGst(targetUrl)
+                val localGstSec = GstTime.fromUtcMillis(System.currentTimeMillis()).totalSeconds
+                networkClockOffsetMillis = (gst.totalSeconds - localGstSec) * 1000L
+                _assistedOsnmaState.value = _assistedOsnmaState.value.copy(
+                    isConnected = true,
+                    statusText = "Connected ($targetUrl)",
+                    gstBanner = "GST WN ${gst.weekNumber} · TOW ${gst.towSeconds}s (${gst.clockSource})",
+                    bitwiseBanner = "Bitwise 40-bit OSNMA armed · ${_assistedOsnmaState.value.matchedCount} matched · ${_assistedOsnmaState.value.mismatchCount} mismatch"
+                )
+                reevaluateTrust()
+            } catch (e: Exception) {
+                _assistedOsnmaState.value = _assistedOsnmaState.value.copy(
+                    isConnected = false,
+                    statusText = "Connection failed"
+                )
+            }
+        }
+    }
+
+    fun disconnectAssistedOsnma() {
+        _assistedOsnmaState.value = _assistedOsnmaState.value.copy(
+            isConnected = false,
+            statusText = "Disconnected",
+            bitwiseBanner = "Bitwise Cross-Check: Standby"
+        )
+        reevaluateTrust()
+    }
+
     private val gnssNavigationCallback = object : GnssNavigationMessage.Callback() {
         override fun onGnssNavigationMessageReceived(event: GnssNavigationMessage) {
             if (_receiverMode.value != GnssReceiverMode.INTERNAL_TLE) return
@@ -509,6 +556,48 @@ class LocationGnssManager(private val context: Context) {
                 )
                 val updatedList = (_inavMessages.value + inavMsg).takeLast(50)
                 _inavMessages.value = updatedList
+
+                val parsed = when {
+                    event.data.size >= 30 -> GalileoINavBitParser.parseFull240Bit(event.svid, event.data)
+                    else -> null
+                }
+                if (parsed != null && parsed.crcValid) {
+                    val netGst = GstTime.fromUtcMillis(System.currentTimeMillis() + networkClockOffsetMillis)
+                    if (parsed.decodedGst != null) {
+                        val drift = kotlin.math.abs(parsed.decodedGst.totalSeconds - netGst.totalSeconds)
+                        val spoof = drift > 5L
+                        _assistedOsnmaState.value = _assistedOsnmaState.value.copy(
+                            isTimeSpoofingSuspected = spoof,
+                            gstBanner = "GST ${parsed.decodedGst.formatted} | Δt(RX-Net): ${drift}s" +
+                                if (spoof) " [TIME-SPOOFING ALERT]" else " [SYNC OK]"
+                        )
+                    }
+                    if (_assistedOsnmaState.value.isConnected && parsed.hasNonZeroOsnma) {
+                        val url = _assistedOsnmaState.value.serverUrl
+                        val gstSec = parsed.decodedGst?.totalSeconds ?: netGst.totalSeconds
+                        val osnmaHex = parsed.osnma40Hex
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                val res = assistedOsnmaClient.checkBitwise(url, event.svid, gstSec, osnmaHex)
+                                if (res.hasReference) {
+                                    val cur = _assistedOsnmaState.value
+                                    val matched = cur.matchedCount + if (res.matched) 1 else 0
+                                    val mismatched = cur.mismatchCount + if (res.matched) 0 else 1
+                                    _assistedOsnmaState.value = cur.copy(
+                                        matchedCount = matched,
+                                        mismatchCount = mismatched,
+                                        lastReason = res.reason,
+                                        bitwiseBanner = "Bitwise 40-bit OSNMA: $matched matched · $mismatched mismatch"
+                                    )
+                                    reevaluateTrust()
+                                }
+                            } catch (_: Exception) {
+                                // Non-fatal network miss
+                            }
+                        }
+                    }
+                }
+
                 reevaluateTrust()
 
                 if (bleServer.isServerActive) {

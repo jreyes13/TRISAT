@@ -5,8 +5,22 @@ import com.example.myapplication.data.gnss.model.OsnmaStatus
 
 class OsnmaVerificationEngine {
 
-    /** Reports reception only. The current pipeline does not verify received OSNMA tags. */
-    fun verifyOsnma(inavMessages: List<GalileoInavMessage>): OsnmaStatus {
+    /**
+     * Evaluates Galileo OSNMA status from live received I/NAV pages and optional Assisted OSNMA results.
+     * Preserves strict provenance: live pages remain UNAUTHENTICATED unless verified by Assisted OSNMA.
+     */
+    fun verifyOsnma(
+        inavMessages: List<GalileoInavMessage>,
+        assistedState: AssistedOsnmaUiState? = null
+    ): OsnmaStatus {
+        if (assistedState != null) {
+            if (assistedState.mismatchCount > 0 || assistedState.isTimeSpoofingSuspected) {
+                return OsnmaStatus.FAILED
+            }
+            if (assistedState.matchedCount > 0) {
+                return OsnmaStatus.BITWISE_VERIFIED
+            }
+        }
         return if (inavMessages.any { it.isGalileoInav && it.rawBytes.isNotEmpty() }) {
             OsnmaStatus.UNAUTHENTICATED
         } else {

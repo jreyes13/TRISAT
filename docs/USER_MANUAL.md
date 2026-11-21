@@ -154,4 +154,36 @@ This script configures the u-blox ZED-F9P for high-rate NMEA and binary `UBX-RXM
 ### iOS / macOS Target (`trisat_ios` / `trisat_mac`):
 1. Open `trisat_mac/TRISAT.xcodeproj` or `trisat_ios/TRISAT.xcodeproj` in Xcode.
 2. Build and run the app (`Cmd + R`).
-3. Connect the SXblue receiver over USB daemon or Bluetooth LE to stream raw Galileo I/NAV frames into the app.
+3. Connect the SXblue or u-blox ZED-F9P receiver over USB daemon or Bluetooth LE to stream raw Galileo I/NAV frames into the app.
+
+---
+
+## 6. Assisted OSNMA & Independent GST Clock
+
+**Assisted OSNMA** is TRISAT's open-source, zero-database architecture for fast cold-start Galileo OSNMA authentication and **2-second bitwise anti-spoofing** across Windows, macOS, iOS, and Android.
+
+### Architecture Overview
+1. **Bit-Exact Galileo I/NAV Decoding (All Platforms):**
+   * Extracts the 128-bit navigation word, validates **CRC-24Q** (`0x1864CFB`), isolates the **40-bit OSNMA field** (`8-bit HKROOT` + `32-bit MACK`), and decodes **Galileo System Time (`GST` — Week Number & TOW)** from Word Types `0`, `5`, and `6` (supporting both 228-bit u-blox `UBX-RXM-SFRBX` and 240-bit nominal pages such as Android `TYPE_GAL_I`).
+2. **Independent GST Clock Guard (Anti-Time-Spoofing):**
+   * Synchronizes independent network UTC time via **SNTP (RFC 4330 UDP `:123`)** with HTTPS `Date` fallback (or from an Assisted OSNMA server's `/api/osnma/gst` endpoint) and converts it to GST.
+   * Continuously monitors `Δt = GST_receiver − GST_network`. If `|Δt| > 5 s`, TRISAT raises a **Time-Spoofing / Meaconing Alert**; if `|Δt| > 30 s`, TESLA key acceptance is blocked per the Galileo OSNMA Receiver Guidelines.
+3. **Live Subframe Reassembly & EUSPA Public XML Verification (`trisat_win`):**
+   * Reassembles 30-second OSNMA subframes (`15 × 2 s` pages → `120-bit HKROOT` + `480-bit MACK`), parses the `NMA Header` (`NMAS`, `CID`, `CPKS`), reassembles multi-block `DSM-KROOT` messages, and verifies **ECDSA P-256**, SHA-256 `P_DK` padding, TESLA chains, and HMAC-SHA-256 tags using official public EUSPA GSC XML files (`MerkleTree.xml` and `PublicKey.xml`).
+4. **Assisted OSNMA Reference Server & 2-Second Bitwise Cross-Check:**
+   * A reference node (e.g. `trisat_win` connected to a stationary u-blox ZED-F9P) starts the built-in **Assisted OSNMA** HTTP JSON server on port `8095` from the **Threat Analysis** tab.
+   * Remote clients on **Windows**, **macOS**, **iOS**, and **Android** enter the reference server URL (e.g. `http://<host-ip>:8095`) in the **Threat Analysis** tab and click **Connect**:
+     * **Fast Bootstrap (`/api/osnma/assist`):** Downloads Merkle Root, Public Key, and verified `DSM-KROOT` immediately instead of waiting minutes for over-the-air DSM reassembly.
+     * **2-Second Bitwise Anti-Spoofing (`/api/osnma/bitwise-check`):** Compares every received 40-bit OSNMA field `(SVID, GST)` bit-by-bit against the reference station's 60-second sliding window. Matching 40/40 bits reports `BITWISE VERIFIED (2s)`; even a single tampered or replayed bit triggers an immediate `BITWISE MISMATCH ALERT` and escalates the Threat Score.
+
+### Assisted OSNMA REST API Reference (Default Port `:8095`)
+
+| Method | Endpoint | Purpose |
+| :--- | :--- | :--- |
+| `GET` | `/api/osnma/status` | Service status, current GST, NMA header, active reference epochs |
+| `GET` | `/api/osnma/gst` | Independent reference GST (`weekNumber`, `towSeconds`, `totalSeconds`, `utcIso`) |
+| `GET` | `/api/osnma/assist` | Assisted OSNMA cryptographic bootstrap bundle (`merkleRootHex`, `publicKeyCompressedHex`, `dsmKrootHex`, `krootHex`, `alphaHex`) |
+| `GET` | `/api/osnma/reference[?gst=<sec>]` | 40-bit OSNMA hex fields per Galileo satellite (`E01–E36`) for a 2-second GST epoch |
+| `GET` | `/api/osnma/satellites` | Per-satellite OSNMA availability and authentication counters |
+| `POST` | `/api/osnma/bitwise-check` | Submit `{ svid, gstSeconds, osnmaHex }` for instant 40-bit bitwise cross-check verdict |
+| `POST` | `/api/osnma/ingest` | Push `{ svid, gstSeconds, osnmaHex }` from external reference receiver bridges |

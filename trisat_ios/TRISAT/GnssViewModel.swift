@@ -77,6 +77,21 @@ class GnssViewModel: ObservableObject {
     // Interactive Threat Simulation Mode
     @Published var simulatedThreatMode: SimulatedThreatMode = .nominal
 
+    // Assisted OSNMA Client State (Open-Source HTTP JSON API)
+    private let assistedOsnmaClient = AssistedOsnmaClient()
+    private var networkClockOffsetSeconds: TimeInterval = 0.0
+    @Published var assistedOsnmaUrl: String = "http://127.0.0.1:8095"
+    @Published var isAssistedOsnmaConnected: Bool = false
+    @Published var assistedOsnmaStatusText: String = "Disconnected"
+    @Published var assistedGstBanner: String = "Independent GST: Unsynced"
+    @Published var assistedBitwiseBanner: String = "Bitwise Cross-Check: Standby"
+    @Published var assistedOsnmaMaterial: AssistedOsnmaMaterial? = nil
+    @Published var assistedOsnmaAuthStatus: OsnmaAuthStatus = .notAvailable
+    @Published var isTimeSpoofingSuspected: Bool = false
+    @Published var bitwiseMatchedCount: Int = 0
+    @Published var bitwiseMismatchCount: Int = 0
+    @Published var lastBitwiseReason: String? = nil
+
     // Differential & NMEA Telemetry Metrics
     @Published var fixTypeDesc: String = "3D Autonomous GNSS"
     @Published var numSatellitesInFix: Int = 0
@@ -571,17 +586,123 @@ class GnssViewModel: ObservableObject {
         }
     }
 
+    func connectAssistedOsnma() {
+        let targetUrl = assistedOsnmaUrl.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !targetUrl.isEmpty else { return }
+        DispatchQueue.main.async {
+            self.assistedOsnmaStatusText = "Connecting..."
+        }
+        Task {
+            do {
+                let gst = try await assistedOsnmaClient.fetchGst(baseUrl: targetUrl)
+                let mat = try await assistedOsnmaClient.fetchAssistMaterial(baseUrl: targetUrl)
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                if let remoteDate = formatter.date(from: gst.utcIso) ?? ISO8601DateFormatter().date(from: gst.utcIso) {
+                    self.networkClockOffsetSeconds = remoteDate.timeIntervalSince(Date())
+                }
+                await MainActor.run {
+                    self.isAssistedOsnmaConnected = true
+                    self.assistedOsnmaMaterial = mat
+                    self.assistedOsnmaStatusText = "Connected (\(targetUrl))"
+                    self.assistedGstBanner = "GST WN \(gst.weekNumber) · TOW \(gst.towSeconds)s (\(gst.clockSource))"
+                    self.assistedBitwiseBanner = "Bitwise 40-bit OSNMA armed · 0 matched · 0 mismatch"
+                }
+            } catch {
+                await MainActor.run {
+                    self.isAssistedOsnmaConnected = false
+                    self.assistedOsnmaStatusText = "Connection failed"
+                }
+            }
+        }
+    }
+
+    func disconnectAssistedOsnma() {
+        DispatchQueue.main.async {
+            self.isAssistedOsnmaConnected = false
+            self.assistedOsnmaStatusText = "Disconnected"
+            self.assistedBitwiseBanner = "Bitwise Cross-Check: Standby"
+        }
+    }
+
     func handleInavMessage(_ msg: GalileoINavMessage) {
+        var enriched = msg
+        if !msg.isSimulated {
+            let parsed: ParsedGalileoINavPage?
+            if msg.data.count >= 32 {
+                parsed = GalileoINavBitParser.parseUbxSfrbx228(svid: msg.svid, data: msg.data)
+            } else if msg.data.count >= 30 {
+                parsed = GalileoINavBitParser.parseFull240Bit(svid: msg.svid, data: msg.data)
+            } else {
+                parsed = nil
+            }
+            if let p = parsed, p.crcValid {
+                enriched.crcValid = true
+                if p.hasNonZeroOsnma {
+                    enriched.osnma40Hex = p.osnma40Hex
+                }
+                if let gst = p.decodedGst {
+                    enriched.gstWeek = gst.weekNumber
+                    enriched.gstTow = gst.towSeconds
+                    let netGst = GstTime.fromUtc(Date().addingTimeInterval(networkClockOffsetSeconds))
+                    let drift = abs(Double(gst.totalSeconds - netGst.totalSeconds))
+                    DispatchQueue.main.async {
+                        self.isTimeSpoofingSuspected = drift > 5.0
+                        self.assistedGstBanner = String(format: "GST %@ | Δt(RX-Net): %.1fs%@", gst.formatted, drift, drift > 5.0 ? " [TIME-SPOOFING ALERT]" : " [SYNC OK]")
+                    }
+                }
+            }
+        }
+
+        let finalMsg = enriched
         DispatchQueue.main.async {
             if self.messages.count >= 80 {
                 self.messages.removeFirst()
             }
-            self.messages.append(msg)
-            self.repository.appendRealInavMessage(msg)
+            self.messages.append(finalMsg)
+            self.repository.appendRealInavMessage(finalMsg)
+
+            if !finalMsg.isSimulated && self.assistedOsnmaAuthStatus == .notAvailable {
+                self.assistedOsnmaAuthStatus = .unverified
+            }
+
+            // Trigger 2-second Assisted OSNMA Bitwise cross-check when connected
+            if self.isAssistedOsnmaConnected, !finalMsg.isSimulated,
+               let osnmaHex = finalMsg.osnma40Hex, osnmaHex.count == 10 {
+                let targetUrl = self.assistedOsnmaUrl
+                let gstSec: Int64
+                if let wn = finalMsg.gstWeek, let tow = finalMsg.gstTow {
+                    gstSec = GstTime(weekNumber: wn, towSeconds: tow).totalSeconds
+                } else {
+                    gstSec = GstTime.fromUtc(Date().addingTimeInterval(self.networkClockOffsetSeconds)).totalSeconds
+                }
+                Task {
+                    if let res = try? await self.assistedOsnmaClient.checkBitwise(
+                        baseUrl: targetUrl,
+                        svid: finalMsg.svid,
+                        gstSeconds: gstSec,
+                        osnma40Hex: osnmaHex
+                    ), res.hasReference {
+                        await MainActor.run {
+                            if res.matched {
+                                self.bitwiseMatchedCount += 1
+                                if self.bitwiseMismatchCount == 0 && self.assistedOsnmaAuthStatus != .authenticated {
+                                    self.assistedOsnmaAuthStatus = .bitwiseVerified
+                                }
+                            } else {
+                                self.bitwiseMismatchCount += 1
+                                self.assistedOsnmaAuthStatus = .tamperDetected
+                            }
+                            self.lastBitwiseReason = res.reason
+                            self.assistedBitwiseBanner = "Bitwise 40-bit OSNMA: \(self.bitwiseMatchedCount) matched · \(self.bitwiseMismatchCount) mismatch"
+                        }
+                    }
+                }
+            }
 
             // Associate detected carrier band (E1-B vs E5b-I) with satellite in satelliteStore
-            let key = "Galileo_\(msg.svid)"
-            let bandPrefix = msg.band.contains("E5") ? "E5b" : "E1"
+            let key = "Galileo_\(finalMsg.svid)"
+            let bandPrefix = finalMsg.band.contains("E5") ? "E5b" : "E1"
             if let existing = self.satelliteStore[key] {
                 var bands = existing.info.trackedBands
                 if !bands.contains(bandPrefix) {
@@ -613,13 +734,21 @@ class GnssViewModel: ObservableObject {
               let wt = Int(parts[2]),
               let payload = GalileoINavMessage.decodeHexPayload(parts[3].components(separatedBy: "*")[0])
         else { return }
+        var osnmaHex: String? = nil
+        if parts.count >= 5 {
+            let candidate = parts[4].components(separatedBy: "*")[0].trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            if candidate.count == 10 {
+                osnmaHex = candidate
+            }
+        }
         let inavMsg = GalileoINavMessage(
             svid: svid,
             submessageId: wt,
             data: payload,
             status: 0,
             timestamp: Date(),
-            band: "E1-B"
+            band: "E1-B",
+            osnma40Hex: osnmaHex
         )
         self.handleInavMessage(inavMsg)
     }

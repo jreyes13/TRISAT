@@ -38,6 +38,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.window.core.layout.WindowWidthSizeClass
+import com.example.myapplication.data.gnss.engine.AssistedOsnmaUiState
 import com.example.myapplication.data.gnss.model.IntelligenceLogEntry
 import com.example.myapplication.data.gnss.model.OsnmaStatus
 import com.example.myapplication.data.gnss.model.ThreatScenario
@@ -83,6 +85,7 @@ fun ThreatAnalysisScreen(
     val gnssMeasurements by gnssViewModel.gnssMeasurementsState.collectAsState()
     val isMockMode by gnssViewModel.isMockMode.collectAsState()
     val receiverMode by gnssViewModel.receiverMode.collectAsState()
+    val assistedOsnma by gnssViewModel.assistedOsnmaState.collectAsState()
 
     val isStandby = gnssStatus.satellites.isEmpty() && !isMockMode && receiverMode != com.example.myapplication.data.gnss.model.GnssReceiverMode.SIMULATION_TLE
     if (isStandby) {
@@ -131,6 +134,14 @@ fun ThreatAnalysisScreen(
 
                 item {
                     OsnmaAuthenticationCard(osnmaStatus = osnmaStatus)
+                }
+
+                item {
+                    AssistedOsnmaControlCard(
+                        state = assistedOsnma,
+                        onUrlChanged = { gnssViewModel.updateAssistedOsnmaUrl(it) },
+                        onToggleConnect = { gnssViewModel.toggleAssistedOsnma() }
+                    )
                 }
 
                 item {
@@ -234,6 +245,14 @@ fun ThreatAnalysisScreen(
 
             item {
                 OsnmaAuthenticationCard(osnmaStatus = osnmaStatus)
+            }
+
+            item {
+                AssistedOsnmaControlCard(
+                    state = assistedOsnma,
+                    onUrlChanged = { gnssViewModel.updateAssistedOsnmaUrl(it) },
+                    onToggleConnect = { gnssViewModel.toggleAssistedOsnma() }
+                )
             }
 
             item {
@@ -575,7 +594,7 @@ fun OsnmaAuthenticationCard(osnmaStatus: OsnmaStatus) {
                 }
 
                 val level = when (osnmaStatus) {
-                    OsnmaStatus.VERIFIED -> StatusLevel.SECURE
+                    OsnmaStatus.VERIFIED, OsnmaStatus.ASSISTED_AUTHENTICATED, OsnmaStatus.BITWISE_VERIFIED -> StatusLevel.SECURE
                     OsnmaStatus.UNAUTHENTICATED -> StatusLevel.WARNING
                     OsnmaStatus.FAILED -> StatusLevel.ALERT
                     OsnmaStatus.SIMULATED_FAILURE -> StatusLevel.WARNING
@@ -617,6 +636,73 @@ fun OsnmaAuthenticationCard(osnmaStatus: OsnmaStatus) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun AssistedOsnmaControlCard(
+    state: AssistedOsnmaUiState,
+    onUrlChanged: (String) -> Unit,
+    onToggleConnect: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Assisted OSNMA (GST & 2s Bitwise)",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                StatusBadge(
+                    text = if (state.isConnected) "CONNECTED" else "STANDBY",
+                    level = if (state.mismatchCount > 0 || state.isTimeSpoofingSuspected) StatusLevel.ALERT
+                    else if (state.isConnected) StatusLevel.SECURE
+                    else StatusLevel.INFO
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = state.serverUrl,
+                onValueChange = onUrlChanged,
+                singleLine = true,
+                label = { Text("Assisted OSNMA Server URL") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = onToggleConnect,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (state.isConnected) "Disconnect Assisted OSNMA" else "Connect Assisted OSNMA")
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = state.gstBanner,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = state.bitwiseBanner,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
