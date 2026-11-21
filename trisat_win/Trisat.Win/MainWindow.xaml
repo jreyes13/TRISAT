@@ -1,0 +1,951 @@
+<Window x:Class="Trisat.Win.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Trisat.Win.Controls"
+        Title="TRISAT — Authenticated Earth Intelligence (Windows Native)"
+        Icon="Assets/trisat.ico"
+        Width="1360"
+        Height="880"
+        MinWidth="1024"
+        MinHeight="700"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BgDeepBrush}"
+        Foreground="{StaticResource TextPrimaryBrush}"
+        FontFamily="Segoe UI">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- =================================================================== -->
+        <!-- TOP HEADER BAR                                                      -->
+        <!-- =================================================================== -->
+        <Border Grid.Row="0"
+                Background="{StaticResource BgSurfaceBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="18,10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Image Source="Assets/trisat_logo.png" Height="34" Margin="0,0,12,0" Stretch="Uniform" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="TRISAT · WINDOWS NATIVE COCKPIT"
+                                   FontWeight="Bold" FontSize="14" Foreground="{StaticResource CyanAccentBrush}" />
+                        <TextBlock Text="{Binding ActiveSourceHeader}"
+                                   FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Quick Mode & Constellation Status Badges -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Background="#0C4A6E" BorderBrush="#22D3EE" BorderThickness="1"
+                            CornerRadius="8" Padding="10,4" Margin="0,0,10,0">
+                        <TextBlock Text="{Binding SkySourceLabel}"
+                                   FontFamily="Consolas" FontSize="11" FontWeight="Bold"
+                                   Foreground="#67E8F9" />
+                    </Border>
+                    <Button Content="{Binding TestStreamButtonText}"
+                            Command="{Binding ToggleTestStreamCommand}"
+                            Style="{StaticResource SubtleButtonStyle}"
+                            Margin="0,0,8,0" />
+                    <Button Content="Download TLEs"
+                            Command="{Binding DownloadTleCommand}"
+                            Style="{StaticResource AccentButtonStyle}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- =================================================================== -->
+        <!-- MAIN 5-TAB WORKSPACE                                                -->
+        <!-- =================================================================== -->
+        <TabControl Grid.Row="1" Margin="8,4,8,4">
+
+            <!-- =============================================================== -->
+            <!-- TAB 1: DASHBOARD                                                -->
+            <!-- =============================================================== -->
+            <TabItem Header="Dashboard">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.05*" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="0.95*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- LEFT COLUMN: SkyPlot + Filters + Constellation Matrix -->
+                        <StackPanel Grid.Column="0">
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,10">
+                                        <TextBlock Text="OPEN SKY SATELLITE VIEW"
+                                                   FontWeight="Bold" FontSize="13"
+                                                   Foreground="{StaticResource CyanAccentBrush}" />
+                                        <Border DockPanel.Dock="Right" Background="#052E16" BorderBrush="#22C55E"
+                                                BorderThickness="1" CornerRadius="6" Padding="8,2">
+                                            <TextBlock Text="{Binding VisibleSatelliteCount, StringFormat={}{0} SATS}"
+                                                       FontFamily="Consolas" FontSize="11" FontWeight="Bold"
+                                                       Foreground="#4ADE80" />
+                                        </Border>
+                                    </DockPanel>
+
+                                    <!-- Constellation Filter Chips -->
+                                    <WrapPanel Margin="0,0,0,10">
+                                        <ToggleButton Content="Galileo (E)" IsChecked="{Binding IsGalileoEnabled}"
+                                                      Style="{StaticResource FilterChipStyle}" Margin="0,0,8,4" />
+                                        <ToggleButton Content="GPS (G)" IsChecked="{Binding IsGpsEnabled}"
+                                                      Style="{StaticResource FilterChipStyle}" Margin="0,0,8,4" />
+                                        <ToggleButton Content="GLONASS (R)" IsChecked="{Binding IsGlonassEnabled}"
+                                                      Style="{StaticResource FilterChipStyle}" Margin="0,0,8,4" />
+                                        <ToggleButton Content="BeiDou (B)" IsChecked="{Binding IsBeidouEnabled}"
+                                                      Style="{StaticResource FilterChipStyle}" Margin="0,0,8,4" />
+                                    </WrapPanel>
+
+                                    <!-- Mode 2 TLE ±12h Time Scrubbing Slider -->
+                                    <Border Style="{StaticResource InnerTileStyle}"
+                                            Visibility="{Binding IsSimulationMode, Converter={StaticResource BoolToVis}}"
+                                            Margin="0,0,0,10">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <TextBlock Text="Orbit Propagation Offset (TLE Simulation)"
+                                                           FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                                <TextBlock DockPanel.Dock="Right" Text="{Binding TimeOffsetDisplay}"
+                                                           FontFamily="Consolas" FontSize="11" FontWeight="Bold"
+                                                           Foreground="{StaticResource CyanAccentBrush}" />
+                                            </DockPanel>
+                                            <Slider Minimum="-12" Maximum="12" TickFrequency="0.5" IsSnapToTickEnabled="True"
+                                                    Value="{Binding TimeOffsetHours}" Margin="0,6,0,0" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Polar SkyPlot -->
+                                    <controls:SkyPlotControl Height="360"
+                                                             Satellites="{Binding DisplayedSatellites}"
+                                                             IsAwaitingLocation="{Binding IsAwaitingLocation}"
+                                                             IsAwaitingTle="{Binding IsAwaitingTle}" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Constellation Signal Matrix -->
+                            <Border Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,12">
+                                        <TextBlock Text="CONSTELLATION SIGNAL MATRIX"
+                                                   FontWeight="Bold" FontSize="13"
+                                                   Foreground="{StaticResource CyanAccentBrush}" />
+                                        <TextBlock DockPanel.Dock="Right" Text="4 NETWORKS"
+                                                   FontFamily="Consolas" FontSize="11"
+                                                   Foreground="{StaticResource TextSecondaryBrush}" />
+                                    </DockPanel>
+
+                                    <UniformGrid Columns="2" Rows="2">
+                                        <Border Style="{StaticResource InnerTileStyle}" Margin="0,0,6,6" BorderBrush="#0891B2">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="Galileo (EU)" FontWeight="Bold" Foreground="#22D3EE" />
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding GalileoCount, StringFormat={}{0} SVs}"
+                                                               FontFamily="Consolas" FontWeight="Bold" Foreground="#22D3EE" />
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding GalileoSummary}" FontSize="11" FontFamily="Consolas"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Style="{StaticResource InnerTileStyle}" Margin="6,0,0,6" BorderBrush="#B45309">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="GPS (US)" FontWeight="Bold" Foreground="#FBBF24" />
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding GpsCount, StringFormat={}{0} SVs}"
+                                                               FontFamily="Consolas" FontWeight="Bold" Foreground="#FBBF24" />
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding GpsSummary}" FontSize="11" FontFamily="Consolas"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Style="{StaticResource InnerTileStyle}" Margin="0,6,6,0" BorderBrush="#BE123C">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="GLONASS (RU)" FontWeight="Bold" Foreground="#FB7185" />
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding GlonassCount, StringFormat={}{0} SVs}"
+                                                               FontFamily="Consolas" FontWeight="Bold" Foreground="#FB7185" />
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding GlonassSummary}" FontSize="11" FontFamily="Consolas"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Style="{StaticResource InnerTileStyle}" Margin="6,6,0,0" BorderBrush="#15803D">
+                                            <StackPanel>
+                                                <DockPanel>
+                                                    <TextBlock Text="BeiDou (CN)" FontWeight="Bold" Foreground="#4ADE80" />
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding BeiDouCount, StringFormat={}{0} SVs}"
+                                                               FontFamily="Consolas" FontWeight="Bold" Foreground="#4ADE80" />
+                                                </DockPanel>
+                                                <TextBlock Text="{Binding BeiDouSummary}" FontSize="11" FontFamily="Consolas"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0" />
+                                            </StackPanel>
+                                        </Border>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- RIGHT COLUMN: Position Telemetry + DOP Geometry + MiniMap -->
+                        <StackPanel Grid.Column="2">
+                            <!-- Position & Telemetry -->
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="POSITION &amp; TELEMETRY"
+                                                   FontWeight="Bold" FontSize="13"
+                                                   Foreground="{StaticResource CyanAccentBrush}" />
+                                        <Border DockPanel.Dock="Right" Background="#172554" BorderBrush="#3B82F6"
+                                                BorderThickness="1" CornerRadius="6" Padding="8,2">
+                                            <TextBlock Text="{Binding CopyStatusText}"
+                                                       FontFamily="Consolas" FontSize="10" FontWeight="Bold"
+                                                       Foreground="#93C5FD" />
+                                        </Border>
+                                    </DockPanel>
+
+                                    <TextBlock Text="{Binding LocationText}"
+                                               FontFamily="Consolas" FontSize="19" FontWeight="Bold"
+                                               Foreground="White" Margin="0,4,0,4" />
+                                    <TextBlock Text="{Binding AccuracyText}"
+                                               FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                                               TextWrapping="Wrap" Margin="0,0,0,12" />
+
+                                    <UniformGrid Columns="2">
+                                        <Button Content="Copy Coords" Command="{Binding CopyCoordsCommand}"
+                                                Style="{StaticResource AccentButtonStyle}" Margin="0,0,6,0" />
+                                        <Button Content="Open in OpenStreetMap" Command="{Binding OpenMapsCommand}"
+                                                Style="{StaticResource SubtleButtonStyle}" Margin="6,0,0,0" />
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- DOP Geometry Quality -->
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,10">
+                                        <TextBlock Text="DOP GEOMETRY QUALITY"
+                                                   FontWeight="Bold" FontSize="13"
+                                                   Foreground="{StaticResource CyanAccentBrush}" />
+                                        <Border DockPanel.Dock="Right" Background="#172554" BorderBrush="#38BDF8"
+                                                BorderThickness="1" CornerRadius="6" Padding="8,2">
+                                            <TextBlock Text="{Binding Dop.QualityBadge}"
+                                                       FontFamily="Consolas" FontSize="10" FontWeight="Bold"
+                                                       Foreground="#7DD3FC" />
+                                        </Border>
+                                    </DockPanel>
+
+                                    <UniformGrid Columns="4">
+                                        <Border Style="{StaticResource InnerTileStyle}" Margin="0,0,5,0">
+                                            <StackPanel HorizontalAlignment="Center">
+                                                <TextBlock Text="HDOP" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" />
+                                                <TextBlock Text="{Binding Dop.HdopText}" FontFamily="Consolas" FontSize="17" FontWeight="Bold" Foreground="#4ADE80" HorizontalAlignment="Center" />
+                                                <TextBlock Text="Horizontal" FontSize="9" Foreground="#64748B" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Style="{StaticResource InnerTileStyle}" Margin="3,0,3,0">
+                                            <StackPanel HorizontalAlignment="Center">
+                                                <TextBlock Text="VDOP" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" />
+                                                <TextBlock Text="{Binding Dop.VdopText}" FontFamily="Consolas" FontSize="17" FontWeight="Bold" Foreground="#E2E8F0" HorizontalAlignment="Center" />
+                                                <TextBlock Text="Vertical" FontSize="9" Foreground="#64748B" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Style="{StaticResource InnerTileStyle}" Margin="3,0,3,0">
+                                            <StackPanel HorizontalAlignment="Center">
+                                                <TextBlock Text="PDOP" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" />
+                                                <TextBlock Text="{Binding Dop.PdopText}" FontFamily="Consolas" FontSize="17" FontWeight="Bold" Foreground="#22D3EE" HorizontalAlignment="Center" />
+                                                <TextBlock Text="3D Position" FontSize="9" Foreground="#64748B" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Style="{StaticResource InnerTileStyle}" Margin="5,0,0,0">
+                                            <StackPanel HorizontalAlignment="Center">
+                                                <TextBlock Text="GDOP" FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center" />
+                                                <TextBlock Text="{Binding Dop.GdopText}" FontFamily="Consolas" FontSize="17" FontWeight="Bold" Foreground="#A5B4FC" HorizontalAlignment="Center" />
+                                                <TextBlock Text="Geometric" FontSize="9" Foreground="#64748B" HorizontalAlignment="Center" />
+                                            </StackPanel>
+                                        </Border>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Geospatial MiniMap -->
+                            <Border Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="GEOSPATIAL MINI MAP"
+                                               FontWeight="Bold" FontSize="13"
+                                               Foreground="{StaticResource CyanAccentBrush}"
+                                               Margin="0,0,0,10" />
+                                    <controls:MiniMapControl Height="265"
+                                                             Latitude="{Binding MapLatitude}"
+                                                             Longitude="{Binding MapLongitude}"
+                                                             BadgeText="{Binding MapBadgeText}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- =============================================================== -->
+            <!-- TAB 2: SIGNAL PROCESSING                                        -->
+            <!-- =============================================================== -->
+            <TabItem Header="Signal Processing">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10">
+                    <StackPanel>
+                        <!-- Differential & Precision Header Bar -->
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+                            <UniformGrid Columns="4">
+                                <Border Style="{StaticResource InnerTileStyle}" Margin="0,0,8,0">
+                                    <StackPanel>
+                                        <TextBlock Text="FIX MODE" FontSize="10" Foreground="#4ADE80" FontWeight="Bold" />
+                                        <TextBlock Text="{Binding FixTypeDesc}" FontFamily="Consolas" FontSize="13" FontWeight="Bold" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource InnerTileStyle}" Margin="4,0,4,0">
+                                    <StackPanel>
+                                        <TextBlock Text="SATS IN FIX / HDOP" FontSize="10" Foreground="#22D3EE" FontWeight="Bold" />
+                                        <TextBlock FontFamily="Consolas" FontSize="13" FontWeight="Bold" Margin="0,3,0,0">
+                                            <Run Text="{Binding NumSatellitesInFix, Mode=OneWay}" /><Run Text=" Sats | HDOP " /><Run Text="{Binding Dop.HdopText, Mode=OneWay}" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource InnerTileStyle}" Margin="4,0,4,0">
+                                    <StackPanel>
+                                        <TextBlock Text="DGPS BASE STATION" FontSize="10" Foreground="#FBBF24" FontWeight="Bold" />
+                                        <TextBlock FontFamily="Consolas" FontSize="13" FontWeight="Bold" Margin="0,3,0,0">
+                                            <Run Text="ID: " /><Run Text="{Binding DgpsStationId, Mode=OneWay}" /><Run Text=" (" /><Run Text="{Binding DgpsAge, Mode=OneWay}" /><Run Text=")" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                </Border>
+                                <Border Style="{StaticResource InnerTileStyle}" Margin="8,0,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="PSEUDORANGE ERROR ($GST)" FontSize="10" Foreground="#C084FC" FontWeight="Bold" />
+                                        <TextBlock Text="{Binding GstRmsError}" FontFamily="Consolas" FontSize="13" FontWeight="Bold" Margin="0,3,0,0" />
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                        </Border>
+
+                        <!-- ROW 1: Compact Skyplot + C/N0 Bar Chart -->
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="300" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="OPEN SKY RADAR" FontWeight="Bold" FontSize="12" Foreground="{StaticResource CyanAccentBrush}" />
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding VisibleSatelliteCount, StringFormat={}{0} Sats}"
+                                                   FontFamily="Consolas" FontSize="11" Foreground="#4ADE80" />
+                                    </DockPanel>
+                                    <controls:SkyPlotControl Height="220"
+                                                             Satellites="{Binding DisplayedSatellites}"
+                                                             IsAwaitingLocation="{Binding IsAwaitingLocation}"
+                                                             IsAwaitingTle="{Binding IsAwaitingTle}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="SIGNAL STRENGTH C/N0 (dB-Hz)" FontWeight="Bold" FontSize="12" Foreground="#4ADE80" />
+                                        <TextBlock DockPanel.Dock="Right" Text="Green ≥35 · Amber ≥25 · Red &lt;25"
+                                                   FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" />
+                                    </DockPanel>
+                                    <controls:SnrBarChartControl Height="220" Satellites="{Binding DisplayedSatellites}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- ROW 2: NMEA Terminal + Galileo I/NAV Subframes -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- NMEA Live Terminal -->
+                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="ASCII NMEA / JSON STREAM TERMINAL" FontWeight="Bold" FontSize="12" Foreground="#4ADE80" VerticalAlignment="Center" />
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <CheckBox Content="Pause" IsChecked="{Binding PauseNmeaLog}" Margin="0,0,10,0" />
+                                            <Button Content="Export" Command="{Binding ExportNmeaCommand}" Style="{StaticResource SubtleButtonStyle}" Padding="8,3" Margin="0,0,6,0" />
+                                            <Button Content="Clear" Command="{Binding ClearNmeaCommand}" Style="{StaticResource DangerButtonStyle}" Padding="8,3" />
+                                        </StackPanel>
+                                    </DockPanel>
+
+                                    <ListBox ItemsSource="{Binding NmeaLines}"
+                                             Height="280"
+                                             Background="#020617"
+                                             BorderBrush="#1E293B"
+                                             Foreground="#4ADE80"
+                                             FontFamily="Consolas"
+                                             FontSize="11"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Galileo I/NAV Subframes -->
+                            <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock FontWeight="Bold" FontSize="12" Foreground="{StaticResource CyanAccentBrush}" VerticalAlignment="Center">
+                                            <Run Text="GALILEO I/NAV SUBFRAMES (" /><Run Text="{Binding InavMessages.Count, Mode=OneWay}" /><Run Text=")" />
+                                        </TextBlock>
+                                        <Button DockPanel.Dock="Right" Content="Clear" Command="{Binding ClearInavCommand}"
+                                                Style="{StaticResource DangerButtonStyle}" Padding="8,3" />
+                                    </DockPanel>
+
+                                    <ListBox ItemsSource="{Binding InavMessages}"
+                                             Height="280"
+                                             Background="#020617"
+                                             BorderBrush="#1E293B"
+                                             HorizontalContentAlignment="Stretch">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#0F172A" BorderBrush="#1E293B" BorderThickness="1"
+                                                        CornerRadius="8" Padding="10" Margin="2,3">
+                                                    <StackPanel>
+                                                        <DockPanel>
+                                                            <TextBlock Text="{Binding FormattedSvid}" FontWeight="Bold" Foreground="#22D3EE" FontSize="12" />
+                                                            <Border DockPanel.Dock="Right" Background="#451A03" BorderBrush="#F59E0B"
+                                                                    BorderThickness="1" CornerRadius="4" Padding="6,1">
+                                                                <TextBlock Text="{Binding ProvenanceBadge}" FontFamily="Consolas" FontSize="9" Foreground="#FCD34D" />
+                                                            </Border>
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,2,0,4">
+                                                            <TextBlock Text="{Binding WordTypeDescription}" FontSize="11" Foreground="#CBD5E1" />
+                                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Band}" FontFamily="Consolas" FontSize="10" Foreground="#94A3B8" />
+                                                        </DockPanel>
+                                                        <TextBlock Text="{Binding HexPayload}" FontFamily="Consolas" FontSize="10"
+                                                                   Foreground="#60A5FA" TextWrapping="Wrap" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- =============================================================== -->
+            <!-- TAB 3: THREAT ANALYSIS & OSNMA                                  -->
+            <!-- =============================================================== -->
+            <TabItem Header="Threat Analysis">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10">
+                    <StackPanel>
+                        <!-- Overall Threat Gauge Banner -->
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="20,0,0,0">
+                                    <TextBlock Text="{Binding ThreatAssessment.ThreatScore, StringFormat={}{0}%}"
+                                               FontFamily="Consolas" FontSize="34" FontWeight="Bold"
+                                               Foreground="{StaticResource CyanAccentBrush}" HorizontalAlignment="Center" />
+                                    <Border Background="#1E293B" BorderBrush="#38BDF8" BorderThickness="1"
+                                            CornerRadius="6" Padding="10,3">
+                                        <TextBlock Text="{Binding ThreatAssessment.ThreatLevelText}"
+                                                   FontFamily="Consolas" FontSize="11" FontWeight="Bold" Foreground="White" />
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="THREAT ANALYSIS &amp; ANTI-SPOOFING ENGINE"
+                                               FontWeight="Bold" FontSize="16" Foreground="White" />
+                                    <TextBlock Text="Real-time automated evaluation of C/N0 noise floor, $GPGST pseudorange residuals, DGPS/RTK base station consistency, and Galileo OSNMA reception provenance."
+                                               FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- 2x2 Threat Cards -->
+                        <UniformGrid Columns="2" Rows="2" Margin="0,0,0,16">
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,8,8">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="GALILEO OSNMA PROVENANCE" FontWeight="Bold" FontSize="13" Foreground="#22D3EE" />
+                                        <Border DockPanel.Dock="Right" Background="#451A03" BorderBrush="#F59E0B" BorderThickness="1" CornerRadius="6" Padding="8,2">
+                                            <TextBlock Text="{Binding ThreatAssessment.OsnmaStatusText}" FontFamily="Consolas" FontSize="10" FontWeight="Bold" Foreground="#FCD34D" />
+                                        </Border>
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding ThreatAssessment.OsnmaDetails}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="8,0,0,8">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="JAMMING &amp; RF INTERFERENCE" FontWeight="Bold" FontSize="13" Foreground="#4ADE80" />
+                                        <Border DockPanel.Dock="Right" Background="#052E16" BorderBrush="#22C55E" BorderThickness="1" CornerRadius="6" Padding="8,2">
+                                            <TextBlock Text="{Binding ThreatAssessment.JammingStatusText}" FontFamily="Consolas" FontSize="10" FontWeight="Bold" Foreground="#86EFAC" />
+                                        </Border>
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding ThreatAssessment.JammingDetails}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,8,8,0">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="SPOOFING / MEACONING DETECTION" FontWeight="Bold" FontSize="13" Foreground="#FBBF24" />
+                                        <Border DockPanel.Dock="Right" Background="#172554" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="6" Padding="8,2">
+                                            <TextBlock Text="{Binding ThreatAssessment.SpoofingStatusText}" FontFamily="Consolas" FontSize="10" FontWeight="Bold" Foreground="#7DD3FC" />
+                                        </Border>
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding ThreatAssessment.SpoofingDetails}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="8,8,0,0">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="DIFFERENTIAL DGPS / RTK INTEGRITY" FontWeight="Bold" FontSize="13" Foreground="#A5B4FC" />
+                                        <Border DockPanel.Dock="Right" Background="#1E1B4B" BorderBrush="#818CF8" BorderThickness="1" CornerRadius="6" Padding="8,2">
+                                            <TextBlock Text="{Binding ThreatAssessment.DgpsStatusText}" FontFamily="Consolas" FontSize="10" FontWeight="Bold" Foreground="#C7D2FE" />
+                                        </Border>
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding ThreatAssessment.DgpsDetails}" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <!-- Standalone Cryptographic Annex A Self-Test + Interactive Attack Drills -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- EUSPA Annex A Cryptographic Self-Test -->
+                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="OSNMA CRYPTOGRAPHIC SELF-TEST (EUSPA ANNEX A)"
+                                               FontWeight="Bold" FontSize="13" Foreground="{StaticResource CyanAccentBrush}" Margin="0,0,0,6" />
+                                    <TextBlock Text="Checks the fixed official Galileo OSNMA Annex A reference test vector (ECDSA P-256 KROOT, SHA-256 Merkle padding, TESLA K14→K0 chain, HMAC-SHA-256 MACSEQ &amp; ADKD=4 Tag2). Reported separately from live session reception."
+                                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                    <Border Style="{StaticResource InnerTileStyle}" Margin="0,0,0,10">
+                                        <TextBlock Text="{Binding AnnexASelfTestBanner}"
+                                                   FontFamily="Consolas" FontSize="11" Foreground="#67E8F9" TextWrapping="Wrap" />
+                                    </Border>
+                                    <Button Content="Run EUSPA Annex A Cryptographic Self-Test"
+                                            Command="{Binding RunAnnexASelfTestCommand}"
+                                            Style="{StaticResource AccentButtonStyle}" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Interactive Threat Simulation Drills -->
+                            <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="INTERACTIVE THREAT SIMULATION DRILLS"
+                                                   FontWeight="Bold" FontSize="13" Foreground="#FB7185" VerticalAlignment="Center" />
+                                        <Button DockPanel.Dock="Right" Content="Reset Drills"
+                                                Command="{Binding ResetThreatSimulationCommand}"
+                                                Style="{StaticResource SubtleButtonStyle}" Padding="8,3" />
+                                    </DockPanel>
+                                    <TextBlock Text="Inject synthetic RF degradation or spoofing anomalies locally for operator training and UI diagnostics:"
+                                               FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                    <UniformGrid Columns="2" Rows="2">
+                                        <CheckBox Content="Broadband Jamming (-22 dB)" IsChecked="{Binding SimJamming}" Margin="0,4" />
+                                        <CheckBox Content="Coherent Spoofing Attack" IsChecked="{Binding SimSpoofing}" Margin="0,4" />
+                                        <CheckBox Content="Meaconing (Replay Delay)" IsChecked="{Binding SimMeaconing}" Margin="0,4" />
+                                        <CheckBox Content="OSNMA MAC Tampering" IsChecked="{Binding SimMacTamper}" Margin="0,4" />
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- =============================================================== -->
+            <!-- TAB 4: TRISAT-SDR & SEPTENTRIO SBF REPLAY                       -->
+            <!-- =============================================================== -->
+            <TabItem Header="SDR &amp; SBF Tools">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10">
+                    <StackPanel>
+                        <!-- Repository & Python Paths -->
+                        <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="16" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="160" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="TRISAT Repo:" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <TextBox Grid.Column="1" Text="{Binding RepoRootPath, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Grid.Column="2" Content="Browse..." Command="{Binding BrowseRepoRootCommand}" Style="{StaticResource SubtleButtonStyle}" Margin="8,0,0,0" />
+                                <TextBlock Grid.Column="4" Text="Python:" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{StaticResource TextSecondaryBrush}" />
+                                <TextBox Grid.Column="5" Text="{Binding PythonExecutable, UpdateSourceTrigger=PropertyChanged}" />
+                            </Grid>
+                        </Border>
+
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="16" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- TRISAT-SDR Launcher -->
+                            <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,10">
+                                        <TextBlock Text="TRISAT-SDR DUAL-HACKRF ENGINE" FontWeight="Bold" FontSize="13" Foreground="{StaticResource CyanAccentBrush}" />
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding SdrStatusText}" FontFamily="Consolas" FontSize="11" Foreground="#4ADE80" />
+                                    </DockPanel>
+
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="10" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="10" />
+                                            <ColumnDefinition Width="90" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Primary SDR (#0 Master)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
+                                            <ComboBox ItemsSource="{Binding SdrBands}" SelectedItem="{Binding SdrBand1}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Secondary SDR (#1 Slave)" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
+                                            <ComboBox ItemsSource="{Binding SdrBands}" SelectedItem="{Binding SdrBand2}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="4">
+                                            <TextBlock Text="Web Port" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
+                                            <TextBox Text="{Binding SdrWebPort}" />
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <WrapPanel Margin="0,0,0,12">
+                                        <CheckBox Content="Single-SDR Mode" IsChecked="{Binding SdrSingleMode}" Margin="0,0,16,0" />
+                                        <CheckBox Content="Emit Legacy Simulated NMEA" IsChecked="{Binding SdrEmitLegacySimulation}" />
+                                    </WrapPanel>
+
+                                    <UniformGrid Columns="2">
+                                        <Button Content="{Binding SdrButtonText}" Command="{Binding ToggleSdrCommand}" Style="{StaticResource AccentButtonStyle}" Margin="0,0,6,0" />
+                                        <Button Content="Open SDR Web UI (:8085)" Command="{Binding OpenSdrDashboardCommand}" Style="{StaticResource SubtleButtonStyle}" Margin="6,0,0,0" />
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Septentrio SBF Replay + Offline OSNMA -->
+                            <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,10">
+                                        <TextBlock Text="SEPTENTRIO SBF REPLAY &amp; OFFLINE OSNMA" FontWeight="Bold" FontSize="13" Foreground="#FBBF24" />
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding SbfStatusText}" FontFamily="Consolas" FontSize="11" Foreground="#FCD34D" />
+                                    </DockPanel>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Recording (.sbf):" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBox Grid.Column="1" Text="{Binding SbfFilePath, UpdateSourceTrigger=PropertyChanged}" />
+                                        <Button Grid.Column="2" Content="..." Command="{Binding BrowseSbfFileCommand}" Style="{StaticResource SubtleButtonStyle}" Margin="6,0,0,0" />
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="MerkleTree.xml:" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBox Grid.Column="1" Text="{Binding MerkleTreeXmlPath, UpdateSourceTrigger=PropertyChanged}" />
+                                        <Button Grid.Column="2" Content="..." Command="{Binding BrowseMerkleXmlCommand}" Style="{StaticResource SubtleButtonStyle}" Margin="6,0,0,0" />
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="PublicKey.xml:" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBox Grid.Column="1" Text="{Binding PublicKeyXmlPath, UpdateSourceTrigger=PropertyChanged}" />
+                                        <Button Grid.Column="2" Content="..." Command="{Binding BrowsePublicKeyXmlCommand}" Style="{StaticResource SubtleButtonStyle}" Margin="6,0,0,0" />
+                                    </Grid>
+
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="110" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="80" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="OSNMAlib Path:" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBox Grid.Column="1" Text="{Binding OsnmaLibPath, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0" />
+                                        <TextBox Grid.Column="2" Text="{Binding SbfReplayPort}" ToolTip="Replay HTTP Port" />
+                                    </Grid>
+
+                                    <UniformGrid Columns="2">
+                                        <Button Content="{Binding SbfReplayButtonText}" Command="{Binding ToggleSbfReplayCommand}" Style="{StaticResource AccentButtonStyle}" Margin="0,0,6,0" />
+                                        <Button Content="Open SBF Viewer" Command="{Binding OpenSbfViewerCommand}" Style="{StaticResource SubtleButtonStyle}" Margin="6,0,0,0" />
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Live SDR / SBF Console -->
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <TextBlock Text="SDR / SBF PROCESS CONSOLE OUTPUT" FontWeight="Bold" FontSize="12" Foreground="{StaticResource CyanAccentBrush}" Margin="0,0,0,8" />
+                                <ListBox ItemsSource="{Binding SdrConsoleLines}"
+                                         Height="240"
+                                         Background="#020617"
+                                         BorderBrush="#1E293B"
+                                         Foreground="#93C5FD"
+                                         FontFamily="Consolas"
+                                         FontSize="11" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- =============================================================== -->
+            <!-- TAB 5: SETTINGS & HARDWARE                                      -->
+            <!-- =============================================================== -->
+            <TabItem Header="Settings &amp; Hardware">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.15*" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="0.85*" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- LEFT COLUMN: Mode, Serial COM, WinRT BLE, UDP/TCP, TLE -->
+                        <StackPanel Grid.Column="0">
+                            <!-- Receiver Operating Mode -->
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
+                                <StackPanel>
+                                    <TextBlock Text="GNSS RECEIVER OPERATING MODE" FontWeight="Bold" FontSize="13" Foreground="{StaticResource CyanAccentBrush}" Margin="0,0,0,10" />
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="12" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Mode:" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
+                                            <ComboBox SelectedIndex="{Binding SelectedModeIndex}">
+                                                <ComboBoxItem Content="Mode 0 · Windows Location + TLE" />
+                                                <ComboBoxItem Content="Mode 1 · External Hardware (COM / BLE / UDP)" />
+                                                <ComboBoxItem Content="Mode 2 · TLE Orbit Simulation (±12h)" />
+                                            </ComboBox>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="Simulation Reference Site (Mode 2):" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,4" />
+                                            <ComboBox ItemsSource="{Binding SitePresets}" SelectedItem="{Binding SelectedSitePreset}" DisplayMemberPath="Name" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Windows Native USB Serial (COM*) -->
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,10">
+                                        <TextBlock Text="WINDOWS USB / HARDWARE SERIAL PORTS (COM*)" FontWeight="Bold" FontSize="13" Foreground="#4ADE80" />
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding SerialStatusText}" FontFamily="Consolas" FontSize="11" Foreground="#86EFAC" />
+                                    </DockPanel>
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="110" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0" ItemsSource="{Binding AvailableSerialPorts}" SelectedItem="{Binding SelectedSerialPort}" />
+                                        <ComboBox Grid.Column="2" ItemsSource="{Binding BaudRates}" SelectedItem="{Binding SelectedBaudRate}" />
+                                        <Button Grid.Column="4" Content="Refresh" Command="{Binding RefreshSerialPortsCommand}" Style="{StaticResource SubtleButtonStyle}" />
+                                    </Grid>
+
+                                    <WrapPanel Margin="0,0,0,10">
+                                        <CheckBox Content="Auto-configure u-blox ZED-F9P (NMEA + UBX-RXM-SFRBX)" IsChecked="{Binding AutoInitZedF9p}" Margin="0,0,16,4" />
+                                        <CheckBox Content="Relay COM Stream to Wi-Fi UDP :9090" IsChecked="{Binding RelaySerialToUdp}" Margin="0,0,0,4" />
+                                    </WrapPanel>
+
+                                    <WrapPanel>
+                                        <Button Content="{Binding SerialConnectButtonText}" Command="{Binding ToggleSerialConnectionCommand}" Style="{StaticResource AccentButtonStyle}" Margin="0,0,8,4" />
+                                        <Button Content="Configure ZED-F9P" Command="{Binding ConfigureZedF9pCommand}" Style="{StaticResource SubtleButtonStyle}" Margin="0,0,8,4" />
+                                        <Button Content="SXblue Wake-up ($JBIN)" Command="{Binding SendSxBlueWakeupCommand}" Style="{StaticResource SubtleButtonStyle}" Margin="0,0,8,4" />
+                                        <Button Content="ZED-F9P Factory Reset" Command="{Binding FactoryResetZedF9pCommand}" Style="{StaticResource DangerButtonStyle}" Margin="0,0,0,4" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Native Windows Bluetooth LE (WinRT) -->
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,10">
+                                        <TextBlock Text="WINDOWS BLUETOOTH LE (ESP32 NORDIC UART &amp; TRISAT GATT)" FontWeight="Bold" FontSize="13" Foreground="#60A5FA" />
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding BleStatusText}" FontFamily="Consolas" FontSize="11" Foreground="#93C5FD" />
+                                    </DockPanel>
+
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="8" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0" ItemsSource="{Binding DiscoveredBleDevices}" SelectedItem="{Binding SelectedBleDevice}" />
+                                        <Button Grid.Column="2" Content="{Binding BleScanButtonText}" Command="{Binding ToggleBleScanCommand}" Style="{StaticResource SubtleButtonStyle}" />
+                                    </Grid>
+
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Content="Connect Selected BLE" Command="{Binding ConnectBleCommand}" Style="{StaticResource AccentButtonStyle}" Margin="0,0,8,0" />
+                                        <Button Content="Disconnect BLE" Command="{Binding DisconnectBleCommand}" Style="{StaticResource DangerButtonStyle}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Network Telemetry Bridges (UDP / TCP) -->
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,10">
+                                        <TextBlock Text="NETWORK TELEMETRY BRIDGES (UDP / TCP)" FontWeight="Bold" FontSize="13" Foreground="#22D3EE" />
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding UdpPacketCount, StringFormat=Datagrams Rx: {0}}" FontFamily="Consolas" FontSize="11" Foreground="#67E8F9" />
+                                    </DockPanel>
+
+                                    <Grid Margin="0,0,0,8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="90" />
+                                            <ColumnDefinition Width="90" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="UDP Port:" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBox Grid.Column="1" Text="{Binding UdpPort}" Margin="0,0,8,0" />
+                                        <TextBlock Grid.Column="2" Text="{Binding UdpStatusText}" VerticalAlignment="Center" FontFamily="Consolas" FontSize="11" Foreground="#4ADE80" />
+                                        <Button Grid.Column="3" Content="{Binding UdpButtonText}" Command="{Binding ToggleUdpCommand}" Style="{StaticResource SubtleButtonStyle}" />
+                                    </Grid>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="90" />
+                                            <ColumnDefinition Width="130" />
+                                            <ColumnDefinition Width="70" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="SDR TCP:" VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBox Grid.Column="1" Text="{Binding TcpHost}" Margin="0,0,6,0" />
+                                        <TextBox Grid.Column="2" Text="{Binding TcpPort}" Margin="0,0,8,0" />
+                                        <TextBlock Grid.Column="3" Text="{Binding TcpStatusText}" VerticalAlignment="Center" FontFamily="Consolas" FontSize="11" Foreground="#93C5FD" />
+                                        <Button Grid.Column="4" Content="{Binding TcpButtonText}" Command="{Binding ToggleTcpCommand}" Style="{StaticResource SubtleButtonStyle}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- CelesTrak TLE Orbital Data -->
+                            <Border Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="CELESTRAK TLE ORBITAL EPHEMERIS" FontWeight="Bold" FontSize="13" Foreground="#38BDF8" Margin="0,0,0,8" />
+                                    <DockPanel Margin="0,0,0,4">
+                                        <TextBlock Text="Status:" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding TleStatusText}" FontSize="11" FontWeight="Bold" Foreground="#22D3EE" />
+                                    </DockPanel>
+                                    <DockPanel Margin="0,0,0,4">
+                                        <TextBlock Text="Last Download:" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding TleLastDownloadText}" FontSize="11" Foreground="White" />
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding TleCountsSummary}" FontFamily="Consolas" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10" />
+                                    <Button Content="Download Fresh TLE Orbits (CelesTrak)" Command="{Binding DownloadTleCommand}" Style="{StaticResource AccentButtonStyle}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- RIGHT COLUMN: Orbit Preview + System Log + About -->
+                        <StackPanel Grid.Column="2">
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,8">
+                                        <TextBlock Text="LIVE ORBIT PREVIEW" FontWeight="Bold" FontSize="13" Foreground="{StaticResource CyanAccentBrush}" />
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding TimeOffsetDisplay}" FontFamily="Consolas" FontSize="11" Foreground="#67E8F9" />
+                                    </DockPanel>
+                                    <controls:SkyPlotControl Height="260"
+                                                             Satellites="{Binding DisplayedSatellites}"
+                                                             IsAwaitingLocation="{Binding IsAwaitingLocation}"
+                                                             IsAwaitingTle="{Binding IsAwaitingTle}" />
+                                    <Slider Minimum="-12" Maximum="12" TickFrequency="0.5" IsSnapToTickEnabled="True"
+                                            Value="{Binding TimeOffsetHours}" Margin="0,8,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,14">
+                                <StackPanel>
+                                    <TextBlock Text="HARDWARE &amp; SYSTEM EVENT LOG" FontWeight="Bold" FontSize="12" Foreground="{StaticResource CyanAccentBrush}" Margin="0,0,0,8" />
+                                    <ListBox ItemsSource="{Binding SystemLogs}"
+                                             Height="190"
+                                             Background="#020617"
+                                             BorderBrush="#1E293B"
+                                             Foreground="#CBD5E1"
+                                             FontFamily="Consolas"
+                                             FontSize="10" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource CardBorderStyle}">
+                                <StackPanel>
+                                    <TextBlock Text="ABOUT TRISAT WINDOWS" FontWeight="Bold" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,6" />
+                                    <TextBlock Text="TRISAT v2.4 · Native .NET 8 WPF + WinRT (Windows 10/11)" FontSize="11" Foreground="White" />
+                                    <TextBlock Text="Supports u-blox ZED-F9P (USB COM + UBX-RXM-SFRBX), Geneq SXblue (COM), ESP32 Hybrid Bridge (BLE NUS + Wi-Fi UDP), Windows Location API, CelesTrak TLE SGP4, TRISAT-SDR, and Septentrio SBF Replay."
+                                               FontSize="10" Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,4,0,6" />
+                                    <TextBlock Text="Data provenance: Live Galileo I/NAV pages are displayed as unverified until checked offline with trusted EUSPA XML keys. The Annex A self-test checks a fixed reference vector separately from live session status."
+                                               FontSize="10" Foreground="#FBBF24" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <!-- =================================================================== -->
+        <!-- STATUS FOOTER BAR                                                   -->
+        <!-- =================================================================== -->
+        <Border Grid.Row="2"
+                Background="{StaticResource BgSurfaceBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="16,6">
+            <DockPanel>
+                <TextBlock Text="TRISAT v2.4 · Windows Native (.NET 8 WPF + WinRT)"
+                           FontFamily="Consolas" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}" />
+                <TextBlock DockPanel.Dock="Right"
+                           Text="{Binding ThreatAssessment.OsnmaStatusText, StringFormat=OSNMA: {0}}"
+                           FontFamily="Consolas" FontSize="11" FontWeight="Bold" Foreground="#FCD34D" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
