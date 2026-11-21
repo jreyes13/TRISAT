@@ -100,6 +100,7 @@ public sealed class MiniMapControl : Border
         });
 
         Child = _root;
+        Loaded += (_, _) => _ = RenderAsync();
         SizeChanged += (_, _) => _ = RenderAsync();
     }
 
