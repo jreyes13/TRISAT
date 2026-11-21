@@ -58,6 +58,7 @@ public sealed class SkyPlotControl : Border
     {
         Child = _canvas;
         Background = Brushes.Transparent;
+        Loaded += (_, _) => Redraw();
         SizeChanged += (_, _) => Redraw();
     }
 

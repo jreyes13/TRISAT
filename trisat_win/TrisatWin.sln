@@ -2,9 +2,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34330.188
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trisat.Core", "Trisat.Core\Trisat.Core.csproj", "{B7E1A411-5C1B-4D1C-9B2A-111111111101}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trisat.Win", "Trisat.Win\Trisat.Win.csproj", "{B7E1A411-5C1B-4D1C-9B2A-111111111102}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trisat.Core", "Trisat.Core\Trisat.Core.csproj", "{B7E1A411-5C1B-4D1C-9B2A-111111111101}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trisat.Core.Tests", "Trisat.Core.Tests\Trisat.Core.Tests.csproj", "{B7E1A411-5C1B-4D1C-9B2A-111111111103}"
 EndProject
