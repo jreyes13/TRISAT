@@ -1,0 +1,246 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Styles.Resources>
+        <!-- Core TRISAT Aerospace Palette -->
+        <Color x:Key="BgDeepColor">#020617</Color>
+        <Color x:Key="BgSurfaceColor">#0B1222</Color>
+        <Color x:Key="BgCardColor">#0F172A</Color>
+        <Color x:Key="BgInputColor">#111C33</Color>
+        <Color x:Key="BorderSubtleColor">#1E293B</Color>
+        <Color x:Key="TextPrimaryColor">#F1F5F9</Color>
+        <Color x:Key="TextSecondaryColor">#94A3B8</Color>
+        <Color x:Key="CyanAccentColor">#22D3EE</Color>
+        <Color x:Key="CyanDarkColor">#0891B2</Color>
+        <Color x:Key="AmberAccentColor">#F59E0B</Color>
+        <Color x:Key="RedAccentColor">#F43F5E</Color>
+        <Color x:Key="GreenAccentColor">#22C55E</Color>
+
+        <SolidColorBrush x:Key="BgDeepBrush" Color="{StaticResource BgDeepColor}" />
+        <SolidColorBrush x:Key="BgSurfaceBrush" Color="{StaticResource BgSurfaceColor}" />
+        <SolidColorBrush x:Key="BgCardBrush" Color="{StaticResource BgCardColor}" />
+        <SolidColorBrush x:Key="BgInputBrush" Color="{StaticResource BgInputColor}" />
+        <SolidColorBrush x:Key="BorderSubtleBrush" Color="{StaticResource BorderSubtleColor}" />
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+        <SolidColorBrush x:Key="CyanAccentBrush" Color="{StaticResource CyanAccentColor}" />
+        <SolidColorBrush x:Key="CyanDarkBrush" Color="{StaticResource CyanDarkColor}" />
+        <SolidColorBrush x:Key="AmberAccentBrush" Color="{StaticResource AmberAccentColor}" />
+        <SolidColorBrush x:Key="RedAccentBrush" Color="{StaticResource RedAccentColor}" />
+        <SolidColorBrush x:Key="GreenAccentBrush" Color="{StaticResource GreenAccentColor}" />
+
+        <FontFamily x:Key="MonoFont">Ubuntu Mono, DejaVu Sans Mono, Liberation Mono, monospace</FontFamily>
+    </Styles.Resources>
+
+    <!-- Card Container Style -->
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{StaticResource BgCardBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="14" />
+    </Style>
+
+    <Style Selector="Border.tile">
+        <Setter Property="Background" Value="{StaticResource BgDeepBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderSubtleBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="10,8" />
+    </Style>
+
+    <!-- Primary Accent Button -->
+    <Style Selector="Button.accent">
+        <Setter Property="Background" Value="#0E7490" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="BorderBrush" Value="#22D3EE" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Padding" Value="14,7" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#0891B2" />
+        <Setter Property="BorderBrush" Value="#22D3EE" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.accent:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#155E75" />
+    </Style>
+
+    <!-- Secondary Subtle Button -->
+    <Style Selector="Button.subtle">
+        <Setter Property="Background" Value="#1E293B" />
+        <Setter Property="Foreground" Value="#E2E8F0" />
+        <Setter Property="BorderBrush" Value="#334155" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.subtle:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#334155" />
+        <Setter Property="BorderBrush" Value="#475569" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.subtle:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#0F172A" />
+    </Style>
+
+    <!-- Danger / Warning Button -->
+    <Style Selector="Button.danger">
+        <Setter Property="Background" Value="#4C0519" />
+        <Setter Property="BorderBrush" Value="#F43F5E" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="#FDA4AF" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Padding" Value="12,6" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#881337" />
+        <Setter Property="BorderBrush" Value="#FB7185" />
+        <Setter Property="Foreground" Value="White" />
+    </Style>
+
+    <!-- Constellation Filter ToggleButton -->
+    <Style Selector="ToggleButton.chip">
+        <Setter Property="Background" Value="#020617" />
+        <Setter Property="Foreground" Value="#94A3B8" />
+        <Setter Property="BorderBrush" Value="#334155" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="7" />
+        <Setter Property="Padding" Value="12,5" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="ToggleButton.chip:checked /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="#164E63" />
+        <Setter Property="BorderBrush" Value="#22D3EE" />
+        <Setter Property="Foreground" Value="#67E8F9" />
+    </Style>
+    <Style Selector="ToggleButton.chip:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="BorderBrush" Value="#38BDF8" />
+    </Style>
+
+    <!-- Subtle Aerospace GridSplitter -->
+    <Style Selector="GridSplitter.subtle">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Focusable" Value="False" />
+    </Style>
+    <Style Selector="GridSplitter.subtle:pointerover">
+        <Setter Property="Background" Value="#3322D3EE" />
+    </Style>
+
+    <!-- Dark TextBox -->
+    <Style Selector="TextBox">
+        <Setter Property="Background" Value="{StaticResource BgInputBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="#334155" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="CaretBrush" Value="{StaticResource CyanAccentBrush}" />
+        <Setter Property="SelectionBrush" Value="#0891B2" />
+        <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="MinHeight" Value="30" />
+    </Style>
+
+    <!-- Dark ComboBox -->
+    <Style Selector="ComboBox">
+        <Setter Property="Background" Value="{StaticResource BgInputBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="#334155" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+
+    <!-- Dark CheckBox -->
+    <Style Selector="CheckBox">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+
+    <!-- Dark ListBox -->
+    <Style Selector="ListBox">
+        <Setter Property="Background" Value="#020617" />
+        <Setter Property="Foreground" Value="#E2E8F0" />
+        <Setter Property="BorderBrush" Value="#1E293B" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+    <Style Selector="ListBoxItem">
+        <Setter Property="Padding" Value="6,3" />
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <!-- Dark TabControl & TabItem -->
+    <Style Selector="TabControl">
+        <Setter Property="Background" Value="{StaticResource BgDeepBrush}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}">
+                    <Grid RowDefinitions="Auto,*">
+                        <Border Grid.Row="0"
+                                Background="{StaticResource BgSurfaceBrush}"
+                                BorderBrush="{StaticResource BorderSubtleBrush}"
+                                BorderThickness="0,0,0,1"
+                                Padding="12,0">
+                            <ItemsPresenter Name="PART_ItemsPresenter"
+                                            ItemsPanel="{TemplateBinding ItemsPanel}" />
+                        </Border>
+                        <ContentPresenter Grid.Row="1"
+                                          Name="PART_SelectedContentHost"
+                                          Margin="{TemplateBinding Padding}"
+                                          HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          Content="{TemplateBinding SelectedContent}"
+                                          ContentTemplate="{TemplateBinding SelectedContentTemplate}" />
+                    </Grid>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="TabItem">
+        <Setter Property="Foreground" Value="#94A3B8" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="Padding" Value="18,10" />
+        <Setter Property="MinHeight" Value="40" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="TabItem:selected">
+        <Setter Property="Foreground" Value="#22D3EE" />
+        <Setter Property="Background" Value="#0F172A" />
+    </Style>
+    <Style Selector="TabItem:selected /template/ Border#PART_SelectedPipe">
+        <Setter Property="Background" Value="#22D3EE" />
+        <Setter Property="Height" Value="2.5" />
+    </Style>
+    <Style Selector="TabItem:pointerover">
+        <Setter Property="Foreground" Value="#F1F5F9" />
+    </Style>
+
+</Styles>

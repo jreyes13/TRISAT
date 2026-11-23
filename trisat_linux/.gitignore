@@ -1,0 +1,8 @@
+bin/
+obj/
+publish/
+dist/
+.avalonia-build-tasks/
+*.user
+*.suo
+.vs/

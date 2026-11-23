@@ -1,0 +1,20 @@
+# TRISAT Linux udev rules — grant non-root USB access for GNSS receivers & SDR hardware
+# Install with:
+#   sudo cp 99-trisat-gnss.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# u-blox ZED-F9P / u-blox GNSS USB-CDC receivers
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1546", MODE="0666", GROUP="dialout", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1546", MODE="0666", GROUP="plugdev", TAG+="uaccess"
+
+# Geneq SXblue (FTDI USB VID:0403 PID:b5a0) & generic FTDI GNSS bridges
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="b5a0", MODE="0666", GROUP="dialout", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="b5a0", MODE="0666", GROUP="plugdev", TAG+="uaccess"
+
+# ESP32 Hybrid Bridge USB-UART adapters (Silicon Labs CP210x, WCH CH340, Espressif USB JTAG/Serial)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", MODE="0666", GROUP="dialout", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", MODE="0666", GROUP="dialout", TAG+="uaccess"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", MODE="0666", GROUP="dialout", TAG+="uaccess"
+
+# Great Scott Gadgets HackRF One (for TRISAT-SDR)
+SUBSYSTEM=="usb", ATTRS{idVendor}=="1d50", ATTRS{idProduct}=="6089", MODE="0666", GROUP="plugdev", TAG+="uaccess"

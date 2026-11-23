@@ -12,12 +12,13 @@ Live Galileo E1-B I/NAV pages are reported as unverified until validated cryptog
 
 ## 🌐 Multiplatform Architecture
 
-TRISAT is built as a cross-ecosystem solution with native, high-performance implementations for Windows, iOS, macOS, Android, and embedded telemetry bridges:
+TRISAT is built as a cross-ecosystem solution with native, high-performance implementations for Linux, Windows, iOS, macOS, Android, and embedded telemetry bridges:
 
 | Platform / Module | Directory | Tech Stack | Key Capabilities |
 | :--- | :--- | :--- | :--- |
 | **iOS / iPadOS** | `trisat_ios/` | Swift, SwiftUI, CoreLocation, CoreBluetooth, MapKit, CryptoKit | 3-mode operation (Internal TLE, BLE Nordic UART, UDP Simulator), Galileo I/NAV bit-exact CRC-24Q/OSNMA parser, **Assisted OSNMA** client (GST sync & 2s bitwise check), CelesTrak 24h orbit propagator |
 | **macOS** | `trisat_mac/` & `trisat_ios/` | Swift, SwiftUI, Network.framework, POSIX Serial, CryptoKit, PyUSB | Native macOS desktop app, **Assisted OSNMA** client (GST sync & 2s bitwise anti-spoofing), integrated **TRISAT-SDR (E1 OSNMA + E6 HAS-UA)** launcher, POSIX direct USB serial for u-blox & SXblue |
+| **Linux (Ubuntu)** | `trisat_linux/` | C# (.NET 8), Avalonia UI 11 (X11/Wayland), BlueZ D-Bus, `gpsd`/GeoClue2, `System.IO.Ports` | Native Linux desktop cockpit sharing `Trisat.Core`, direct `/dev/ttyACM*`/`/dev/ttyUSB*` (`sysfs` VID/PID detection for u-blox ZED-F9P `UBX-RXM-SFRBX` & SXblue), BlueZ BLE NUS/GATT, `gpsd`/GeoClue2 location, live EUSPA XML OSNMA verifier, **Assisted OSNMA** Reference Server (`:8095`) & Client, EUSPA Annex A self-test, TRISAT-SDR & SBF Replay launcher, `.desktop` installer & `udev` rules |
 | **Windows** | `trisat_win/` | C# (.NET 8), WPF, WinRT BLE & Geolocation, `System.IO.Ports` | Native Windows 10/11 cockpit, direct USB `COM*` (u-blox ZED-F9P `UBX-RXM-SFRBX` + SXblue), bit-exact Galileo I/NAV (`CRC-24Q`, 40-bit OSNMA, `GST`), independent SNTP/GST clock, live EUSPA XML OSNMA verifier, **Assisted OSNMA** HTTP JSON Reference Server (`:8095`) & Client, WinRT BLE, UDP/TCP bridges, EUSPA Annex A self-test, TRISAT-SDR & SBF Replay launcher |
 | **Hardware Bridges** | `trisat_hw/` | Arduino / C++, Python 3, PyUSB, libusb | SparkFun u-blox ZED-F9P + ESP32 hybrid bridge (BLE NUS + WiFi UDP), Geneq SXblue USB daemon, u-blox USB-CDC bridge |
 | **Android** | `trisat_android/` | Kotlin, Jetpack Compose, Android GNSS HAL APIs | Raw `TYPE_GAL_I` I/NAV 240-bit CRC-24Q/OSNMA decoding, **Assisted OSNMA** client (GST drift monitor & 2s bitwise check), AGC levels, A-GNSS cold-start reset |
@@ -94,4 +95,12 @@ xcodebuild -project trisat_ios/TRISAT.xcodeproj -scheme TRISAT -sdk iphonesimula
 ```powershell
 dotnet test trisat_win\TrisatWin.sln
 dotnet run --project trisat_win\Trisat.Win\Trisat.Win.csproj
+```
+
+### Linux App (`trisat_linux`)
+```bash
+dotnet test trisat_linux/TrisatLinux.sln
+dotnet run --project trisat_linux/Trisat.Linux/Trisat.Linux.csproj
+# Optional: build self-contained binary + Ubuntu .desktop launcher
+./trisat_linux/scripts/install-desktop.sh
 ```

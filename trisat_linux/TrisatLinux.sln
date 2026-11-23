@@ -1,0 +1,36 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trisat.Core", "..\trisat_win\Trisat.Core\Trisat.Core.csproj", "{B4F37F1A-6E12-4F55-9A91-21A63C9B4F10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trisat.Linux", "Trisat.Linux\Trisat.Linux.csproj", "{D7E81B4C-3F20-4C8A-A412-90B7E52C6A01}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trisat.Core.Tests", "..\trisat_win\Trisat.Core.Tests\Trisat.Core.Tests.csproj", "{A3D61A09-8C24-4A10-B33F-47F20B8E1C22}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Trisat.Linux.Tests", "Trisat.Linux.Tests\Trisat.Linux.Tests.csproj", "{E9A54F2D-5C18-4B9E-8F03-72C4D8A1E302}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B4F37F1A-6E12-4F55-9A91-21A63C9B4F10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4F37F1A-6E12-4F55-9A91-21A63C9B4F10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4F37F1A-6E12-4F55-9A91-21A63C9B4F10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4F37F1A-6E12-4F55-9A91-21A63C9B4F10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D7E81B4C-3F20-4C8A-A412-90B7E52C6A01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7E81B4C-3F20-4C8A-A412-90B7E52C6A01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D7E81B4C-3F20-4C8A-A412-90B7E52C6A01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D7E81B4C-3F20-4C8A-A412-90B7E52C6A01}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3D61A09-8C24-4A10-B33F-47F20B8E1C22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3D61A09-8C24-4A10-B33F-47F20B8E1C22}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3D61A09-8C24-4A10-B33F-47F20B8E1C22}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3D61A09-8C24-4A10-B33F-47F20B8E1C22}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9A54F2D-5C18-4B9E-8F03-72C4D8A1E302}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9A54F2D-5C18-4B9E-8F03-72C4D8A1E302}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9A54F2D-5C18-4B9E-8F03-72C4D8A1E302}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9A54F2D-5C18-4B9E-8F03-72C4D8A1E302}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <Version>2.4.0</Version>
+    <AssemblyVersion>2.4.0.0</AssemblyVersion>
+    <FileVersion>2.4.0.0</FileVersion>
+    <Company>TRISAT Project</Company>
+    <Product>TRISAT - Authenticated Earth Intelligence (Linux)</Product>
+    <Authors>Joaquín Reyes González</Authors>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RollForward>Major</RollForward>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>
